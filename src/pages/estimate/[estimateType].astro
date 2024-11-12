@@ -1,0 +1,86 @@
+---
+import Layout from "@layouts/Layout.astro";
+import optionsDeduped from "../index.astro";
+
+console.log({ optionsDeduped });
+
+const cfInfo = Astro?.request?.cf?.city;
+
+console.log({ cfInfo });
+
+const { estimateType } = Astro.params;
+
+if (!estimateType) {
+	return Astro.redirect("/");
+}
+---
+
+<Layout title={estimateType}>
+	<div
+		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
+	>
+		<h2 class="text-xl font-black">
+			Let's find your local {estimateType} pros
+		</h2>
+		<p>Enter the location of your project</p>
+		<form class="flex flex-col items-center text-center gap-4 my-4">
+			<input
+				type="text"
+				required
+				class="bg-transparent rounded-lg border py-2 px-4 text-center w-full"
+				placeholder="zip code"
+				id="zipInput"
+				minlength="5"
+				maxlength="5"
+				pattern="[0-9]{5}"
+				inputmode="numeric"
+			/>
+			<button
+				type="submit"
+				id="zipSubmitButton"
+				class="rounded-lg px-6 py-2 border disabled:opacity-20"
+				disabled
+			>
+				next
+			</button>
+		</form>
+	</div>
+	<pre>
+		{JSON.stringify(cfInfo)}
+	</pre>
+</Layout>
+
+<script>
+	import { z } from "zod";
+	const zipEl = document.getElementById(
+		"zipInput",
+	) as HTMLInputElement | null;
+
+	const zipSubmitButton = document.getElementById(
+		"zipSubmitButton",
+	) as HTMLButtonElement | null;
+
+	if (zipEl && zipSubmitButton) {
+		console.log("zipEl found");
+
+		zipEl.addEventListener("input", (event) => {
+			const target = event.target as HTMLInputElement;
+			const targetParse = z
+				.string()
+				.length(5)
+				.safeParse(target.value);
+			console.log(targetParse);
+
+			if (targetParse.success) {
+				zipSubmitButton.removeAttribute("disabled");
+			} else {
+				zipSubmitButton.hasAttribute("disabled")
+					? null
+					: zipSubmitButton.setAttribute(
+							"disabled",
+							"",
+						);
+			}
+		});
+	}
+</script>
