@@ -1,17 +1,30 @@
 ---
+import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
-import optionsDeduped from "../index.astro";
-
-console.log({ optionsDeduped });
-
-const cfInfo = Astro?.request?.cf?.city;
-
-console.log({ cfInfo });
+import { estimateStore } from "@stores/estimateProgress";
 
 const { estimateType } = Astro.params;
 
 if (!estimateType) {
 	return Astro.redirect("/");
+}
+const existingStore = estimateStore.get();
+
+let zipCode: string | number = existingStore.zipCode;
+
+if (Astro.request.method === "POST") {
+	const formData = await Astro.request.formData();
+
+	const zipParser = z.string();
+
+	const zipCodeParsed = zipParser.safeParse(formData.get("zipInput"));
+
+	console.log({ zipCodeParsed });
+	if (zipCodeParsed.success) {
+		zipCode = zipCodeParsed.data;
+		estimateStore.set({ zipCode });
+	}
+	console.log({ zipCode });
 }
 ---
 
@@ -23,13 +36,18 @@ if (!estimateType) {
 			Let's find your local {estimateType} pros
 		</h2>
 		<p>Enter the location of your project</p>
-		<form class="flex flex-col items-center text-center gap-4 my-4">
+		<form
+			class="flex flex-col items-center text-center gap-4 my-4"
+			method="post"
+		>
 			<input
 				type="text"
 				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center w-full"
+				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
 				placeholder="zip code"
 				id="zipInput"
+				name="zipInput"
+				value={zipCode.length ? zipCode : null}
 				minlength="5"
 				maxlength="5"
 				pattern="[0-9]{5}"
@@ -45,13 +63,11 @@ if (!estimateType) {
 			</button>
 		</form>
 	</div>
-	<pre>
-		{JSON.stringify(cfInfo)}
-	</pre>
 </Layout>
 
 <script>
 	import { z } from "zod";
+
 	const zipEl = document.getElementById(
 		"zipInput",
 	) as HTMLInputElement | null;
@@ -61,8 +77,6 @@ if (!estimateType) {
 	) as HTMLButtonElement | null;
 
 	if (zipEl && zipSubmitButton) {
-		console.log("zipEl found");
-
 		zipEl.addEventListener("input", (event) => {
 			const target = event.target as HTMLInputElement;
 			const targetParse = z
@@ -72,7 +86,15 @@ if (!estimateType) {
 			console.log(targetParse);
 
 			if (targetParse.success) {
-				zipSubmitButton.removeAttribute("disabled");
+				const targetParseAsNumber = z.coerce
+					.number()
+					.safeParse(targetParse.data);
+
+				if (targetParseAsNumber.success) {
+					zipSubmitButton.removeAttribute(
+						"disabled",
+					);
+				}
 			} else {
 				zipSubmitButton.hasAttribute("disabled")
 					? null
