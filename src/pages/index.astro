@@ -4,47 +4,18 @@ export const prerender = true;
 import Layout from "@layouts/Layout.astro";
 import DummmyJson from "@assets/info/dummyOptions.json";
 import { z } from "zod";
+import { actions } from "astro:actions";
 
-export const estimateParser = z.object({
-	fullTrade: z.string(),
-	shortTrade: z.string(),
-	estimateAction: z.string(),
-	type: z.string().nullable(),
-});
+const { data: reformatted, error } = await Astro.callAction(
+	actions.estimateOptions.estimateOptionsReformatted,
+	{},
+);
 
-export const dummyParsed = estimateParser.array().parse(DummmyJson);
-
-export const optionsDeduped = [
-	...new Set(dummyParsed.map((x) => x.shortTrade)),
-];
-
-console.log({ optionsDeduped });
-
-type TP = typeof DummmyJson;
-
-interface EstimateOptions {
-	name: string;
-	typeOptions: string[];
+if (error) {
+	throw new Error(`failed fetching options... ${JSON.stringify(error)}`);
 }
 
-const estimateOptions: EstimateOptions[] = [
-	{
-		name: "roof",
-		typeOptions: ["asphalt", "metal", "tile", "flat"],
-	},
-	{
-		name: "window",
-		typeOptions: ["asphalt", "metal", "tile", "flat"],
-	},
-	{
-		name: "bath",
-		typeOptions: ["asphalt", "metal", "tile", "flat"],
-	},
-	{
-		name: "siding",
-		typeOptions: ["asphalt", "metal", "tile", "flat"],
-	},
-];
+console.log({ rfData: JSON.stringify(reformatted) });
 ---
 
 <Layout title="Welcome to Astro.">
@@ -58,12 +29,12 @@ const estimateOptions: EstimateOptions[] = [
 		</h1>
 		<div class="grid grid-cols-4 mx-auto my-auto gap-4">
 			{
-				estimateOptions.map((option) => (
+				reformatted.map((option) => (
 					<a
-						href={`/estimate/${option.name}/zip`}
+						href={`/estimate/${option.shortTrade}/zip`}
 						class="px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
 					>
-						{option.name}
+						{option.shortTrade}
 					</a>
 				))
 			}
