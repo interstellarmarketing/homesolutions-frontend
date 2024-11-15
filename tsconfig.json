@@ -10,6 +10,7 @@
       "@assets/*": ["src/assets/*"],
       "@stores/*": ["src/stores/*"],
       "@typestash/*": ["src/typestash/*"],
+      "@actions/*": ["src/actions/*"],
       "@layouts/*": ["src/layouts/*"]
     },
     "jsx": "react-jsx",
