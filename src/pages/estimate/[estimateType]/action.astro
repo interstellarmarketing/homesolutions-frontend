@@ -1,5 +1,5 @@
 ---
-import { z } from "zod";
+//import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
 import { estimateStore } from "@stores/estimateProgress";
 
@@ -10,21 +10,13 @@ if (!estimateType) {
 }
 const existingStore = estimateStore.get();
 
+if (!existingStore.zipCode.length) {
+	return Astro.redirect(`/estimate/${estimateType}/zip`);
+}
+
 let zipCode: string | number = existingStore.zipCode;
 
 if (Astro.request.method === "POST") {
-	const formData = await Astro.request.formData();
-
-	const zipParser = z.string();
-
-	const zipCodeParsed = zipParser.safeParse(formData.get("zipInput"));
-
-	console.log({ zipCodeParsed });
-	if (zipCodeParsed.success) {
-		zipCode = zipCodeParsed.data;
-		estimateStore.set({ zipCode });
-	}
-	console.log({ zipCode });
 }
 ---
 
@@ -33,76 +25,79 @@ if (Astro.request.method === "POST") {
 		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
 	>
 		<h2 class="text-xl font-black">
-			Let's find your local {estimateType} pros
+			do you want to replace or repair an existing {
+				estimateType
+			}?
 		</h2>
-		<p>Enter the location of your project</p>
 		<form
 			class="flex flex-col items-center text-center gap-4 my-4"
 			method="post"
 		>
-			<input
-				type="text"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="zip code"
-				id="zipInput"
-				name="zipInput"
-				value={zipCode.length ? zipCode : null}
-				minlength="5"
-				maxlength="5"
-				pattern="[0-9]{5}"
-				inputmode="numeric"
-			/>
-			<button
-				type="submit"
-				id="zipSubmitButton"
-				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled
-			>
-				next
-			</button>
+			<div class="flex gap-2">
+				<label
+					><input
+						type="radio"
+						name="action"
+						value="replace"
+					/>
+					replace</label
+				>
+				<label
+					><input
+						type="radio"
+						name="action"
+						value="repair"
+					/>
+					repair</label
+				>
+			</div>
+
+			<div class="flex gap-4 items-center">
+				<a
+					href={`/estimate/${estimateType}/zip`}
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+				>
+					prev
+				</a>
+				<button
+					type="submit"
+					id="actionSubmitButton"
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					disabled
+				>
+					next
+				</button>
+			</div>
 		</form>
 	</div>
 </Layout>
 
 <script>
-	import { z } from "zod";
-
-	const zipEl = document.getElementById(
-		"zipInput",
-	) as HTMLInputElement | null;
-
-	const zipSubmitButton = document.getElementById(
-		"zipSubmitButton",
+	const radioButtons = document.querySelectorAll(
+		'input[name="action"]',
+	) as NodeListOf<HTMLInputElement>;
+	const submitButton = document.getElementById(
+		"actionSubmitButton",
 	) as HTMLButtonElement | null;
 
-	if (zipEl && zipSubmitButton) {
-		zipEl.addEventListener("input", (event) => {
-			const target = event.target as HTMLInputElement;
-			const targetParse = z
-				.string()
-				.length(5)
-				.safeParse(target.value);
-			console.log(targetParse);
+	if (radioButtons && submitButton) {
+		radioButtons.forEach((radioButton) => {
+			radioButton.addEventListener("change", () => {
+				const selectedValue = document.querySelector(
+					'input[name="action"]:checked',
+				) as HTMLInputElement | null;
 
-			if (targetParse.success) {
-				const targetParseAsNumber = z.coerce
-					.number()
-					.safeParse(targetParse.data);
-
-				if (targetParseAsNumber.success) {
-					zipSubmitButton.removeAttribute(
+				if (selectedValue) {
+					submitButton.removeAttribute(
 						"disabled",
 					);
+				} else {
+					submitButton.setAttribute(
+						"disabled",
+						"",
+					);
 				}
-			} else {
-				zipSubmitButton.hasAttribute("disabled")
-					? null
-					: zipSubmitButton.setAttribute(
-							"disabled",
-							"",
-						);
-			}
+			});
 		});
 	}
 </script>

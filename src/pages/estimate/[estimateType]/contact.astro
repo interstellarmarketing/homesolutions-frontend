@@ -9,55 +9,16 @@ const { estimateType } = Astro.params;
 if (!estimateType) {
 	return Astro.redirect("/");
 }
-
-const { data: optionSet, error: optionSetError } = await Astro.callAction(
-	actions.estimateOptions.estimateOptionShortSet,
-	{},
-);
-
-if (optionSetError) {
-	throw new Error(JSON.stringify(optionSetError));
-}
-
-if (!optionSet.includes(estimateType)) {
-	return Astro.redirect("/");
-}
-
 const existingStore = estimateStore.get();
 
 const cfInfo = Astro.locals.runtime.cf;
 
-let zipCode: string | number = existingStore.zipCode ?? cfInfo?.postalCode;
+//console.log({ cfInfo });
+
+let { firstName, lastName } = existingStore;
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
-
-	const zipParser = z.string();
-
-	const zipCodeParsed = zipParser.safeParse(formData.get("zipInput"));
-
-	console.log({ zipCodeParsed });
-	if (zipCodeParsed.success) {
-		zipCode = zipCodeParsed.data;
-		const { data: uspsData, error } = await Astro.callAction(
-			actions.usps.uspsZipCheck,
-			{ zip: zipCode },
-		);
-
-		if (error) {
-			throw new Error(`${JSON.stringify(error)}`);
-		}
-
-		console.log({ uspsZipCheck: uspsData });
-		estimateStore.set({
-			...existingStore,
-			zipCode,
-			state: uspsData?.defaultState,
-			city: uspsData?.defaultCity,
-		});
-		return Astro.redirect(`/estimate/${estimateType}/action`);
-	}
-	console.log({ zipCode });
 }
 ---
 
@@ -65,10 +26,7 @@ if (Astro.request.method === "POST") {
 	<div
 		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
 	>
-		<h2 class="text-xl font-black">
-			Let's find your local {estimateType} pros
-		</h2>
-		<p>Enter the location of your project</p>
+		<h2 class="text-xl font-black">Please enter your full name</h2>
 		<form
 			class="flex flex-col items-center text-center gap-4 my-4"
 			method="post"
@@ -77,20 +35,30 @@ if (Astro.request.method === "POST") {
 				type="text"
 				required
 				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="zip code"
-				id="zipInput"
-				name="zipInput"
-				value={zipCode.length ? zipCode : null}
-				minlength="5"
-				maxlength="5"
-				pattern="[0-9]{5}"
-				inputmode="numeric"
+				placeholder="first name"
+				id="firstNameInput"
+				name="firstNameInput"
+				value={firstName.length ? firstName : null}
+				minlength="2"
 			/>
+			<input
+				type="text"
+				required
+				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+				placeholder="last name"
+				id="lastNameInput"
+				name="lastNameInput"
+				value={lastName.length ? lastName : null}
+				minlength="2"
+			/>
+			<p class="p-8 text-red-500">
+				your matches are almost ready!
+			</p>
 			<button
 				type="submit"
 				id="zipSubmitButton"
 				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled={zipCode.length !== 5}
+				disabled
 			>
 				next
 			</button>
@@ -101,7 +69,11 @@ if (Astro.request.method === "POST") {
 <script>
 	import { z } from "zod";
 
-	const zipEl = document.getElementById(
+	const firstNameEl = document.getElementById(
+		"zipInput",
+	) as HTMLInputElement | null;
+
+	const lastNameEl = document.getElementById(
 		"zipInput",
 	) as HTMLInputElement | null;
 
@@ -111,10 +83,8 @@ if (Astro.request.method === "POST") {
 	const targetParser = z.string().length(5);
 	const targetParserAsNumber = z.coerce.number();
 
-	if (zipEl && zipSubmitButton) {
-		console.log(zipEl.value);
-
-		zipEl.addEventListener("input", (event) => {
+	if (firstNameEl && lastNameEl && zipSubmitButton) {
+		lastNameEl.addEventListener("input", (event) => {
 			const target = event.target as HTMLInputElement;
 			const targetParse = targetParser.safeParse(
 				target.value,
