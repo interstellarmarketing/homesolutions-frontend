@@ -1,61 +1,31 @@
-import { defineAction } from 'astro:actions';
-import DummmyJson from "@assets/info/dummyOptions.json";
+import { ActionError, defineAction } from 'astro:actions';
 import { z } from "zod";
-
-export const estimateParser = z.object({
-	fullTrade: z.string(),
-	shortTrade: z.string(),
-	estimateAction: z.string(),
-	type: z.string().nullable(),
-});
-
-export const dummyParsed = estimateParser.array().parse(DummmyJson);
-
-export const optionsDeduped = [
-	...new Set(dummyParsed.map((x) => x.shortTrade)),
-];
-
-
-console.log({ optionsDeduped });
-
-type TP = typeof DummmyJson;
-
-export const estimateOptionReformatted = z.object({
-	shortTrade: z.string(),
-	estimateAction: z.string().array(),
-	type: z.string().array().nullable(),
-});
-
-type EstimateOptionReformatted = z.infer<typeof estimateOptionReformatted>
-
-const reformatted: EstimateOptionReformatted[] = []
-
-for (const option of dummyParsed) {
-	const findExisting = reformatted.find(x => x.shortTrade === option.shortTrade)
-
-	if (findExisting) {
-		findExisting.estimateAction.push(option.estimateAction)
-		option.type && findExisting.type ? findExisting?.type.push(option.type) : null
-	} else {
-		reformatted.push({
-			shortTrade: option.shortTrade,
-			type: option.type ? [option.type] : null,
-			estimateAction: [option.estimateAction]
-		})
-	}
-}
+import { estimateTypes } from '@assets/info/estimateOptions';
 
 export const estimateOptions = {
 	estimateOptionShortSet: defineAction({
 		handler: async (input, context) => {
 
-			return reformatted.map(x => x.shortTrade)
+			return estimateTypes.map(x => x.shortTrade)
 		},
 	}),
 	estimateOptionsReformatted: defineAction({
+		input: z.object({
+			shortTrade: z.string(),
+		}),
 		handler: async (input, context) => {
+			const { shortTrade } = input
 
-			return reformatted
+			const findViaShortTrade = estimateTypes.find(x => x.shortTrade === shortTrade)
+
+			if (findViaShortTrade) {
+				return findViaShortTrade
+			}
+
+			throw new ActionError({
+				code: "BAD_REQUEST",
+				message: `could not find match for ${shortTrade}`
+			})
 		},
 	})
 }
