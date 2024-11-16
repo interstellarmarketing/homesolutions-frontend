@@ -11,9 +11,15 @@ export const estimateParser = z.object({
 	email: z.string().email(),
 	phone: z.number(),
 	isHomeowner: z.boolean(),
-	px: z.enum(["f"])
+	estimateType: z.string(),
+	estimateAction: z.string()
+	//px: z.enum(["siding", "bathroom"])
 })
+
+export const estimateParserLoose = estimateParser.partial()
 
 export type EstimateStoreType = z.infer<typeof estimateParser>
 
-export const estimateStore = atom<EstimateStoreType>({ zipCode: "", firstName: "", lastName: "", state: "", streetAddress: "", city: "", isHomeowner: true, email: "", phone: 0 })
+export type EstimateStoreTypeLoose = z.infer<typeof estimateParserLoose>
+
+export const estimateStore = atom<EstimateStoreTypeLoose>({})
