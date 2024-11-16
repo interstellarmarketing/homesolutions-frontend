@@ -18,7 +18,7 @@ const cfInfo = Astro.locals.runtime.cf;
 
 //console.log({ cfInfo });
 
-let { streetAddress } = existingStore;
+let { streetAddress, isHomeowner } = existingStore;
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
@@ -41,20 +41,7 @@ if (Astro.request.method === "POST") {
 				placeholder="Street Address"
 				id="streetAddressInput"
 				name="streetAddressInput"
-				value={streetAddress.length
-					? streetAddress
-					: null}
-				minlength="2"
-			/>
-
-			<input
-				type="checkbox"
-				checked={false}
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="Street Address"
-				id="streetAddressInput"
-				name="streetAddressInput"
-				value={streetAddress.length
+				value={streetAddress?.length
 					? streetAddress
 					: null}
 				minlength="2"
@@ -64,6 +51,18 @@ if (Astro.request.method === "POST") {
 				{existingStore.city}, {existingStore.state}
 				{existingStore.zipCode}
 			</p>
+
+			<label class="flex gap-4 items-center">
+				<input
+					type="checkbox"
+					checked={isHomeowner ?? true}
+					class="bg-transparent rounded-lg p-3"
+					placeholder="Street Address"
+					id="isHomeownerInput"
+					name="isHomeownerInput"
+				/>
+				I'm the homeowner
+			</label>
 
 			<button
 				type="submit"
