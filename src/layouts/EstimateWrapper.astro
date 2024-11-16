@@ -1,0 +1,23 @@
+---
+import { estimateStore } from "@stores/estimateProgress";
+import Layout from "./Layout.astro";
+
+interface Props {
+	title: string;
+	estimateType: string;
+}
+
+const activeEstimate = estimateStore.get();
+
+console.log({ activeEstimate });
+
+const { title, estimateType } = Astro.props;
+
+if (estimateType !== activeEstimate.estimateType) {
+	estimateStore.set({ ...activeEstimate, estimateType });
+}
+---
+
+<Layout title={title}>
+	<slot />
+</Layout>
