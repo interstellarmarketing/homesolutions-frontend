@@ -3,14 +3,24 @@ import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
 import { estimateStore } from "@stores/estimateProgress";
 import { actions } from "astro:actions";
+import {
+	shortTradeEnum,
+	getOptionsForShortTrade,
+} from "@assets/info/estimateOptions";
+import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 
-const { estimateType } = Astro.params;
+let { estimateType } = Astro.params;
 
-if (!estimateType) {
+const parseEstimateType = shortTradeEnum.safeParse(estimateType);
+
+if (!estimateType || !parseEstimateType.success) {
 	return Astro.redirect("/");
 }
 
+estimateType = parseEstimateType.data;
+
 const existingStore = estimateStore.get();
+const activeEstimateType = activeEstimateTypeStore.get();
 
 let { estimateAction } = existingStore;
 
@@ -26,6 +36,11 @@ const { data, error } = await Astro.callAction(
 if (error) {
 	throw new Error(JSON.stringify(error));
 }
+
+const estimateOptions = getOptionsForShortTrade(
+	parseEstimateType.data,
+	"estimateAction",
+);
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
@@ -69,31 +84,29 @@ if (Astro.request.method === "POST") {
 		>
 			<div class="grid grid-cols-2 gap-4 p-8">
 				{
-					data.estimateAction.map(
-						(actionOption) => {
-							return (
-								<label class="inline-flex items-center">
-									<input
-										type="radio"
-										name="action"
-										checked={
-											existingStore.estimateAction ===
-											actionOption
-										}
-										value={
-											actionOption
-										}
-										class="hidden peer"
-									/>
-									<span class="px-4 py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
-										{
-											actionOption
-										}
-									</span>
-								</label>
-							);
-						},
-					)
+					estimateOptions.map((actionOption) => {
+						return (
+							<label class="inline-flex items-center">
+								<input
+									type="radio"
+									name="action"
+									checked={
+										existingStore.estimateAction ===
+										actionOption
+									}
+									value={
+										actionOption
+									}
+									class="hidden peer"
+								/>
+								<span class="px-4 py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
+									{
+										actionOption
+									}
+								</span>
+							</label>
+						);
+					})
 				}
 			</div>
 			<div class="flex gap-4 items-center">

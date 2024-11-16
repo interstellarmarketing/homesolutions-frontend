@@ -1,30 +1,23 @@
 ---
 import { z } from "zod";
-import Layout from "@layouts/Layout.astro";
 import { estimateStore } from "@stores/estimateProgress";
 import { actions } from "astro:actions";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import { activeEstimateTypeStore } from "@stores/activeEstimateType";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
 
-const { estimateType } = Astro.params;
+let { estimateType } = Astro.params;
 
-if (!estimateType) {
+const parseEstimateType = shortTradeEnum.safeParse(estimateType);
+
+if (!estimateType || !parseEstimateType.success) {
 	return Astro.redirect("/");
 }
 
-const { data: optionSet, error: optionSetError } = await Astro.callAction(
-	actions.estimateOptions.estimateOptionShortSet,
-	{},
-);
-
-if (optionSetError) {
-	throw new Error(JSON.stringify(optionSetError));
-}
-
-if (!optionSet.includes(estimateType)) {
-	return Astro.redirect("/");
-}
+estimateType = parseEstimateType.data;
 
 const existingStore = estimateStore.get();
+const activeEstimateType = activeEstimateTypeStore.get();
 
 const cfInfo = Astro.locals.runtime.cf;
 
@@ -73,7 +66,10 @@ if (Astro.request.method === "POST") {
 		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
 	>
 		<h2 class="text-xl font-black">
-			Let's find your local {estimateType} pros
+			Let's find your local {
+				activeEstimateType?.data?.shortTradeNoun ??
+					estimateType
+			} pros
 		</h2>
 		<p>Enter the location of your project</p>
 		<form
@@ -123,7 +119,7 @@ if (Astro.request.method === "POST") {
 				type="submit"
 				id="zipSubmitButton"
 				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled={zipCode.length !== 5}
+				disabled={zipCode?.length !== 5}
 			>
 				next
 			</button>

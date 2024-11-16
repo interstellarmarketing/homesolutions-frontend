@@ -16,7 +16,6 @@ const cfInfo = Astro.locals.runtime.cf;
 //console.log({ cfInfo });
 
 let { phone, email } = existingStore;
-let zipCode: string | number = existingStore.zipCode ?? cfInfo?.postalCode;
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
@@ -60,7 +59,7 @@ if (Astro.request.method === "POST") {
 				placeholder="email"
 				id="emailInput"
 				name="emailInput"
-				value={email.length ? email : null}
+				value={email?.length ? email : null}
 				inputmode="tel"
 			/>
 			<input
@@ -71,7 +70,7 @@ if (Astro.request.method === "POST") {
 				id="phoneInput"
 				pattern="\(\d{3}\)\s\d{3}-\d{4}"
 				name="phoneInput"
-				value={phone ?? null}
+				value={phone ?? ""}
 				inputmode="tel"
 			/>
 
@@ -79,7 +78,6 @@ if (Astro.request.method === "POST") {
 				type="submit"
 				id="zipSubmitButton"
 				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled={zipCode.length !== 5}
 			>
 				next
 			</button>
