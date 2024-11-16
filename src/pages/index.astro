@@ -6,8 +6,8 @@ import DummmyJson from "@assets/info/dummyOptions.json";
 import { z } from "zod";
 import { actions } from "astro:actions";
 
-const { data: reformatted, error } = await Astro.callAction(
-	actions.estimateOptions.estimateOptionsReformatted,
+const { data: optionSet, error } = await Astro.callAction(
+	actions.estimateOptions.estimateOptionShortSet,
 	{},
 );
 
@@ -15,7 +15,7 @@ if (error) {
 	throw new Error(`failed fetching options... ${JSON.stringify(error)}`);
 }
 
-console.log({ rfData: JSON.stringify(reformatted) });
+//console.log({ rfData: JSON.stringify(reformatted) });
 ---
 
 <Layout title="Welcome to Astro.">
@@ -29,12 +29,12 @@ console.log({ rfData: JSON.stringify(reformatted) });
 		</h1>
 		<div class="grid grid-cols-4 mx-auto my-auto gap-4">
 			{
-				reformatted.map((option) => (
+				optionSet.map((option) => (
 					<a
-						href={`/estimate/${option.shortTrade}/zip`}
+						href={`/estimate/${option}/zip`}
 						class="px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
 					>
-						{option.shortTrade}
+						{option}
 					</a>
 				))
 			}
