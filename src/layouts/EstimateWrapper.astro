@@ -2,7 +2,13 @@
 import { estimateStore } from "@stores/estimateProgress";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import Layout from "./Layout.astro";
+import { z } from "zod";
 import { actions } from "astro:actions";
+import {
+	shortTradeEnum,
+	getAllowableValuesForShortTrade,
+} from "@assets/info/estimateOptions";
+import { shortTradeDiscriminatedUnion } from "@assets/info/estimateOptions";
 
 interface Props {
 	title: string;
@@ -14,7 +20,15 @@ const activeEstimateType = activeEstimateTypeStore.get();
 
 //console.log({ activeEstimate });
 
-const { title, estimateType } = Astro.props;
+let { title, estimateType } = Astro.props;
+
+const parseEstimateType = shortTradeEnum.safeParse(estimateType);
+
+if (parseEstimateType.success) {
+	estimateType = parseEstimateType.data;
+} else {
+	return Astro.redirect("/");
+}
 
 // INFO: handle switching routes
 if (estimateType !== activeEstimate.estimateType) {
@@ -22,23 +36,25 @@ if (estimateType !== activeEstimate.estimateType) {
 	estimateStore.set({ ...existingRest, estimateType });
 }
 
-if (estimateType !== activeEstimateType?.shortTrade) {
-	const { data: getEstimateType, error } = await Astro.callAction(
-		actions.estimateOptions.estimateOptionsReformatted,
-		{ shortTrade: estimateType },
-	);
-
-	if (error) {
-		throw new Error("failed to fetch details of estimateType");
-	} else {
-		activeEstimateTypeStore.set(getEstimateType);
-	}
+if (parseEstimateType.data !== activeEstimateType) {
+	activeEstimateTypeStore.set(parseEstimateType.data);
+	//const testa = getAllowableValuesForShortTrade(parseEstimateType.data);
+	//console.log({ testa });
+	//const testa = shortTradeDiscriminatedUnion.options[0].shape;
+	//const fff = getAllowableValuesForShortTrade(parseEstimateType.data);
+	//console.log({ testa });
+	//console.log({ fff });
+	//const { data: getEstimateType, error } = await Astro.callAction(
+	//	actions.estimateOptions.estimateOptionsReformatted,
+	//	{ shortTrade: estimateType },
+	//);
+	//
+	//if (error) {
+	//	throw new Error("failed to fetch details of estimateType");
+	//} else {
+	//	activeEstimateTypeStore.set(getEstimateType);
+	//}
 }
-
-//console.log({
-//	activeEstimate: estimateStore.get(),
-//	activeEstimateType: activeEstimateTypeStore.get(),
-//});
 ---
 
 <Layout title={title}>
