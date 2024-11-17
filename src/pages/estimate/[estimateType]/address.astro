@@ -22,6 +22,8 @@ let { streetAddress, isHomeowner } = existingStore;
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
+
+	return Astro.redirect(`/estimate/${estimateType}/finalize`);
 }
 ---
 
@@ -66,7 +68,7 @@ if (Astro.request.method === "POST") {
 
 			<button
 				type="submit"
-				id="zipSubmitButton"
+				id="addressSubmitButton"
 				class="rounded-lg px-6 py-2 border disabled:opacity-20"
 				disabled
 			>
@@ -79,22 +81,19 @@ if (Astro.request.method === "POST") {
 <script>
 	import { z } from "zod";
 
-	const firstNameEl = document.getElementById(
-		"zipInput",
+	const streetAddressInput = document.getElementById(
+		"streetAddressInput",
 	) as HTMLInputElement | null;
 
-	const lastNameEl = document.getElementById(
-		"zipInput",
-	) as HTMLInputElement | null;
-
-	const zipSubmitButton = document.getElementById(
-		"zipSubmitButton",
+	const addressSubmitButton = document.getElementById(
+		"addressSubmitButton",
 	) as HTMLButtonElement | null;
+
 	const targetParser = z.string().length(5);
 	const targetParserAsNumber = z.coerce.number();
 
-	if (firstNameEl && lastNameEl && zipSubmitButton) {
-		lastNameEl.addEventListener("input", (event) => {
+	if (streetAddressInput && addressSubmitButton) {
+		streetAddressInput.addEventListener("input", (event) => {
 			const target = event.target as HTMLInputElement;
 			const targetParse = targetParser.safeParse(
 				target.value,

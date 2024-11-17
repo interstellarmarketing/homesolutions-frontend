@@ -21,6 +21,7 @@ estimateType = parseEstimateType.data;
 
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
+console.log({ activeEstimateType });
 
 let { estimateAction } = existingStore;
 
@@ -56,17 +57,21 @@ if (Astro.request.method === "POST") {
 			...existingStore,
 			estimateAction,
 		});
+		return Astro.redirect(
+			`/estimate/${estimateType}/projectDetails`,
+		);
 
+		console.log({ activeEstimateType });
 		// INFO: whether we need additional details
-		if (data.type) {
-			return Astro.redirect(
-				`/estimate/${estimateType}/projectDetails`,
-			);
-		} else {
-			return Astro.redirect(
-				`/estimate/${estimateType}/address`,
-			);
-		}
+		//if (activeEstimateType?.data?.type?.length) {
+		//	return Astro.redirect(
+		//		`/estimate/${estimateType}/projectDetails`,
+		//	);
+		//} else {
+		//	return Astro.redirect(
+		//		`/estimate/${estimateType}/address`,
+		//	);
+		//}
 	}
 }
 ---
@@ -86,7 +91,7 @@ if (Astro.request.method === "POST") {
 				{
 					estimateOptions.map((actionOption) => {
 						return (
-							<label class="inline-flex items-center">
+							<label class="inline-flex items-center ">
 								<input
 									type="radio"
 									name="action"
@@ -99,7 +104,7 @@ if (Astro.request.method === "POST") {
 									}
 									class="hidden peer"
 								/>
-								<span class="px-4 py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
+								<span class="px-4 w-full py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
 									{
 										actionOption
 									}

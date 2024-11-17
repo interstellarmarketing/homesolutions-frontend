@@ -22,10 +22,13 @@ estimateType = parseEstimateType.data;
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
 
-const estimateDetails = getOptionsForShortTrade(
-	parseEstimateType.data,
-	"estimateAction",
-);
+const projectDetails = getOptionsForShortTrade(parseEstimateType.data, "type");
+
+if (!projectDetails?.length) {
+	return Astro.redirect(`/estimate/${estimateType}/address`);
+}
+
+console.log({ projectDetails });
 
 //if (Astro.request.method === "POST") {
 //	const formData = await Astro.request.formData();
@@ -59,7 +62,7 @@ const estimateDetails = getOptionsForShortTrade(
 		>
 			<div class="grid grid-cols-2 gap-4 p-8">
 				{
-					estimateDetails.map((actionOption) => {
+					projectDetails?.map((actionOption) => {
 						return (
 							<label class="inline-flex items-center">
 								<input
@@ -74,7 +77,7 @@ const estimateDetails = getOptionsForShortTrade(
 									}
 									class="hidden peer"
 								/>
-								<span class="px-4 py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
+								<span class="px-4 py-2 w-full rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
 									{
 										actionOption
 									}

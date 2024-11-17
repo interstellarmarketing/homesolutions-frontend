@@ -3,19 +3,10 @@ export const prerender = true;
 
 import Layout from "@layouts/Layout.astro";
 import DummmyJson from "@assets/info/dummyOptions.json";
-import { z } from "zod";
-import { actions } from "astro:actions";
-
-const { data: optionSet, error } = await Astro.callAction(
-	actions.estimateOptions.estimateOptionShortSet,
-	{},
-);
-
-if (error) {
-	throw new Error(`failed fetching options... ${JSON.stringify(error)}`);
-}
-
-//console.log({ rfData: JSON.stringify(reformatted) });
+import {
+	getOptionsForShortTrade,
+	shortTradesConst,
+} from "@assets/info/estimateOptions";
 ---
 
 <Layout title="Welcome to Astro.">
@@ -29,7 +20,7 @@ if (error) {
 		</h1>
 		<div class="grid grid-cols-4 mx-auto my-auto gap-4">
 			{
-				optionSet.map((option) => (
+				shortTradesConst.map((option) => (
 					<a
 						href={`/estimate/${option}/zip`}
 						class="px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
