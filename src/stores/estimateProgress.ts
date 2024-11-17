@@ -13,7 +13,6 @@ export const estimateParser = z.object({
 	isHomeowner: z.boolean(),
 	estimateType: z.string(),
 	estimateAction: z.string()
-	//px: z.enum(["siding", "bathroom"])
 })
 
 export const estimateParserLoose = estimateParser.partial()
