@@ -1,20 +1,24 @@
 import { z } from "zod"
 
-const shortTradesConst = ['bathroom', 'roofing', 'siding', 'windows'] as const;
+export const shortTradesConst = ['bathroom', 'roofing', 'siding', 'windows'] as const;
 
 export const shortTradeEnum = z.enum(shortTradesConst);
 export type ShortTradeEnum = z.infer<typeof shortTradeEnum>
 
 export const estimateOptionReformatted = z.object({
 	//shortTrade: shortTradeEnum,
-	shortTradeNoun: z.string().optional(),
-	actionDescription: z.string(),
+	//shortTradeNoun: z.string().optional(),
+	//actionDescription: z.string(),
 	estimateAction: z.enum(["replace", "repair"]),
 	type: z.string().array().nullable(),
 });
 
 export type EstimateOptionReformatted = z.infer<typeof estimateOptionReformatted>
 
+export const estimateOptionExtended = estimateOptionReformatted.extend({
+	shortTradeNoun: z.string().optional(),
+	actionDescription: z.string(),
+})
 
 function extendEstimateOptionSchema<T extends { [K in keyof EstimateOptionReformatted]?: z.ZodType<any, any, any> }>(
 	extension: T
@@ -24,6 +28,7 @@ function extendEstimateOptionSchema<T extends { [K in keyof EstimateOptionReform
 
 
 
+// INFO: default `estimateAction` === ["repair", "replace"]
 export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
 	z.object({
 		shortTrade: z.literal<ShortTradeEnum>("bathroom"),
@@ -48,14 +53,80 @@ export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
 	z.object({
 		shortTrade: z.literal<ShortTradeEnum>("windows"),
 		data: extendEstimateOptionSchema({
-			type: z.enum(["10", "3-5", "6-9"]),
+			type: z.enum(["10+", "3-5", "6-9"]),
 		}),
 	}),
 ]);
 
+export function getAllowableValuesForShortTrade<T extends ShortTradeEnum>(
+	shortTrade: T
+): Record<string, any[]> {
+	const unionMember = shortTradeDiscriminatedUnion.options.find(
+		option => option.shape.shortTrade.value === shortTrade
+	);
+
+	if (!unionMember) {
+		throw new Error(`Invalid short trade: ${shortTrade}`);
+	}
+
+	const result: Record<string, any[]> = {};
+	const dataSchema = unionMember.shape.data;
+
+	if (dataSchema instanceof z.ZodObject) {
+		for (const [key, value] of Object.entries(dataSchema.shape)) {
+			if (value instanceof z.ZodEnum) {
+				result[key] = value.options;
+			} else if (value instanceof z.ZodLiteral) {
+				result[key] = [value.value];
+			} else if (value instanceof z.ZodNull) {
+				result[key] = [null];
+			} else if (value instanceof z.ZodString) {
+				result[key] = [''];
+			} else if (value instanceof z.ZodArray) {
+				result[key] = [];
+			}
+		}
+	}
+
+	return result;
+}
+
 type ShortTradeSchemaType = z.infer<typeof shortTradeDiscriminatedUnion>;
 
 type ShortTradeFields<T extends ShortTradeEnum> = keyof ShortTradeSchemaType["data"];
+
+//export function getAllowableValuesForShortTrade<T extends ShortTradeEnum>(
+//	shortTrade: T
+//): Record<string, string[]> {
+//	const unionMember = shortTradeDiscriminatedUnion.options.find(
+//		option => option.shape.shortTrade.value === shortTrade
+//	);
+//
+//	if (!unionMember) {
+//		throw new Error(`Invalid short trade: ${shortTrade}`);
+//	}
+//
+//	const dataSchema = unionMember.shape.data;
+//	const result: Record<string, string[] | null> = {};
+//
+//	if (dataSchema instanceof z.ZodObject) {
+//		for (const [key, value] of Object.entries(dataSchema.shape)) {
+//			if (value instanceof z.ZodEnum) {
+//				result[key] = value.options;
+//			} else if (value instanceof z.ZodLiteral) {
+//				result[key] = [value.value];
+//			} else if (value instanceof z.ZodNull) {
+//				result[key] = null;
+//			} else if (value instanceof z.ZodString) {
+//				result[key] = [''];
+//			} else if (value instanceof z.ZodArray) {
+//				result[key] = [];
+//			}
+//		}
+//	}
+//
+//	return result;
+//}
 
 export function getOptionsForShortTrade<T extends ShortTradeEnum>(
 	shortTrade: T,
@@ -83,7 +154,7 @@ export function getOptionsForShortTrade<T extends ShortTradeEnum>(
 
 	return [];
 }
+
 export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>
 
-export const estimateTypes: EstimateOptionReformatted[] = [{ "shortTrade": "bathroom", "type": null, actionDescription: "which of these best describes your needs?", "estimateAction": ["enclosure", "updates", "conversion", "remodel", "walk-in"] }, { "shortTrade": "roofing", shortTradeNoun: "roof", actionDescription: "do you need to replace or repair an existing roof?", "type": ["asphalt", "tile", "flat", "metal", "wood"], "estimateAction": ["replace", "repair"] }, { "shortTrade": "siding", actionDescription: "service needed", "type": ["brickface", "metal", "stucco", "vinyl", "wood"], "estimateAction": ["replace", "repair"] }, { "shortTrade": "windows", actionDescription: "Do you want to replace or repair existing windows?", "type": ["10", "3-5", "6-9"], "estimateAction": ["replace", "repair"] }] as const
 
