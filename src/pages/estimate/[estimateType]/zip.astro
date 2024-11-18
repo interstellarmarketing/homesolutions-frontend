@@ -53,7 +53,7 @@ if (Astro.request.method === "POST") {
 			zipCode,
 			state: uspsData?.defaultState,
 			city: uspsData?.defaultCity,
-			estimateType,
+			estimateShortTrade: estimateType,
 		});
 		return Astro.redirect(`/estimate/${estimateType}/action`);
 	}

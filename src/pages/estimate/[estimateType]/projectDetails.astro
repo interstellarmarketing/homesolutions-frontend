@@ -5,9 +5,12 @@ import { estimateStore } from "@stores/estimateProgress";
 import { actions } from "astro:actions";
 import {
 	shortTradeEnum,
-	getOptionsForShortTrade,
+	tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
-import { activeEstimateTypeStore } from "@stores/activeEstimateType";
+import {
+	activeEstimateTypeStore,
+	computedEstimateOptions,
+} from "@stores/activeEstimateType";
 
 let { estimateType } = Astro.params;
 
@@ -21,32 +24,39 @@ estimateType = parseEstimateType.data;
 
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
+const activeEstimateOptions = computedEstimateOptions.get();
 
-const projectDetails = getOptionsForShortTrade(parseEstimateType.data, "type");
+if (!activeEstimateOptions) {
+	return Astro.redirect("/");
+}
+console.log({ existingStore, activeEstimateType, activeEstimateOptions });
 
-if (!projectDetails?.length) {
+console.log({ activeEstimateOptions });
+if (activeEstimateOptions.data.type?.includes(null)) {
 	return Astro.redirect(`/estimate/${estimateType}/address`);
 }
 
-console.log({ projectDetails });
+const tradeOptions = tradeOptionDescriptions.find(
+	(x) => x.shortTrade === activeEstimateType,
+);
 
-//if (Astro.request.method === "POST") {
-//	const formData = await Astro.request.formData();
-//
-//	const actionParser = z.string();
-//
-//	const actionParsed = actionParser.safeParse(formData.get("action"));
-//
-//	if (actionParsed?.success) {
-//		estimateAction = actionParsed?.data;
-//
-//		estimateStore.set({
-//			...existingStore,
-//			estimateAction,
-//		});
-//		return Astro.redirect(`/estimate/${estimateType}/address`);
-//	}
-//}
+if (Astro.request.method === "POST") {
+	const formData = await Astro.request.formData();
+
+	const actionParser = z.string();
+
+	const actionParsed = actionParser.safeParse(formData.get("action"));
+
+	if (actionParsed?.success) {
+		//estimateAction = actionParsed?.data;
+
+		estimateStore.set({
+			...existingStore,
+			estimateType: actionParsed?.data,
+		});
+		return Astro.redirect(`/estimate/${estimateType}/address`);
+	}
+}
 ---
 
 <Layout title={estimateType}>
@@ -54,7 +64,7 @@ console.log({ projectDetails });
 		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
 	>
 		<h2 class="text-xl font-black">
-			{activeEstimateType?.data?.actionDescription}
+			{tradeOptions?.typeDescription}
 		</h2>
 		<form
 			class="flex flex-col items-center text-center gap-4 my-4"
@@ -62,29 +72,31 @@ console.log({ projectDetails });
 		>
 			<div class="grid grid-cols-2 gap-4 p-8">
 				{
-					projectDetails?.map((actionOption) => {
-						return (
-							<label class="inline-flex items-center">
-								<input
-									type="radio"
-									name="action"
-									checked={
-										existingStore.estimateAction ===
-										actionOption
-									}
-									value={
-										actionOption
-									}
-									class="hidden peer"
-								/>
-								<span class="px-4 py-2 w-full rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
-									{
-										actionOption
-									}
-								</span>
-							</label>
-						);
-					})
+					activeEstimateOptions.data.type?.map(
+						(actionOption) => {
+							return (
+								<label class="inline-flex items-center">
+									<input
+										type="radio"
+										name="action"
+										checked={
+											existingStore.estimateAction ===
+											actionOption
+										}
+										value={
+											actionOption
+										}
+										class="hidden peer"
+									/>
+									<span class="px-4 py-2 w-full rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
+										{
+											actionOption
+										}
+									</span>
+								</label>
+							);
+						},
+					)
 				}
 			</div>
 			<div class="flex gap-4 items-center">

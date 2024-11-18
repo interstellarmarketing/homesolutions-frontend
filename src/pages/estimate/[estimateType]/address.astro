@@ -23,7 +23,26 @@ let { streetAddress, isHomeowner } = existingStore;
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
 
-	return Astro.redirect(`/estimate/${estimateType}/finalize`);
+	const streetAddressParser = z.string().min(3);
+
+	const streetAddressInput = streetAddressParser.safeParse(
+		formData.get("streetAddressInput"),
+	);
+	console.log(JSON.stringify(streetAddressInput));
+	const isHomeownerInput = formData.get("isHomeownerInput");
+
+	isHomeowner = z.coerce.boolean().parse(isHomeownerInput);
+
+	if (streetAddressInput.success) {
+		streetAddress = streetAddressInput.data;
+		estimateStore.set({
+			...existingStore,
+			isHomeowner,
+			streetAddress,
+		});
+
+		return Astro.redirect(`/estimate/${estimateType}/finalize`);
+	}
 }
 ---
 
@@ -89,8 +108,7 @@ if (Astro.request.method === "POST") {
 		"addressSubmitButton",
 	) as HTMLButtonElement | null;
 
-	const targetParser = z.string().length(5);
-	const targetParserAsNumber = z.coerce.number();
+	const targetParser = z.string().min(5);
 
 	if (streetAddressInput && addressSubmitButton) {
 		streetAddressInput.addEventListener("input", (event) => {
@@ -101,20 +119,11 @@ if (Astro.request.method === "POST") {
 			console.log(targetParse);
 
 			if (targetParse.success) {
-				const targetParseAsNumber =
-					targetParserAsNumber.safeParse(
-						targetParse.data,
-					);
-
-				if (targetParseAsNumber.success) {
-					zipSubmitButton.removeAttribute(
-						"disabled",
-					);
-				}
+				addressSubmitButton.removeAttribute("disabled");
 			} else {
-				zipSubmitButton.hasAttribute("disabled")
+				addressSubmitButton.hasAttribute("disabled")
 					? null
-					: zipSubmitButton.setAttribute(
+					: addressSubmitButton.setAttribute(
 							"disabled",
 							"",
 						);

@@ -1,7 +1,7 @@
 ---
 import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
-import { estimateStore } from "@stores/estimateProgress";
+import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import { actions } from "astro:actions";
 
 const { estimateType } = Astro.params;
@@ -19,6 +19,30 @@ let { phone, email } = existingStore;
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
+	const phoneEmailParser = estimateParser.pick({
+		phone: true,
+		email: true,
+	});
+
+	const phone = formData.get("phoneInput");
+	const email = formData.get("emailInput");
+
+	const test = phoneEmailParser.safeParse({ phone, email });
+
+	if (test.success) {
+		estimateStore.set({
+			...existingStore,
+			...test.data,
+		});
+
+		const finalizedStore = estimateStore.get();
+		console.log({ finalizedStore });
+		const parseFinalizedStore =
+			estimateParser.safeParse(finalizedStore);
+		console.log(JSON.stringify(parseFinalizedStore));
+	} else {
+		console.log(JSON.stringify(test));
+	}
 }
 ---
 
@@ -68,15 +92,16 @@ if (Astro.request.method === "POST") {
 				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
 				placeholder="phone number"
 				id="phoneInput"
-				pattern="\(\d{3}\)\s\d{3}-\d{4}"
 				name="phoneInput"
 				value={phone ?? ""}
 				inputmode="tel"
+				pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+				title="Phone number format: (XXX) XXX-XXXX"
 			/>
 
 			<button
 				type="submit"
-				id="zipSubmitButton"
+				id="finalizeSubmitButton"
 				class="rounded-lg px-6 py-2 border disabled:opacity-20"
 			>
 				next
@@ -88,20 +113,39 @@ if (Astro.request.method === "POST") {
 <script>
 	import { z } from "zod";
 
-	const zipEl = document.getElementById(
-		"zipInput",
+	const emailInputEl = document.getElementById(
+		"emailInput",
 	) as HTMLInputElement | null;
 
-	const zipSubmitButton = document.getElementById(
-		"zipSubmitButton",
+	const phoneInputEl = document.getElementById(
+		"phoneInput",
+	) as HTMLInputElement | null;
+
+	const finalizeSubmitButton = document.getElementById(
+		"finalizeSubmitButton",
 	) as HTMLButtonElement | null;
 	const targetParser = z.string().length(5);
 	const targetParserAsNumber = z.coerce.number();
 
-	if (zipEl && zipSubmitButton) {
-		console.log(zipEl.value);
+	function formatPhoneNumber(value: string): string {
+		const phoneNumber = value.replace(/\D/g, "");
+		const phoneNumberLength = phoneNumber.length;
 
-		zipEl.addEventListener("input", (event) => {
+		if (phoneNumberLength < 4) return phoneNumber;
+		if (phoneNumberLength < 7) {
+			return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+		}
+		return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+	}
+
+	if (emailInputEl && phoneInputEl && finalizeSubmitButton) {
+		phoneInputEl.addEventListener("input", (e: Event) => {
+			const input = e.target as HTMLInputElement;
+			const formattedNumber = formatPhoneNumber(input.value);
+			input.value = formattedNumber;
+		});
+
+		emailInputEl.addEventListener("input", (event) => {
 			const target = event.target as HTMLInputElement;
 			const targetParse = targetParser.safeParse(
 				target.value,
