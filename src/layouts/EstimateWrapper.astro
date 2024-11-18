@@ -2,13 +2,7 @@
 import { estimateStore } from "@stores/estimateProgress";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import Layout from "./Layout.astro";
-import { z } from "zod";
-import { actions } from "astro:actions";
-import {
-	shortTradeEnum,
-	getAllowableValuesForShortTrade,
-} from "@assets/info/estimateOptions";
-import { shortTradeDiscriminatedUnion } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
 
 interface Props {
 	title: string;
@@ -38,22 +32,6 @@ if (estimateType !== activeEstimate.estimateType) {
 
 if (parseEstimateType.data !== activeEstimateType) {
 	activeEstimateTypeStore.set(parseEstimateType.data);
-	//const testa = getAllowableValuesForShortTrade(parseEstimateType.data);
-	//console.log({ testa });
-	//const testa = shortTradeDiscriminatedUnion.options[0].shape;
-	//const fff = getAllowableValuesForShortTrade(parseEstimateType.data);
-	//console.log({ testa });
-	//console.log({ fff });
-	//const { data: getEstimateType, error } = await Astro.callAction(
-	//	actions.estimateOptions.estimateOptionsReformatted,
-	//	{ shortTrade: estimateType },
-	//);
-	//
-	//if (error) {
-	//	throw new Error("failed to fetch details of estimateType");
-	//} else {
-	//	activeEstimateTypeStore.set(getEstimateType);
-	//}
 }
 ---
 
