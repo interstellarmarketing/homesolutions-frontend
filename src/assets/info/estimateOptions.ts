@@ -5,25 +5,20 @@ export const shortTradesConst = ['bathroom', 'roofing', 'siding', 'windows'] as 
 export const shortTradeEnum = z.enum(shortTradesConst);
 export type ShortTradeEnum = z.infer<typeof shortTradeEnum>
 
-export const estimateOptionReformatted = z.object({
-	//shortTrade: shortTradeEnum,
-	//shortTradeNoun: z.string().optional(),
-	//actionDescription: z.string(),
+export const estimateOption = z.object({
 	estimateAction: z.enum(["replace", "repair"]),
 	type: z.string().array().nullable(),
 });
 
-export type EstimateOptionReformatted = z.infer<typeof estimateOptionReformatted>
+export type EstimateOption = z.infer<typeof estimateOption>
 
-export const estimateOptionExtended = estimateOptionReformatted.extend({
-	shortTradeNoun: z.string().optional(),
-	actionDescription: z.string(),
-})
 
-function extendEstimateOptionSchema<T extends { [K in keyof EstimateOptionReformatted]?: z.ZodType<any, any, any> }>(
+// INFO: utility for typesafe overwriting of existings fields
+// as well as arbitrary new fields
+function extendEstimateOptionSchema<T extends { [K in keyof EstimateOption]?: z.ZodType<any, any, any> }>(
 	extension: T
 ) {
-	return estimateOptionReformatted.extend(extension);
+	return estimateOption.extend(extension);
 }
 
 
@@ -40,7 +35,6 @@ export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
 	z.object({
 		shortTrade: z.literal<ShortTradeEnum>("roofing"),
 		data: extendEstimateOptionSchema({
-			shortTradeNoun: z.literal("roof"),
 			type: z.enum(["asphalt", "tile", "flat", "metal", "wood"]),
 		}),
 	}),
@@ -58,103 +52,82 @@ export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
 	}),
 ]);
 
-export function getAllowableValuesForShortTrade<T extends ShortTradeEnum>(
-	shortTrade: T
-): Record<string, any[]> {
-	const unionMember = shortTradeDiscriminatedUnion.options.find(
-		option => option.shape.shortTrade.value === shortTrade
-	);
-
-	if (!unionMember) {
-		throw new Error(`Invalid short trade: ${shortTrade}`);
-	}
-
-	const result: Record<string, any[]> = {};
-	const dataSchema = unionMember.shape.data;
-
-	if (dataSchema instanceof z.ZodObject) {
-		for (const [key, value] of Object.entries(dataSchema.shape)) {
-			if (value instanceof z.ZodEnum) {
-				result[key] = value.options;
-			} else if (value instanceof z.ZodLiteral) {
-				result[key] = [value.value];
-			} else if (value instanceof z.ZodNull) {
-				result[key] = [null];
-			} else if (value instanceof z.ZodString) {
-				result[key] = [''];
-			} else if (value instanceof z.ZodArray) {
-				result[key] = [];
-			}
-		}
-	}
-
-	return result;
-}
+export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>
 
 type ShortTradeSchemaType = z.infer<typeof shortTradeDiscriminatedUnion>;
 
 type ShortTradeFields<T extends ShortTradeEnum> = keyof ShortTradeSchemaType["data"];
 
-//export function getAllowableValuesForShortTrade<T extends ShortTradeEnum>(
-//	shortTrade: T
-//): Record<string, string[]> {
-//	const unionMember = shortTradeDiscriminatedUnion.options.find(
-//		option => option.shape.shortTrade.value === shortTrade
-//	);
-//
-//	if (!unionMember) {
-//		throw new Error(`Invalid short trade: ${shortTrade}`);
-//	}
-//
-//	const dataSchema = unionMember.shape.data;
-//	const result: Record<string, string[] | null> = {};
-//
-//	if (dataSchema instanceof z.ZodObject) {
-//		for (const [key, value] of Object.entries(dataSchema.shape)) {
-//			if (value instanceof z.ZodEnum) {
-//				result[key] = value.options;
-//			} else if (value instanceof z.ZodLiteral) {
-//				result[key] = [value.value];
-//			} else if (value instanceof z.ZodNull) {
-//				result[key] = null;
-//			} else if (value instanceof z.ZodString) {
-//				result[key] = [''];
-//			} else if (value instanceof z.ZodArray) {
-//				result[key] = [];
-//			}
-//		}
-//	}
-//
-//	return result;
-//}
+type ShortTradeDataMap = {
+	[K in ShortTradeEnum]: {
+		[P in keyof z.infer<typeof shortTradeDiscriminatedUnion>['data']]:
+		P extends 'estimateAction' | 'type'
+		? z.infer<typeof shortTradeDiscriminatedUnion>['data'][P][]
+		: z.infer<typeof shortTradeDiscriminatedUnion>['data'][P];
+	};
+};
 
-export function getOptionsForShortTrade<T extends ShortTradeEnum>(
-	shortTrade: T,
-	field: ShortTradeFields<T>
-): string[] {
-	const unionMember = shortTradeDiscriminatedUnion.options.find(
-		option => option.shape.shortTrade.value === shortTrade
-	);
-
-	if (!unionMember) {
-		throw new Error(`Invalid short trade: ${shortTrade}`);
-	}
-
-	const dataSchema = unionMember.shape.data;
-
-	if (dataSchema instanceof z.ZodObject) {
-		const targetField = dataSchema.shape[field];
-
-		if (targetField instanceof z.ZodEnum) {
-			return targetField.options;
-		} else if (targetField instanceof z.ZodLiteral) {
-			return [targetField.value];
-		}
-	}
-
-	return [];
+function createShortTradeObject<K extends ShortTradeEnum>(
+	shortTrade: K,
+	data: ShortTradeDataMap[K]
+): { shortTrade: K; data: ShortTradeDataMap[K] } {
+	return { shortTrade, data };
 }
 
-export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>
+export function parseShortTradeObject<K extends ShortTradeEnum>(
+	obj: { shortTrade: K; data: ShortTradeDataMap[K] }
+): ShortTradeDiscriminatedUnion {
+	return shortTradeDiscriminatedUnion.parse(obj);
+}
+
+export const shortTradeObjects = [
+	createShortTradeObject("bathroom", {
+		estimateAction: ["enclosure", "updates", "conversion", "remodel", "walk-in"],
+		type: [null],
+	}),
+	createShortTradeObject("roofing", {
+		estimateAction: ["replace", "repair"],
+		type: ["asphalt", "tile", "flat", "metal", "wood"],
+	}),
+	createShortTradeObject("siding", {
+		estimateAction: ["replace", "repair"],
+		type: ["brickface", "metal", "stucco", "vinyl", "wood"],
+	}),
+	createShortTradeObject("windows", {
+		estimateAction: ["replace", "repair"],
+		type: ["10+", "3-5", "6-9"],
+	}),
+];
+
+const tradeOptionDescriptionsParser = z.object({
+	shortTrade: shortTradeEnum,
+	actionDescription: z.string().optional(),
+	typeDescription: z.string().optional(),
+	shortTradeNoun: z.string().optional()
+})
+
+export type TradeOptionDescriptions = z.infer<typeof tradeOptionDescriptionsParser>
+
+export const tradeOptionDescriptions: TradeOptionDescriptions[] = [{
+	shortTrade: "roofing",
+	actionDescription: "Do you need to replace or repair an existing roof?",
+	typeDescription: "What type of roof are you looking for?",
+	shortTradeNoun: "roof"
+}, {
+	shortTrade: "bathroom",
+	actionDescription: "Which of these best describe your needs?",
+	typeDescription: "",
+	shortTradeNoun: ""
+}, {
+	shortTrade: "windows",
+	actionDescription: "roofing",
+	typeDescription: "How many windows do you need replaced?",
+	shortTradeNoun: ""
+}, {
+	shortTrade: "siding",
+	actionDescription: "Service Needed",
+	typeDescription: "Project Details",
+	shortTradeNoun: ""
+}]
 
 
