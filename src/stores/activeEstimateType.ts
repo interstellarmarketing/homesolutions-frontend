@@ -1,4 +1,4 @@
-import { shortTradeDiscriminatedUnion, shortTradeEnum, type EstimateOptionReformatted, type ShortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeDiscriminatedUnion, shortTradeEnum, shortTradeObjects, type EstimateOptionReformatted, type ShortTradeEnum } from "@assets/info/estimateOptions";
 import { atom, computed } from "nanostores";
 import { z } from "zod"
 
@@ -8,4 +8,4 @@ type ShortTradeStore = z.infer<typeof shortTradeStore>
 
 export const activeEstimateTypeStore = atom<ShortTradeStore>()
 
-export const computedEstimateOptions = computed()
+export const computedEstimateOptions = computed(activeEstimateTypeStore, shortTradeStore => shortTradeObjects.find(x => x.shortTrade === shortTradeStore))

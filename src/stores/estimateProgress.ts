@@ -1,6 +1,7 @@
 import { atom } from "nanostores";
 import { z } from "zod"
 
+
 export const estimateParser = z.object({
 	streetAddress: z.string().min(5),
 	city: z.string().min(2),
@@ -9,15 +10,16 @@ export const estimateParser = z.object({
 	firstName: z.string().min(2),
 	lastName: z.string().min(2),
 	email: z.string().email(),
-	phone: z.number(),
+	phone: z.string().regex(/^(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/),
 	isHomeowner: z.boolean(),
-	estimateType: z.string(),
-	estimateAction: z.string()
+	estimateShortTrade: z.string(),
+	estimateAction: z.string(),
+	estimateType: z.string()
 })
 
-export const estimateParserLoose = estimateParser.partial()
-
 export type EstimateStoreType = z.infer<typeof estimateParser>
+
+export const estimateParserLoose = estimateParser.partial()
 
 export type EstimateStoreTypeLoose = z.infer<typeof estimateParserLoose>
 
