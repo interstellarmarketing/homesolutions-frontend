@@ -1,8 +1,6 @@
 ---
-import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
-import { estimateStore } from "@stores/estimateProgress";
-import { actions } from "astro:actions";
+import { estimateParser, estimateStore } from "@stores/estimateProgress";
 
 const { estimateType } = Astro.params;
 
@@ -19,6 +17,26 @@ let { firstName, lastName } = existingStore;
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
+	const firstName = formData.get("firstNameInput");
+	const lastName = formData.get("lastNameInput");
+
+	const contactParser = estimateParser.pick({
+		firstName: true,
+		lastName: true,
+	});
+
+	const contactParsed = contactParser.safeParse({
+		firstName,
+		lastName,
+	});
+
+	if (contactParsed.success) {
+		estimateStore.set({
+			...existingStore,
+			...contactParsed.data,
+		});
+		return Astro.redirect(`/estimate/${estimateType}/address`);
+	}
 }
 ---
 
@@ -38,7 +56,7 @@ if (Astro.request.method === "POST") {
 				placeholder="first name"
 				id="firstNameInput"
 				name="firstNameInput"
-				value={firstName.length ? firstName : null}
+				value={firstName?.length ? firstName : null}
 				minlength="2"
 			/>
 			<input
@@ -48,12 +66,9 @@ if (Astro.request.method === "POST") {
 				placeholder="last name"
 				id="lastNameInput"
 				name="lastNameInput"
-				value={lastName.length ? lastName : null}
+				value={lastName?.length ? lastName : null}
 				minlength="2"
 			/>
-			<p class="p-8 text-red-500">
-				your matches are almost ready!
-			</p>
 			<button
 				type="submit"
 				id="zipSubmitButton"
@@ -70,18 +85,17 @@ if (Astro.request.method === "POST") {
 	import { z } from "zod";
 
 	const firstNameEl = document.getElementById(
-		"zipInput",
+		"firstNameInput",
 	) as HTMLInputElement | null;
 
 	const lastNameEl = document.getElementById(
-		"zipInput",
+		"lastNameInput",
 	) as HTMLInputElement | null;
 
 	const zipSubmitButton = document.getElementById(
 		"zipSubmitButton",
 	) as HTMLButtonElement | null;
-	const targetParser = z.string().length(5);
-	const targetParserAsNumber = z.coerce.number();
+	const targetParser = z.string().min(3);
 
 	if (firstNameEl && lastNameEl && zipSubmitButton) {
 		lastNameEl.addEventListener("input", (event) => {
@@ -92,16 +106,7 @@ if (Astro.request.method === "POST") {
 			console.log(targetParse);
 
 			if (targetParse.success) {
-				const targetParseAsNumber =
-					targetParserAsNumber.safeParse(
-						targetParse.data,
-					);
-
-				if (targetParseAsNumber.success) {
-					zipSubmitButton.removeAttribute(
-						"disabled",
-					);
-				}
+				zipSubmitButton.removeAttribute("disabled");
 			} else {
 				zipSubmitButton.hasAttribute("disabled")
 					? null

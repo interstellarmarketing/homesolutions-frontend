@@ -21,6 +21,8 @@ const activeEstimateType = activeEstimateTypeStore.get();
 
 const cfInfo = Astro.locals.runtime.cf;
 
+console.log({ cfInfo });
+
 const cfColoPostalCode = z.string().safeParse(cfInfo?.postalCode);
 
 // init using either prev stashed result or cfColo zip

@@ -3,6 +3,7 @@ import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import { actions } from "astro:actions";
+import { storeSuccessResult } from "src/utils/kv/storedResults";
 
 const { estimateType } = Astro.params;
 
@@ -39,6 +40,14 @@ if (Astro.request.method === "POST") {
 		console.log({ finalizedStore });
 		const parseFinalizedStore =
 			estimateParser.safeParse(finalizedStore);
+
+		if (parseFinalizedStore.success) {
+			const tryStash = await storeSuccessResult(
+				Astro,
+				parseFinalizedStore.data,
+			);
+		}
+
 		console.log(JSON.stringify(parseFinalizedStore));
 	} else {
 		console.log(JSON.stringify(test));
