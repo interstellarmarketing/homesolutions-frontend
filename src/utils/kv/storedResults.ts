@@ -9,7 +9,7 @@ const storePrefixConstructor = (nanoId: string) => {
 	return `estimate:${nanoId}`
 }
 
-const resultIdParser = z.object({
+export const resultIdParser = z.object({
 	resultId: z.string()
 })
 
@@ -28,12 +28,32 @@ export const storeSuccessResult = async (context: AstroGlobal | APIContext | Act
 	}
 };
 
+export const listSuccessResults = async (context: AstroGlobal | APIContext | ActionAPIContext) => {
+	const kvBinding = context.locals.runtime.env.contracting_estimates
+
+	const getResult = await kvBinding.list({ prefix: "estimate:" })
+
+	const parsedListResults = getResult.keys.map(result => {
+		const parsedResult = estimateParser.safeParse(result?.metadata)
+		if (parsedResult.success) {
+			return parsedResult.data
+		} else {
+			return false
+		}
+	})
+	return parsedListResults.filter(x => !!x)
+};
+
 export const getSuccessResult = async (context: AstroGlobal | APIContext | ActionAPIContext, resultId: string) => {
 	const kvBinding = context.locals.runtime.env.contracting_estimates
 
-	const getResult = await kvBinding.getWithMetadata(resultId)
+	const getResult = await kvBinding.getWithMetadata(storePrefixConstructor(resultId))
+
+	console.log(JSON.stringify(getResult))
 
 	const parsedResult = estimateParser.safeParse(getResult.metadata)
+
+	console.log(JSON.stringify(parsedResult))
 
 	if (parsedResult.success) {
 		return parsedResult.data
