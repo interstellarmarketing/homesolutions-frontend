@@ -2,6 +2,7 @@
 import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
+import { resultIdStore } from "@stores/stashedResultId";
 import { actions } from "astro:actions";
 import { storeSuccessResult } from "src/utils/kv/storedResults";
 
@@ -42,10 +43,13 @@ if (Astro.request.method === "POST") {
 			estimateParser.safeParse(finalizedStore);
 
 		if (parseFinalizedStore.success) {
-			const tryStash = await storeSuccessResult(
+			const { resultId } = await storeSuccessResult(
 				Astro,
 				parseFinalizedStore.data,
 			);
+			resultIdStore.set({ ...resultId });
+
+			return Astro.redirect("/success");
 		}
 
 		console.log(JSON.stringify(parseFinalizedStore));

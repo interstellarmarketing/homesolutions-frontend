@@ -33,7 +33,7 @@ console.log({ existingStore, activeEstimateType, activeEstimateOptions });
 
 console.log({ activeEstimateOptions });
 if (activeEstimateOptions.data.type?.includes(null)) {
-	return Astro.redirect(`/estimate/${estimateType}/address`);
+	return Astro.redirect(`/estimate/${estimateType}/contact`);
 }
 
 const tradeOptions = tradeOptionDescriptions.find(
