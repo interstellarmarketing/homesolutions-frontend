@@ -1,4 +1,4 @@
-import { shortTradeDiscriminatedUnion, shortTradeEnum, shortTradeObjects, type EstimateOptionReformatted, type ShortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum, shortTradeObjects } from "@assets/info/estimateOptions";
 import { atom, computed } from "nanostores";
 import { z } from "zod"
 
