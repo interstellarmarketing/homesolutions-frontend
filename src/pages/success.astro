@@ -1,3 +1,20 @@
 ---
+import Layout from "@layouts/Layout.astro";
+import { resultIdStore } from "@stores/stashedResultId";
+import { getSuccessResult } from "@utils/kv/storedResults";
 
+const { resultId } = resultIdStore.get();
+
+if (!resultId) {
+	return Astro.redirect("/");
+}
+
+const getStashedResult = await getSuccessResult(Astro, resultId);
 ---
+
+<Layout>
+	<div>
+		{resultId}
+		{JSON.stringify(getStashedResult)}
+	</div>
+</Layout>

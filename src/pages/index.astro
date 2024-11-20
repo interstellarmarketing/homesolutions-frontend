@@ -2,11 +2,7 @@
 export const prerender = true;
 
 import Layout from "@layouts/Layout.astro";
-import DummmyJson from "@assets/info/dummyOptions.json";
-import {
-	getOptionsForShortTrade,
-	shortTradesConst,
-} from "@assets/info/estimateOptions";
+import { shortTradesConst } from "@assets/info/estimateOptions";
 ---
 
 <Layout title="Welcome to Astro.">
@@ -30,8 +26,6 @@ import {
 				))
 			}
 		</div>
-		<div>
-			{JSON.stringify(DummmyJson)}
-		</div>
+		<a href="/results"> see results </a>
 	</div>
 </Layout>
