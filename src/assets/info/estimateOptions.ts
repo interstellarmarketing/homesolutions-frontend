@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const shortTradesConst = ['bathroom', 'roofing', 'siding', 'windows'] as const;
+export const shortTradesConst = ["bathroom", "roofing", "siding", "windows"] as const;
 
 export const shortTradeEnum = z.enum(shortTradesConst);
 export type ShortTradeEnum = z.infer<typeof shortTradeEnum>
@@ -120,7 +120,7 @@ export const tradeOptionDescriptions: TradeOptionDescriptions[] = [{
 	shortTradeNoun: ""
 }, {
 	shortTrade: "windows",
-	actionDescription: "roofing",
+	actionDescription: "Do you need to replace or repair existing windows?",
 	typeDescription: "How many windows do you need replaced?",
 	shortTradeNoun: ""
 }, {
