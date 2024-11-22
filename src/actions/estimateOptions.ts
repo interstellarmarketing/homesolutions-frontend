@@ -1,12 +1,12 @@
 import { ActionError, defineAction } from 'astro:actions';
 import { z } from "zod";
-import { estimateTypes } from '@assets/info/estimateOptions';
+import { shortTradesConst, shortTradeObjects } from '@assets/info/estimateOptions';
 
 export const estimateOptions = {
 	estimateOptionShortSet: defineAction({
 		handler: async (input, context) => {
 
-			return estimateTypes.map(x => x.shortTrade)
+			return shortTradesConst
 		},
 	}),
 	estimateOptionsReformatted: defineAction({
@@ -16,7 +16,7 @@ export const estimateOptions = {
 		handler: async (input, context) => {
 			const { shortTrade } = input
 
-			const findViaShortTrade = estimateTypes.find(x => x.shortTrade === shortTrade)
+			const findViaShortTrade = shortTradeObjects.find(x => x.shortTrade === shortTrade)
 
 			if (findViaShortTrade) {
 				return findViaShortTrade
