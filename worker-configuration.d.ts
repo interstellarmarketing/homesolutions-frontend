@@ -2,4 +2,5 @@
 
 interface Env {
 	contracting_estimates: KVNamespace;
+	BACKEND: Service<import("estimates-backend-rpc/src/index").ZipStore>;
 }

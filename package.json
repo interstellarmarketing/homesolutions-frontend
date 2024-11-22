@@ -14,25 +14,27 @@
   "dependencies": {
     "@astrojs/check": "^0.9.4",
     "@astrojs/cloudflare": "^11.2.0",
-    "@astrojs/react": "^3.6.2",
+    "@astrojs/react": "^3.6.3",
     "@astrojs/tailwind": "^5.1.2",
     "@nanostores/react": "^0.8.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "astro": "^4.16.13",
+    "astro": "^4.16.14",
+    "estimates-backend-rpc": "link:estimates-backend-rpc",
     "nanoid": "^5.0.8",
     "nanostores": "^0.11.3",
+    "posthog-js": "^1.188.0",
     "prettier": "^3.3.3",
     "prettier-plugin-astro": "^0.14.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.15",
-    "typescript": "^5.6.3",
+    "typescript": "^5.7.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241112.0",
     "@tailwindcss/forms": "^0.5.9",
-    "wrangler": "^3.87.0"
+    "wrangler": "^3.90.0"
   }
 }
