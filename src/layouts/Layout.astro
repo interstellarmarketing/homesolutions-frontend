@@ -1,5 +1,6 @@
 ---
 import NavMain from "@components/nav/NavMain.astro";
+import Posthog from "@components/anaytics/Posthog.astro";
 
 interface Props {
 	title?: string;
@@ -23,10 +24,17 @@ const titleFormatted = () => {
 		<meta name="description" content="Astro description" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		{
+			/*
+		toggle posthog
+		TODO: actual control for dev
+		<Posthog />
+		*/
+		}
 		<meta name="generator" content={Astro.generator} />
 		<title>{titleFormatted()}</title>
 	</head>
-	<body class="text-white bg-slate-950 min-h-dvh">
+	<body class="text-white bg-slate-950 min-h-dvh flex flex-col">
 		<NavMain />
 		<main class="flex flex-col grow h-full items-center">
 			<slot />
