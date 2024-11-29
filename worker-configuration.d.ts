@@ -2,5 +2,7 @@
 
 interface Env {
 	contracting_estimates: KVNamespace;
-	BACKEND: Service<import("estimates-backend-rpc/src/index").ZipStore>;
+	BE_TEST: Service<import("be-rpc-estimates/src/index").default>;
+	BE_TEST_112: Service<import("be-rpc-estimates/src/index").Testes>;
+	BE_TEST_ZIP_METHODS: Service<import("be-rpc-estimates/src/index").Zips>;
 }
