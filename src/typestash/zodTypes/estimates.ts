@@ -6,6 +6,5 @@ export const estimateObject = z.object({
 	shortTrade: z.enum(["roof", "windows", "bath", "siding",]).nullable()
 })
 
-const tf = estimateObject.pick({ shortTrade: true }).unwrap()
 
 export type EstimateObject = z.infer<typeof estimateObject>

@@ -9,6 +9,28 @@ const kvZipMetadata = z.object({
 })
 
 export const usps = {
+	listAllZips: defineAction({
+		handler: async (_, context) => {
+
+			const kvStash = context.locals.runtime.env.contracting_estimates
+
+
+			const listAll = await kvStash.list({ prefix: "zip:" })
+
+
+			const parsedMetadata = listAll.keys.map(x => {
+				const parseMeta = uspsZipLookupParser.safeParse(x.metadata)
+				if (parseMeta.success) {
+					return parseMeta.data
+				} else {
+					return false
+				}
+			})
+
+			return parsedMetadata.filter(x => !!x)
+
+		},
+	}),
 	uspsZipCheck: defineAction({
 		input: z.object({
 			zip: z.string()

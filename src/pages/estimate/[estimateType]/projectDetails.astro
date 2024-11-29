@@ -11,6 +11,7 @@ import {
 	activeEstimateTypeStore,
 	computedEstimateOptions,
 } from "@stores/activeEstimateType";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 
 let { estimateType } = Astro.params;
 
@@ -59,7 +60,7 @@ if (Astro.request.method === "POST") {
 }
 ---
 
-<Layout title={estimateType}>
+<EstimateWrapper title={estimateType} estimateType={estimateType}>
 	<div
 		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
 	>
@@ -117,7 +118,7 @@ if (Astro.request.method === "POST") {
 			</div>
 		</form>
 	</div>
-</Layout>
+</EstimateWrapper>
 
 <script>
 	const radioButtons = document.querySelectorAll(

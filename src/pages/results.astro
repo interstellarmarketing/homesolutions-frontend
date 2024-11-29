@@ -1,16 +1,52 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import { listSuccessResults } from "@utils/kv/storedResults";
+import { actions } from "astro:actions";
 
 const getPrevResults = await listSuccessResults(Astro);
+
+const { data: zipData, error } = await Astro.callAction(
+	actions.usps.listAllZips,
+	{},
+);
 ---
 
 <Layout title="Welcome to Astro.">
-	<div class="flex flex-col items-center text-center h-full grow gap-4">
-		<div class="flex flex-col gap-4">
+	<div
+		class="flex flex-col md:flex-row items-center text-center h-full grow gap-8"
+	>
+		{
+			/*
+		// INFO: stashed results
+		*/
+		}
+		<div
+			class="flex flex-col gap-4 border p-4 overflow-scroll rounded-lg"
+		>
 			{
 				getPrevResults.map((result) => (
-					<p>{result.zipCode}</p>
+					<div class="grid grid-cols-5 gap-4 text-start">
+						<p>{result.zipCode}</p>
+						<p>{result.email}</p>
+						<p>
+							{
+								result.estimateShortTrade
+							}
+						</p>
+						<p>{result.estimateType}</p>
+						<p>{result.estimateAction}</p>
+					</div>
+				))
+			}
+		</div>
+		<div class="flex flex-col gap-4 border p-4 rounded-lg">
+			{
+				zipData?.map((result) => (
+					<div class="grid grid-cols-3 gap-4 text-start">
+						<p>{result.zip5}</p>
+						<p>{result.defaultCity}</p>
+						<p>{result.defaultState}</p>
+					</div>
 				))
 			}
 		</div>

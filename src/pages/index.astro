@@ -3,6 +3,7 @@ export const prerender = true;
 
 import Layout from "@layouts/Layout.astro";
 import { shortTradesConst } from "@assets/info/estimateOptions";
+import IndexSvgs from "@components/svgs/IndexSvgs.astro";
 ---
 
 <Layout title="Welcome to Astro.">
@@ -14,18 +15,27 @@ import { shortTradesConst } from "@assets/info/estimateOptions";
 			<br />
 			With Top Local Contractors
 		</h1>
-		<div class="grid grid-cols-4 mx-auto my-auto gap-4">
+		<div
+			class="grid grid-cols-2 md:grid-cols-4 mx-auto my-auto gap-4"
+		>
 			{
 				shortTradesConst.map((option) => (
 					<a
 						href={`/estimate/${option}/zip`}
-						class="px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
+						class="flex  gap-2 px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
 					>
-						{option}
+						<p>{option}</p>
+						<div class="flex ml-auto">
+							<IndexSvgs
+								shortTrade={
+									option
+								}
+							/>
+						</div>
 					</a>
 				))
 			}
 		</div>
-		<a href="/results"> see results </a>
+		<a href="/results" class="mt-auto"> see results </a>
 	</div>
 </Layout>
