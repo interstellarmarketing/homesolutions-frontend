@@ -1,42 +1,36 @@
 ---
 import { z } from "zod";
 import { estimateStore } from "@stores/estimateProgress";
-import { actions } from "astro:actions";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
 
-const zz = Astro.locals.runtime.env.BE_TEST;
-const zy = Astro.locals.runtime.env.BE_TEST_112;
-const zr = Astro.locals.runtime.env.BE_TEST_ZIP_METHODS;
-
-const pl = await zz.parse();
-const ll = await zy.yalla();
-const lk = await zy.listAllZips();
+const zr = Astro.locals.runtime.env.ZIP_METHODS;
 
 const pxs = await zr.newZipMethods();
 
-const ka = await pxs.uspsZipCheck("10583");
 const fx = await pxs.listAllZips();
 
-console.log({ pl, ll, lk, fx, ka });
+console.log({ fx });
 
 let { estimateType } = Astro.params;
 
 const parseEstimateType = shortTradeEnum.safeParse(estimateType);
 
 if (!estimateType || !parseEstimateType.success) {
+	console.log("failed at zip");
 	return Astro.redirect("/");
 }
 
 estimateType = parseEstimateType.data;
 
+ProcessEstimateType(parseEstimateType.data);
+
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
 
 const cfInfo = Astro.locals.runtime.cf;
-
-//console.log({ cfInfo });
 
 const cfColoPostalCode = z.string().safeParse(cfInfo?.postalCode);
 
@@ -56,25 +50,15 @@ if (Astro.request.method === "POST") {
 	if (zipCodeParsed.success) {
 		zipCode = zipCodeParsed.data;
 
-		const rpcZipTest = await f.zipLookup(zipCode);
+		const rpcZipTest = await pxs.uspsZipCheck(zipCode);
 
 		console.log({ rpcZipTest });
 
-		const { data: uspsData, error } = await Astro.callAction(
-			actions.usps.uspsZipCheck,
-			{ zip: zipCode },
-		);
-
-		if (error) {
-			throw new Error(`${JSON.stringify(error)}`);
-		}
-
-		console.log({ uspsZipCheck: uspsData });
 		estimateStore.set({
 			...existingStore,
 			zipCode,
-			state: uspsData?.defaultState,
-			city: uspsData?.defaultCity,
+			state: rpcZipTest?.defaultState,
+			city: rpcZipTest?.defaultCity,
 			estimateShortTrade: estimateType,
 		});
 		return Astro.redirect(`/estimate/${estimateType}/action`);

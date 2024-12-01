@@ -7,42 +7,64 @@ import { actions } from "astro:actions";
 import { storeSuccessResult } from "@utils/kv/storedResults";
 import { resetEstimateFields } from "@utils/stores/resetFields";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import { shortTradeDiscriminatedUnion } from "@assets/info/estimateOptions";
 
 const { estimateType } = Astro.params;
 
 if (!estimateType) {
 	return Astro.redirect("/");
 }
-const existingStore = estimateStore.get();
-
-const cfInfo = Astro.locals.runtime.cf;
-
-//console.log({ cfInfo });
+let existingStore = estimateStore.get();
 
 let { phone, email } = existingStore;
 
+const phoneEmailParser = estimateParser.pick({
+	phone: true,
+	email: true,
+});
+
+const existingPhoneEmailParser = phoneEmailParser.safeParse({
+	phone,
+	email,
+});
+
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
-	const phoneEmailParser = estimateParser.pick({
-		phone: true,
-		email: true,
-	});
 
 	const phone = formData.get("phoneInput");
 	const email = formData.get("emailInput");
 
-	const test = phoneEmailParser.safeParse({ phone, email });
+	const phoneEmailParsed = phoneEmailParser.safeParse({ phone, email });
 
-	if (test.success) {
+	if (phoneEmailParsed.success) {
+		console.log({ preFinalStore: existingStore });
+
+		existingStore = {
+			...existingStore,
+			...phoneEmailParsed.data,
+		};
+
+		console.log({ finalfinalstore: existingStore });
+
 		estimateStore.set({
 			...existingStore,
-			...test.data,
+			...phoneEmailParsed.data,
 		});
 
-		const finalizedStore = estimateStore.get();
-		console.log({ finalizedStore });
 		const parseFinalizedStore =
-			estimateParser.safeParse(finalizedStore);
+			estimateParser.safeParse(existingStore);
+
+		const testDiscriminatorParse =
+			shortTradeDiscriminatedUnion.safeParse({
+				shortTrade: existingStore.estimateShortTrade,
+				data: {
+					type: existingStore.estimateType,
+					estimateAction:
+						existingStore.estimateAction,
+				},
+			});
+
+		console.log({ x: JSON.stringify(testDiscriminatorParse) });
 
 		if (parseFinalizedStore.success) {
 			const { resultId } = await storeSuccessResult(
@@ -51,6 +73,19 @@ if (Astro.request.method === "POST") {
 			);
 			resultIdStore.set({ ...resultId });
 
+			const zDb = Astro.locals.runtime.env.DB;
+
+			const db = await zDb.D1Methods();
+
+			const submitToDb = await db.insertSubmission(
+				{
+					...parseFinalizedStore.data,
+				},
+				"home_improvement",
+			);
+
+			console.log({ submitToDb });
+
 			resetEstimateFields();
 
 			return Astro.redirect("/success");
@@ -58,7 +93,7 @@ if (Astro.request.method === "POST") {
 
 		console.log(JSON.stringify(parseFinalizedStore));
 	} else {
-		console.log(JSON.stringify(test));
+		console.log(JSON.stringify(phoneEmailParsed));
 	}
 }
 ---
@@ -94,16 +129,6 @@ if (Astro.request.method === "POST") {
 			method="post"
 		>
 			<input
-				type="email"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="email"
-				id="emailInput"
-				name="emailInput"
-				value={email?.length ? email : null}
-				inputmode="tel"
-			/>
-			<input
 				type="tel"
 				required
 				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
@@ -115,20 +140,39 @@ if (Astro.request.method === "POST") {
 				pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
 				title="Phone number format: (XXX) XXX-XXXX"
 			/>
+			<input
+				type="email"
+				required
+				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+				placeholder="email"
+				id="emailInput"
+				name="emailInput"
+				value={email?.length ? email : null}
+				inputmode="tel"
+			/>
+			<div class="flex gap-4 items-center">
+				<a
+					href={`/estimate/${estimateType}/address`}
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+				>
+					prev
+				</a>
 
-			<button
-				type="submit"
-				id="finalizeSubmitButton"
-				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-			>
-				next
-			</button>
+				<button
+					type="submit"
+					id="finalizeSubmitButton"
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					disabled={!existingPhoneEmailParser.success}
+				>
+					next
+				</button>
+			</div>
 		</form>
 	</div>
 </EstimateWrapper>
 
 <script>
-	import { z } from "zod";
+	import { estimateParser } from "@stores/estimateProgress";
 
 	const emailInputEl = document.getElementById(
 		"emailInput",
@@ -141,8 +185,6 @@ if (Astro.request.method === "POST") {
 	const finalizeSubmitButton = document.getElementById(
 		"finalizeSubmitButton",
 	) as HTMLButtonElement | null;
-	const targetParser = z.string().length(5);
-	const targetParserAsNumber = z.coerce.number();
 
 	function formatPhoneNumber(value: string): string {
 		const phoneNumber = value.replace(/\D/g, "");
@@ -155,39 +197,53 @@ if (Astro.request.method === "POST") {
 		return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
 	}
 
+	const emailParser = estimateParser.pick({
+		email: true,
+	});
+
+	const phoneParser = estimateParser.pick({
+		phone: true,
+	});
+
 	if (emailInputEl && phoneInputEl && finalizeSubmitButton) {
+		let resultHolder = {
+			phone: false,
+			email: false,
+		};
+
+		const updateButtonState = () => {
+			console.log({ resultHolder });
+			if (resultHolder.phone && resultHolder.email) {
+				finalizeSubmitButton.removeAttribute(
+					"disabled",
+				);
+			} else {
+				finalizeSubmitButton.setAttribute(
+					"disabled",
+					"",
+				);
+			}
+		};
+
 		phoneInputEl.addEventListener("input", (e: Event) => {
 			const input = e.target as HTMLInputElement;
 			const formattedNumber = formatPhoneNumber(input.value);
 			input.value = formattedNumber;
+			const tryParse = phoneParser.safeParse({
+				phone: input.value,
+			});
+
+			resultHolder.phone = tryParse.success;
+			updateButtonState();
 		});
 
 		emailInputEl.addEventListener("input", (event) => {
 			const target = event.target as HTMLInputElement;
-			const targetParse = targetParser.safeParse(
-				target.value,
-			);
-			console.log(targetParse);
-
-			if (targetParse.success) {
-				const targetParseAsNumber =
-					targetParserAsNumber.safeParse(
-						targetParse.data,
-					);
-
-				if (targetParseAsNumber.success) {
-					finalizeSubmitButton.removeAttribute(
-						"disabled",
-					);
-				}
-			} else {
-				finalizeSubmitButton.hasAttribute("disabled")
-					? null
-					: finalizeSubmitButton.setAttribute(
-							"disabled",
-							"",
-						);
-			}
+			const targetParse = emailParser.safeParse({
+				email: target.value,
+			});
+			resultHolder.email = targetParse.success;
+			updateButtonState();
 		});
 	}
 </script>

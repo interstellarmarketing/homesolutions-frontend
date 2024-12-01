@@ -2,7 +2,6 @@
 import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
 import { estimateStore } from "@stores/estimateProgress";
-import { actions } from "astro:actions";
 import {
 	shortTradeEnum,
 	tradeOptionDescriptions,
@@ -33,7 +32,12 @@ if (!activeEstimateOptions) {
 console.log({ existingStore, activeEstimateType, activeEstimateOptions });
 
 console.log({ activeEstimateOptions });
+
 if (activeEstimateOptions.data.type?.includes(null)) {
+	estimateStore.set({
+		...existingStore,
+		estimateType: null,
+	});
 	return Astro.redirect(`/estimate/${estimateType}/contact`);
 }
 
@@ -49,8 +53,6 @@ if (Astro.request.method === "POST") {
 	const actionParsed = actionParser.safeParse(formData.get("action"));
 
 	if (actionParsed?.success) {
-		//estimateAction = actionParsed?.data;
-
 		estimateStore.set({
 			...existingStore,
 			estimateType: actionParsed?.data,

@@ -1,7 +1,7 @@
 ---
 import { z } from "zod";
 import Layout from "@layouts/Layout.astro";
-import { estimateStore } from "@stores/estimateProgress";
+import { estimateParser, estimateStore } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 
 const { estimateType } = Astro.params;
@@ -21,25 +21,35 @@ const cfInfo = Astro.locals.runtime.cf;
 
 let { streetAddress, isHomeowner } = existingStore;
 
+const addressParser = estimateParser.pick({
+	isHomeowner: true,
+	streetAddress: true,
+});
+
+const existingAddressParsed = addressParser.safeParse({
+	streetAddress,
+	isHomeowner,
+});
+
+type AddressParser = z.infer<typeof addressParser>;
+
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
+	const extendedAddressParser = addressParser.extend({
+		isHomeowner: z.coerce.boolean(),
+	});
 
-	const streetAddressParser = z.string().min(3);
+	const addressParsed = extendedAddressParser.safeParse({
+		isHomeowner: formData.get("isHomeownerInput"),
+		streetAddress: formData.get("streetAddressInput"),
+	});
 
-	const streetAddressInput = streetAddressParser.safeParse(
-		formData.get("streetAddressInput"),
-	);
-	console.log(JSON.stringify(streetAddressInput));
-	const isHomeownerInput = formData.get("isHomeownerInput");
+	console.log(JSON.stringify(addressParsed));
 
-	isHomeowner = z.coerce.boolean().parse(isHomeownerInput);
-
-	if (streetAddressInput.success) {
-		streetAddress = streetAddressInput.data;
+	if (addressParsed.success) {
 		estimateStore.set({
 			...existingStore,
-			isHomeowner,
-			streetAddress,
+			...addressParsed.data,
 		});
 
 		return Astro.redirect(`/estimate/${estimateType}/finalize`);
@@ -85,15 +95,23 @@ if (Astro.request.method === "POST") {
 				/>
 				I'm the homeowner
 			</label>
+			<div class="flex gap-4 items-center">
+				<a
+					href={`/estimate/${estimateType}/contact`}
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+				>
+					prev
+				</a>
 
-			<button
-				type="submit"
-				id="addressSubmitButton"
-				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled
-			>
-				next
-			</button>
+				<button
+					type="submit"
+					id="addressSubmitButton"
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					disabled={!existingAddressParsed.success}
+				>
+					next
+				</button>
+			</div>
 		</form>
 	</div>
 </EstimateWrapper>

@@ -1,8 +1,6 @@
 ---
 import { z } from "zod";
-import Layout from "@layouts/Layout.astro";
 import { estimateStore } from "@stores/estimateProgress";
-import { actions } from "astro:actions";
 import {
 	shortTradeEnum,
 	tradeOptionDescriptions,
@@ -28,6 +26,7 @@ const activeEstimateType = activeEstimateTypeStore.get();
 const activeEstimateOptions = computedEstimateOptions.get();
 
 if (!activeEstimateOptions) {
+	console.log("failed @ activeEstimateOptions");
 	return Astro.redirect("/");
 }
 
@@ -43,20 +42,24 @@ const tradeOptions = tradeOptionDescriptions.find(
 	(x) => x.shortTrade === activeEstimateType,
 );
 
+const actionParser = z.string();
+
+const existingActionParsed = actionParser.safeParse(estimateAction);
+
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
 
-	const actionParser = z.string();
-
-	const actionParsed = actionParser.safeParse(formData.get("action"));
+	const getAction = formData.get("action");
+	const actionParsed = actionParser.safeParse(getAction);
 
 	if (actionParsed?.success) {
 		estimateAction = actionParsed?.data;
 
 		estimateStore.set({
 			...existingStore,
-			estimateAction,
+			estimateAction: estimateAction,
 		});
+
 		return Astro.redirect(
 			`/estimate/${estimateType}/projectDetails`,
 		);
@@ -115,7 +118,7 @@ if (Astro.request.method === "POST") {
 					type="submit"
 					id="actionSubmitButton"
 					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled
+					disabled={!existingActionParsed.success}
 				>
 					next
 				</button>

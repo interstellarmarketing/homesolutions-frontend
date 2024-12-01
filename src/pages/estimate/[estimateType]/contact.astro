@@ -16,15 +16,20 @@ const cfInfo = Astro.locals.runtime.cf;
 
 let { firstName, lastName } = existingStore;
 
+const contactParser = estimateParser.pick({
+	firstName: true,
+	lastName: true,
+});
+
+const existingContactParsed = contactParser.safeParse({
+	firstName,
+	lastName,
+});
+
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
 	const firstName = formData.get("firstNameInput");
 	const lastName = formData.get("lastNameInput");
-
-	const contactParser = estimateParser.pick({
-		firstName: true,
-		lastName: true,
-	});
 
 	const contactParsed = contactParser.safeParse({
 		firstName,
@@ -70,14 +75,23 @@ if (Astro.request.method === "POST") {
 				value={lastName?.length ? lastName : null}
 				minlength="2"
 			/>
-			<button
-				type="submit"
-				id="zipSubmitButton"
-				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled
-			>
-				next
-			</button>
+			<div class="flex gap-4 items-center">
+				<a
+					href={`/estimate/${estimateType}/zip`}
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+				>
+					prev
+				</a>
+
+				<button
+					type="submit"
+					id="zipSubmitButton"
+					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					disabled={!existingContactParsed.success}
+				>
+					next
+				</button>
+			</div>
 		</form>
 	</div>
 </EstimateWrapper>
