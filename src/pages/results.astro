@@ -9,6 +9,14 @@ const { data: zipData, error } = await Astro.callAction(
 	actions.usps.listAllZips,
 	{},
 );
+
+const db = Astro.locals.runtime.env.DB;
+
+const newDb = await db.D1Methods();
+
+const fx = await newDb.listAllRecords();
+
+console.log({ fx });
 ---
 
 <Layout title="Welcome to Astro.">
