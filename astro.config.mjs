@@ -22,4 +22,3 @@ export default defineConfig({
   }),
   integrations: [tailwind(), react()],
 });
-

@@ -9,19 +9,14 @@ binding = "contracting_estimates"
 id = "41b4b6e293cc4623b723177d6a7d032b"
 
 [[services]]
-binding = "BE_TEST"
-service = "be-rpc-estimates"
-
-[[services]]
-binding = "BE_TEST_112"
-service = "be-rpc-estimates"
-entrypoint = "Testes"
-
-[[services]]
-binding = "BE_TEST_ZIP_METHODS"
+binding = "ZIP_METHODS"
 service = "be-rpc-estimates"
 entrypoint = "Zips"
 
+[[services]]
+binding = "DB"
+service = "be-rpc-estimates"
+entrypoint = "D1Worker"
 
 # Automatically place your workloads in an optimal location to minimize latency.
 # If you are running back-end logic in a Pages Function, running it closer to your back-end infrastructure

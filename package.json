@@ -23,7 +23,7 @@
     "be-rpc-estimates": "link:be-rpc-estimates",
     "nanoid": "^5.0.9",
     "nanostores": "^0.11.3",
-    "posthog-js": "^1.193.1",
+    "posthog-js": "^1.194.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwindcss": "^3.4.15",
