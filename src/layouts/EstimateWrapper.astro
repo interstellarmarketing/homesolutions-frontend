@@ -1,6 +1,4 @@
 ---
-import { estimateStore } from "@stores/estimateProgress";
-import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import Layout from "./Layout.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 
@@ -8,11 +6,6 @@ interface Props {
 	title: string;
 	estimateType: string;
 }
-
-const activeEstimate = estimateStore.get();
-const activeEstimateType = activeEstimateTypeStore.get();
-
-//console.log({ activeEstimate });
 
 let { title, estimateType } = Astro.props;
 
@@ -22,16 +15,6 @@ if (parseEstimateType.success) {
 	estimateType = parseEstimateType.data;
 } else {
 	return Astro.redirect("/");
-}
-
-// INFO: handle switching routes
-if (estimateType !== activeEstimate.estimateType) {
-	const { estimateAction, ...existingRest } = activeEstimate;
-	estimateStore.set({ ...existingRest, estimateType });
-}
-
-if (parseEstimateType.data !== activeEstimateType) {
-	activeEstimateTypeStore.set(parseEstimateType.data);
 }
 ---
 
