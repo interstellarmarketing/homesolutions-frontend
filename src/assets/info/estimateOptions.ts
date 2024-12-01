@@ -7,7 +7,7 @@ export type ShortTradeEnum = z.infer<typeof shortTradeEnum>
 
 export const estimateOption = z.object({
 	estimateAction: z.enum(["replace", "repair"]),
-	type: z.string().array().nullable(),
+	type: z.string().nullable(),
 });
 
 export type EstimateOption = z.infer<typeof estimateOption>
