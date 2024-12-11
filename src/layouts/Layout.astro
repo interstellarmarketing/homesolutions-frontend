@@ -15,6 +15,8 @@ const titleFormatted = () => {
 
 	return "contracting estimates";
 };
+
+const isLocal = Astro?.url?.host?.startsWith("localhost");
 ---
 
 <!doctype html>
@@ -24,13 +26,7 @@ const titleFormatted = () => {
 		<meta name="description" content="Astro description" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		{
-			/*
-		toggle posthog
-		TODO: actual control for dev
-		<Posthog />
-		*/
-		}
+		{isLocal ? null : <Posthog />}
 		<meta name="generator" content={Astro.generator} />
 		<title>{titleFormatted()}</title>
 	</head>
