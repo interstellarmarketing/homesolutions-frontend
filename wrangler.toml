@@ -6,7 +6,7 @@ pages_build_output_dir = "./dist"
 
 [[kv_namespaces]]
 binding = "contracting_estimates"
-id = "41b4b6e293cc4623b723177d6a7d032b"
+id = "f460e30034dc4dd8b2a9389029785431"
 
 [[services]]
 binding = "ZIP_METHODS"
