@@ -6,6 +6,8 @@ import cloudflare from "@astrojs/cloudflare";
 import tailwind from "@astrojs/tailwind";
 import react from "@astrojs/react";
 
+import icon from "astro-icon";
+
 // https://astro.build/config
 export default defineConfig({
   output: "server",
@@ -17,5 +19,5 @@ export default defineConfig({
       enabled: true,
     },
   }),
-  integrations: [tailwind(), react()],
+  integrations: [tailwind(), react(), icon()],
 });
