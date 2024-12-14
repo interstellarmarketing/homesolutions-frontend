@@ -1,9 +1,6 @@
 ---
-import { z } from "zod";
-import Layout from "@layouts/Layout.astro";
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import { resultIdStore } from "@stores/stashedResultId";
-import { actions } from "astro:actions";
 import { storeSuccessResult } from "@utils/kv/storedResults";
 import { resetEstimateFields } from "@utils/stores/resetFields";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -14,6 +11,7 @@ const { estimateType } = Astro.params;
 if (!estimateType) {
 	return Astro.redirect("/");
 }
+
 let existingStore = estimateStore.get();
 
 let { phone, email } = existingStore;
