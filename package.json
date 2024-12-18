@@ -33,9 +33,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20241011.0",
+    "@iconify-json/mdi": "^1.2.2",
     "@tailwindcss/forms": "^0.5.9",
-    "wrangler": "^3.95.0",
     "prettier": "^3.4.2",
-    "prettier-plugin-astro": "^0.14.1"
+    "prettier-plugin-astro": "^0.14.1",
+    "wrangler": "^3.95.0"
   }
 }
