@@ -5,6 +5,8 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
+// 0_- bun/link import!111
+import { estimateParser } from "be-rpc-estimates/src/zoddles/user/userEstimateType";
 
 const zr = Astro.locals.runtime.env.ZIP_METHODS;
 
@@ -41,14 +43,13 @@ let zipCode: string | undefined =
 
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
-
-	const zipParser = z.string();
+	const zipParser = estimateParser.pick({ zipCode: true });
 
 	const zipCodeParsed = zipParser.safeParse(formData.get("zipInput"));
 
 	console.log({ zipCodeParsed });
 	if (zipCodeParsed.success) {
-		zipCode = zipCodeParsed.data;
+		zipCode = zipCodeParsed.data.zipCode;
 
 		const rpcZipTest = await pxs.uspsZipCheck(zipCode);
 
@@ -63,7 +64,6 @@ if (Astro.request.method === "POST") {
 		});
 		return Astro.redirect(`/estimate/${estimateType}/action`);
 	}
-	console.log({ zipCode });
 }
 
 const formatEstimateTypeNoun = (estimateType: string) => {
