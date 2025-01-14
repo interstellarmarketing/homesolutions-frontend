@@ -41,11 +41,17 @@ const cfColoPostalCode = z.string().safeParse(cfInfo?.postalCode);
 let zipCode: string | undefined =
 	existingStore.zipCode ?? cfColoPostalCode.data;
 
+const zipParser = estimateParser.pick({ zipCode: true });
+type ZipParser = z.infer<typeof zipParser>;
+
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
-	const zipParser = estimateParser.pick({ zipCode: true });
 
-	const zipCodeParsed = zipParser.safeParse(formData.get("zipInput"));
+	const zipInput: ZipParser = {
+		zipCode: formData?.get("zipInput") as string,
+	};
+
+	const zipCodeParsed = zipParser.safeParse(zipInput);
 
 	console.log({ zipCodeParsed });
 	if (zipCodeParsed.success) {
