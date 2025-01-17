@@ -68,61 +68,31 @@ if (Astro.request.method === "POST") {
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<h2 class="text-xl font-black">
-			{tradeOptions?.actionDescription}
-		</h2>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
-			<div class="grid grid-cols-2 gap-4 p-8">
-				{
-					activeEstimateOptions.data.estimateAction.map(
-						(actionOption) => {
-							return (
-								<label class="inline-flex items-center ">
-									<input
-										type="radio"
-										name="action"
-										checked={
-											existingStore.estimateAction ===
-											actionOption
-										}
-										value={
-											actionOption
-										}
-										class="hidden peer"
-									/>
-									<span class="px-4 w-full py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
-										{
-											actionOption
-										}
-									</span>
-								</label>
-							);
-						},
-					)
-				}
+	<div class="flex flex-col gap-4 text-center">
+		<h2 class="text-2xl md:text-3xl font-bold text-gray-800">What would you like to do?</h2>
+		<form class="flex flex-col items-center text-center gap-4 my-4" method="post">
+			<div class="flex flex-col gap-4 w-full max-w-md">
+				{activeEstimateOptions.data.estimateAction.map((action) => (
+					<label class="flex items-center gap-4 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+						<input
+							type="radio"
+							name="action"
+							value={action}
+							checked={existingStore.estimateAction === action}
+							class="form-radio text-orange-300 focus:ring-orange-300"
+						/>
+						<span class="text-gray-700">{action}</span>
+					</label>
+				))}
 			</div>
-			<div class="flex gap-4 items-center">
-				<a
-					href={`/estimate/${estimateType}/zip`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
-				<button
-					type="submit"
-					id="actionSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled={!existingActionParsed.success}
-				>
-					next
-				</button>
-			</div>
+			<button
+				type="submit"
+				id="actionSubmitButton"
+				class="w-full max-w-md bg-orange-300 hover:bg-orange-400 text-gray-900 font-semibold rounded-lg py-3 px-6 transition-colors disabled:opacity-50"
+				disabled={!existingActionParsed.success}
+			>
+				NEXT
+			</button>
 		</form>
 	</div>
 </EstimateWrapper>

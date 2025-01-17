@@ -58,60 +58,42 @@ if (Astro.request.method === "POST") {
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<h2 class="text-xl font-black">What is your street address?</h2>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
+	<div class="flex flex-col gap-4 text-center">
+		<h2 class="text-2xl md:text-3xl font-bold text-gray-800">What is your street address?</h2>
+		<form class="flex flex-col items-center text-center gap-4 my-4" method="post">
 			<input
 				type="text"
 				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+				class="form-input w-full max-w-md text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
 				placeholder="Street Address"
 				id="streetAddressInput"
 				name="streetAddressInput"
-				value={streetAddress?.length
-					? streetAddress
-					: null}
+				value={streetAddress?.length ? streetAddress : null}
 				minlength="2"
 			/>
 
-			<p>
-				{existingStore.city}, {existingStore.state}
-				{existingStore.zipCode}
+			<p class="text-gray-600">
+				{existingStore.city}, {existingStore.state} {existingStore.zipCode}
 			</p>
 
 			<label class="flex gap-4 items-center">
 				<input
 					type="checkbox"
 					checked={isHomeowner ?? true}
-					class="bg-transparent rounded-lg p-3"
-					placeholder="Street Address"
+					class="form-checkbox rounded text-orange-300 focus:ring-orange-300"
 					id="isHomeownerInput"
 					name="isHomeownerInput"
 				/>
-				I'm the homeowner
+				<span class="text-gray-700">I'm the homeowner</span>
 			</label>
-			<div class="flex gap-4 items-center">
-				<a
-					href={`/estimate/${estimateType}/contact`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
-
-				<button
-					type="submit"
-					id="addressSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled={!existingAddressParsed.success}
-				>
-					next
-				</button>
-			</div>
+			<button
+				type="submit"
+				id="addressSubmitButton"
+				class="w-full max-w-md bg-orange-300 hover:bg-orange-400 text-gray-900 font-semibold rounded-lg py-3 px-6 transition-colors disabled:opacity-50"
+				disabled={!existingAddressParsed.success}
+			>
+				NEXT
+			</button>
 		</form>
 	</div>
 </EstimateWrapper>

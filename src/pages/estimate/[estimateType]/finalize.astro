@@ -97,73 +97,59 @@ if (Astro.request.method === "POST") {
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<div
-			class="flex mx-auto items-center justify-center text-green-600"
-		>
-			<svg
-				width="150"
-				height="150"
-				viewBox="0 0 15 15"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
-				><path
-					d="M7.49991 0.877045C3.84222 0.877045 0.877075 3.84219 0.877075 7.49988C0.877075 11.1575 3.84222 14.1227 7.49991 14.1227C11.1576 14.1227 14.1227 11.1575 14.1227 7.49988C14.1227 3.84219 11.1576 0.877045 7.49991 0.877045ZM1.82708 7.49988C1.82708 4.36686 4.36689 1.82704 7.49991 1.82704C10.6329 1.82704 13.1727 4.36686 13.1727 7.49988C13.1727 10.6329 10.6329 13.1727 7.49991 13.1727C4.36689 13.1727 1.82708 10.6329 1.82708 7.49988ZM10.1589 5.53774C10.3178 5.31191 10.2636 5.00001 10.0378 4.84109C9.81194 4.68217 9.50004 4.73642 9.34112 4.96225L6.51977 8.97154L5.35681 7.78706C5.16334 7.59002 4.84677 7.58711 4.64973 7.78058C4.45268 7.97404 4.44978 8.29061 4.64325 8.48765L6.22658 10.1003C6.33054 10.2062 6.47617 10.2604 6.62407 10.2483C6.77197 10.2363 6.90686 10.1591 6.99226 10.0377L10.1589 5.53774Z"
-					fill="currentColor"
-					fill-rule="evenodd"
-					clip-rule="evenodd"></path></svg
-			>
-		</div>
-		<h2 class="text-xl font-black">
-			We have matching pros in {existingStore.city}, {
-				existingStore.state
-			}!
-		</h2>
-		<p>Where should we send your matches?</p>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
-			<input
-				type="tel"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="phone number"
-				id="phoneInput"
-				name="phoneInput"
-				value={phone ?? ""}
-				inputmode="tel"
-				pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
-				title="Phone number format: (XXX) XXX-XXXX"
-			/>
-			<input
-				type="email"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="email"
-				id="emailInput"
-				name="emailInput"
-				value={email?.length ? email : null}
-			/>
-			<div class="flex gap-4 items-center">
-				<a
-					href={`/estimate/${estimateType}/address`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
-
-				<button
-					type="submit"
-					id="finalizeSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled={!existingPhoneEmailParser?.success}
-				>
-					next
-				</button>
+	<div class="flex flex-col gap-4 text-center">
+		<h2 class="text-2xl md:text-3xl font-bold text-gray-800">Almost done! Just a few more details...</h2>
+		<form class="flex flex-col items-center text-center gap-4 my-4" method="post">
+			<div class="flex flex-col gap-4 w-full max-w-md">
+				<input
+					type="text"
+					required
+					class="form-input w-full text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+					placeholder="First Name"
+					id="firstNameInput"
+					name="firstNameInput"
+					value={firstName?.length ? firstName : null}
+					minlength="2"
+				/>
+				<input
+					type="text"
+					required
+					class="form-input w-full text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+					placeholder="Last Name"
+					id="lastNameInput"
+					name="lastNameInput"
+					value={lastName?.length ? lastName : null}
+					minlength="2"
+				/>
+				<input
+					type="email"
+					required
+					class="form-input w-full text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+					placeholder="Email"
+					id="emailInput"
+					name="emailInput"
+					value={email?.length ? email : null}
+				/>
+				<input
+					type="tel"
+					required
+					class="form-input w-full text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+					placeholder="Phone"
+					id="phoneInput"
+					name="phoneInput"
+					value={phone?.length ? phone : null}
+					pattern="[0-9]{3}[0-9]{3}[0-9]{4}"
+					title="Please enter a valid 10-digit phone number"
+				/>
 			</div>
+			<button
+				type="submit"
+				id="finalizeSubmitButton"
+				class="w-full max-w-md bg-orange-300 hover:bg-orange-400 text-gray-900 font-semibold rounded-lg py-3 px-6 transition-colors disabled:opacity-50"
+				disabled={!existingPhoneEmailParser.success}
+			>
+				GET MY ESTIMATE
+			</button>
 		</form>
 	</div>
 </EstimateWrapper>

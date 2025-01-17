@@ -47,18 +47,13 @@ if (Astro.request.method === "POST") {
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<h2 class="text-xl font-black">Please enter your full name</h2>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
+	<div class="flex flex-col gap-4 text-center">
+		<h2 class="text-2xl md:text-3xl font-bold text-gray-800">Please enter your full name</h2>
+		<form class="flex flex-col items-center text-center gap-4 my-4" method="post">
 			<input
 				type="text"
 				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+				class="form-input w-full max-w-md text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
 				placeholder="first name"
 				id="firstNameInput"
 				name="firstNameInput"
@@ -68,30 +63,21 @@ if (Astro.request.method === "POST") {
 			<input
 				type="text"
 				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+				class="form-input w-full max-w-md text-center text-lg rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
 				placeholder="last name"
 				id="lastNameInput"
 				name="lastNameInput"
 				value={lastName?.length ? lastName : null}
 				minlength="2"
 			/>
-			<div class="flex gap-4 items-center">
-				<a
-					href={`/estimate/${estimateType}/zip`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
-
-				<button
-					type="submit"
-					id="zipSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled={!existingContactParsed.success}
-				>
-					next
-				</button>
-			</div>
+			<button
+				type="submit"
+				id="contactSubmitButton"
+				class="w-full max-w-md bg-orange-300 hover:bg-orange-400 text-gray-900 font-semibold rounded-lg py-3 px-6 transition-colors disabled:opacity-50"
+				disabled={!existingContactParsed.success}
+			>
+				NEXT
+			</button>
 		</form>
 	</div>
 </EstimateWrapper>
@@ -107,12 +93,12 @@ if (Astro.request.method === "POST") {
 		"lastNameInput",
 	) as HTMLInputElement | null;
 
-	const zipSubmitButton = document.getElementById(
-		"zipSubmitButton",
+	const contactSubmitButton = document.getElementById(
+		"contactSubmitButton",
 	) as HTMLButtonElement | null;
 	const targetParser = z.string().min(3);
 
-	if (firstNameEl && lastNameEl && zipSubmitButton) {
+	if (firstNameEl && lastNameEl && contactSubmitButton) {
 		lastNameEl.addEventListener("input", (event) => {
 			const target = event.target as HTMLInputElement;
 			const targetParse = targetParser.safeParse(
@@ -121,11 +107,11 @@ if (Astro.request.method === "POST") {
 			console.log(targetParse);
 
 			if (targetParse.success) {
-				zipSubmitButton.removeAttribute("disabled");
+				contactSubmitButton.removeAttribute("disabled");
 			} else {
-				zipSubmitButton.hasAttribute("disabled")
+				contactSubmitButton.hasAttribute("disabled")
 					? null
-					: zipSubmitButton.setAttribute(
+					: contactSubmitButton.setAttribute(
 							"disabled",
 							"",
 						);
