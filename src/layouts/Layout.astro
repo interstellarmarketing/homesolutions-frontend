@@ -29,10 +29,17 @@ const isLocal = Astro?.url?.host?.startsWith("localhost");
 		<meta name="generator" content={Astro.generator} />
 		<title>{titleFormatted()}</title>
 	</head>
-	<body class="text-white bg-slate-950 min-h-dvh flex flex-col">
+	<body class="bg-white text-gray-900 min-h-dvh flex flex-col">
 		<NavMain />
 		<main class="flex flex-col grow h-full items-center">
 			<slot />
 		</main>
+		<footer class="w-full text-center py-4 text-sm text-gray-500">
+			<div class="flex justify-center gap-8">
+				<a href="/privacy" class="hover:text-gray-700">Privacy Policy</a>
+				<a href="/terms" class="hover:text-gray-700">Terms of Service</a>
+				<a href="/pro" class="hover:text-gray-700">I'm a Pro</a>
+			</div>
+		</footer>
 	</body>
 </html>

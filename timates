@@ -1,0 +1,438 @@
+[1mdiff --git a/README.md b/README.md[m
+[1mindex 1db3fb3..f68ab9e 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -1,54 +1,223 @@[m
+[31m-# Astro Starter Kit: Basics[m
+[32m+[m[32m# Zach Estimates (2024)[m
+ [m
+[31m-```sh[m
+[31m-npm create astro@latest -- --template basics[m
+[31m-```[m
+[32m+[m[32mA modern web application for estimates and calculations, built with Astro.js and Cloudflare.[m
+[32m+[m
+[32m+[m[32m## 🏗️ Project Architecture[m
+[32m+[m
+[32m+[m[32mThis project consists of two main parts:[m
+[32m+[m
+[32m+[m[32m### Frontend (Root Directory)[m
+[32m+[m[32m- Built with Astro.js and React[m
+[32m+[m[32m- Uses Tailwind CSS for styling[m
+[32m+[m[32m- Implements nanostores for state management[m
+[32m+[m[32m- TypeScript for type safety[m
+[32m+[m[32m- PostHog for analytics[m
+[32m+[m
+[32m+[m[32m### Backend (be-rpc-estimates/)[m
+[32m+[m[32m- Cloudflare Workers for serverless functions[m
+[32m+[m[32m- RPC-based API architecture[m
+[32m+[m[32m- Drizzle ORM for database operations[m
+[32m+[m[32m- TypeScript for type safety[m
+[32m+[m
+[32m+[m[32m## 📋 Frontend Methodology[m
+[32m+[m
+[32m+[m[32m### Component Structure[m
+[32m+[m[32m- Components are organized by feature/domain in `src/components/`[m
+[32m+[m[32m- Each component should be in its own directory with associated types and utilities[m
+[32m+[m[32m- SVG components are isolated in `components/svgs/` directory[m
+[32m+[m[32m- Analytics components are separated in `components/analytics/`[m
+[32m+[m[32m- Navigation components are grouped in `components/nav/`[m
+[32m+[m
+[32m+[m[32m### Layout Methodology[m
+[32m+[m[32m- Layouts are stored in `src/layouts/`[m
+[32m+[m[32m- Base layout (`Layout.astro`) provides:[m
+[32m+[m[32m  - Common HTML structure[m
+[32m+[m[32m  - Meta tags and SEO setup[m
+[32m+[m[32m  - Navigation integration[m
+[32m+[m[32m  - Analytics inclusion (conditional for local development)[m
+[32m+[m[32m  - Base styling with Tailwind classes[m
+[32m+[m[32m  - Responsive viewport configuration[m
+[32m+[m[32m- Feature-specific layouts (e.g. `EstimateWrapper.astro`):[m
+[32m+[m[32m  - Extend the base layout[m
+[32m+[m[32m  - Add feature-specific validation[m
+[32m+[m[32m  - Implement consistent container structures[m
+[32m+[m[32m  - Handle route protection/redirection[m
+[32m+[m[32m  - Maintain consistent spacing and layout patterns[m
+[32m+[m
+[32m+[m[32m#### Layout Guidelines[m
+[32m+[m[32m1. HTML Structure:[m
+[32m+[m[32m   - Use semantic HTML elements[m
+[32m+[m[32m   - Implement proper meta tags[m
+[32m+[m[32m   - Maintain consistent head structure[m
+[32m+[m[32m   - Include necessary viewport settings[m
+[32m+[m
+[32m+[m[32m2. Styling Patterns:[m
+[32m+[m[32m   - Use Tailwind's container classes for width control[m
+[32m+[m[32m   - Implement flexible layouts with flex/grid[m
+[32m+[m[32m   - Use consistent spacing utilities[m
+[32m+[m[32m   - Follow mobile-first responsive design[m
+[32m+[m[32m   - Use dvh (dynamic viewport height) for full-height layouts[m
+[32m+[m
+[32m+[m[32m3. Layout Composition:[m
+[32m+[m[32m   - Keep layouts focused on structure[m
+[32m+[m[32m   - Use slots for content injection[m
+[32m+[m[32m   - Implement proper type checking for props[m
+[32m+[m[32m   - Handle layout-specific validation[m
+[32m+[m[32m   - Maintain clear separation of concerns[m
+[32m+[m
+[32m+[m[32m4. Performance Considerations:[m
+[32m+[m[32m   - Conditional loading of analytics[m
+[32m+[m[32m   - Proper meta tag implementation[m
+[32m+[m[32m   - Efficient CSS class usage[m
+[32m+[m[32m   - Minimal JS in layout files[m
+[32m+[m
+[32m+[m[32m### Page Organization[m
+[32m+[m[32m- Pages use the `.astro` extension and are located in `src/pages/`[m
+[32m+[m[32m- Each page should be minimal, primarily composing components[m
+[32m+[m[32m- Complex pages should be broken down into sub-directories (e.g. `pages/estimate/`)[m
+[32m+[m[32m- Pages follow Astro's file-based routing convention[m
+[32m+[m
+[32m+[m[32m#### Page Patterns[m
+[32m+[m[32m1. Static vs Dynamic Pages:[m
+[32m+[m[32m   - Use `export const prerender = true` for static pages[m
+[32m+[m[32m   - Dynamic pages should handle data fetching in the frontmatter[m
+[32m+[m[32m   - Utilize Astro.locals for runtime environment access[m
+[32m+[m[32m   - Handle errors gracefully with proper typing[m
+[32m+[m
+[32m+[m[32m2. Data Handling:[m
+[32m+[m[32m   - Database queries should be in the frontmatter section[m
+[32m+[m[32m   - Use Astro.callAction for API interactions[m
+[32m+[m[32m   - Implement proper error handling for data fetching[m
+[32m+[m[32m   - Keep data transformation logic in utilities[m
+[32m+[m
+[32m+[m[32m3. UI Structure:[m
+[32m+[m[32m   - Maintain consistent grid/flex patterns[m
+[32m+[m[32m   - Use responsive class modifiers (e.g. `md:grid-cols-4`)[m
+[32m+[m[32m   - Implement consistent spacing (gap-4, gap-8)[m
+[32m+[m[32m   - Use semantic class naming for hover states[m
+[32m+[m
+[32m+[m[32m4. Dynamic Routes:[m
+[32m+[m[32m   - Use directory-based dynamic routing[m
+[32m+[m[32m   - Implement proper parameter validation[m
+[32m+[m[32m   - Handle invalid routes with redirects[m
+[32m+[m[32m   - Maintain type safety for route parameters[m
+[32m+[m
+[32m+[m[32m5. Performance Patterns:[m
+[32m+[m[32m   - Prerender static content where possible[m
+[32m+[m[32m   - Implement proper loading states[m
+[32m+[m[32m   - Use client directives sparingly[m
+[32m+[m[32m   - Keep component tree depth minimal[m
+[32m+[m
+[32m+[m[32m### State Management[m
+[32m+[m[32m- Uses nanostores for global state management[m
+[32m+[m[32m- Store files are named descriptively (e.g. `activeEstimateType.ts`)[m
+[32m+[m[32m- Each store has a single responsibility[m
+[32m+[m[32m- Stores are located in `src/stores/` directory[m
+[32m+[m[32m- State updates should be done through defined actions/methods[m
+[32m+[m
+[32m+[m[32m### Type Safety[m
+[32m+[m[32m- All components should have proper TypeScript types[m
+[32m+[m[32m- Types are stored in `src/typestash/`[m
+[32m+[m[32m- Use interfaces for object shapes[m
+[32m+[m[32m- Prefer type inference where possible[m
+[32m+[m[32m- Zod for runtime type validation[m
+[32m+[m
+[32m+[m[32m### Styling Guidelines[m
+[32m+[m[32m- Uses Tailwind CSS for styling[m
+[32m+[m[32m- Follow utility-first CSS approach[m
+[32m+[m[32m- Common styles should be extracted to Tailwind components[m
+[32m+[m[32m- Maintain consistent spacing and color schemes[m
+[32m+[m[32m- Use Tailwind's responsive design utilities[m
+[32m+[m
+[32m+[m[32m### Actions[m
+[32m+[m[32m- API interactions are isolated in `src/actions/`[m
+[32m+[m[32m- Each action should be typed and documented[m
+[32m+[m[32m- Use async/await for asynchronous operations[m
+[32m+[m[32m- Handle errors gracefully with proper types[m
+[32m+[m
+[32m+[m[32m### Assets[m
+[32m+[m[32m- Static assets are stored in `src/assets/`[m
+[32m+[m[32m- Public assets go in `public/` directory[m
+[32m+[m[32m- SVG files should be componentized[m
+[32m+[m[32m- Use appropriate image formats and optimization[m
+ [m
+[31m-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)[m
+[31m-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)[m
+[31m-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)[m
+[32m+[m[32m### Best Practices[m
+[32m+[m[32m1. Component Creation:[m
+[32m+[m[32m   - One component per file[m
+[32m+[m[32m   - Use functional components[m
+[32m+[m[32m   - Props should be typed[m
+[32m+[m[32m   - Keep components focused and small[m
+ [m
+[31m-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun![m
+[32m+[m[32m2. State Management:[m
+[32m+[m[32m   - Minimize global state[m
+[32m+[m[32m   - Use local state when possible[m
+[32m+[m[32m   - Document store purpose and usage[m
+ [m
+[31m-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)[m
+[32m+[m[32m3. Performance:[m
+[32m+[m[32m   - Lazy load where appropriate[m
+[32m+[m[32m   - Optimize images and assets[m
+[32m+[m[32m   - Use proper Astro client directives[m
+ [m
+[31m-## 🚀 Project Structure[m
+[32m+[m[32m4. Code Style:[m
+[32m+[m[32m   - Follow consistent naming conventions[m
+[32m+[m[32m   - Use meaningful variable names[m
+[32m+[m[32m   - Document complex logic[m
+[32m+[m[32m   - Keep functions pure when possible[m
+ [m
+[31m-Inside of your Astro project, you'll see the following folders and files:[m
+[32m+[m[32m## 📁 Project Structure[m
+ [m
+ ```text[m
+ /[m
+[31m-├── public/[m
+[31m-│   └── favicon.svg[m
+ ├── src/[m
+[31m-│   ├── components/[m
+[31m-│   │   └── Card.astro[m
+[31m-│   ├── layouts/[m
+[31m-│   │   └── Layout.astro[m
+[31m-│   └── pages/[m
+[31m-│       └── index.astro[m
+[31m-└── package.json[m
+[32m+[m[32m│   ├── actions/         # API actions[m
+[32m+[m[32m│   ├── assets/         # Static assets[m
+[32m+[m[32m│   ├── components/     # Reusable UI components[m
+[32m+[m[32m│   ├── layouts/        # Page layouts[m
+[32m+[m[32m│   ├── pages/         # Route pages[m
+[32m+[m[32m│   ├── stores/        # State management[m
+[32m+[m[32m│   ├── typestash/     # TypeScript types[m
+[32m+[m[32m│   └── utils/         # Helper functions[m
+[32m+[m[32m├── be-rpc-estimates/  # Backend service[m
+[32m+[m[32m│   ├── src/          # Backend source code[m
+[32m+[m[32m│   └── drizzle/      # Database operations[m
+[32m+[m[32m└── public/           # Static assets[m
+ ```[m
+ [m
+[31m-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.[m
+[32m+[m[32m## 🚀 Getting Started[m
+ [m
+[31m-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.[m
+[32m+[m[32m1. Install dependencies:[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   npm install[m
+[32m+[m[32m   ```[m
+ [m
+[31m-Any static assets, like images, can be placed in the `public/` directory.[m
+[32m+[m[32m2. Start the development server:[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   npm run dev[m
+[32m+[m[32m   ```[m
+ [m
+[31m-## 🧞 Commands[m
+[32m+[m[32m3. For backend development:[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   cd be-rpc-estimates[m
+[32m+[m[32m   npm install[m
+[32m+[m[32m   ```[m
+ [m
+[31m-All commands are run from the root of the project, from a terminal:[m
+[32m+[m[32m## 🛠️ Available Commands[m
+ [m
+[31m-| Command                   | Action                                           |[m
+[31m-| :------------------------ | :----------------------------------------------- |[m
+[31m-| `npm install`             | Installs dependencies                            |[m
+[31m-| `npm run dev`             | Starts local dev server at `localhost:4321`      |[m
+[31m-| `npm run build`           | Build your production site to `./dist/`          |[m
+[31m-| `npm run preview`         | Preview your build locally, before deploying     |[m
+[31m-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |[m
+[31m-| `npm run astro -- --help` | Get help using the Astro CLI                     |[m
+[32m+[m[32m| Command                | Action                                           |[m
+[32m+[m[32m| :-------------------- | :----------------------------------------------- |[m
+[32m+[m[32m| `npm run dev`         | Start development server at `localhost:4321`     |[m
+[32m+[m[32m| `npm run build`       | Build for production                            |[m
+[32m+[m[32m| `npm run preview`     | Preview production build locally                 |[m
+[32m+[m[32m| `npm run deploy`      | Deploy to Cloudflare Pages                      |[m
+[32m+[m[32m| `npm run cf-typegen`  | Generate Cloudflare Worker types                |[m
+ [m
+[31m-## 👀 Want to learn more?[m
+[32m+[m[32m## 🔧 Tech Stack[m
+ [m
+[31m-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).[m
+[32m+[m[32m- [Astro](https://astro.build/) - Web Framework[m
+[32m+[m[32m- [React](https://reactjs.org/) - UI Components[m
+[32m+[m[32m- [Tailwind CSS](https://tailwindcss.com/) - Styling[m
+[32m+[m[32m- [TypeScript](https://www.typescriptlang.org/) - Type Safety[m
+[32m+[m[32m- [Cloudflare Workers](https://workers.cloudflare.com/) - Serverless Platform[m
+[32m+[m[32m- [Drizzle ORM](https://orm.drizzle.team/) - Database ORM[m
+[32m+[m[32m- [PostHog](https://posthog.com/) - Analytics[m
+[32m+[m[32m- [Nanostores](https://github.com/nanostores/nanostores) - State Management[m
+[1mdiff --git a/astro.config.mjs b/astro.config.mjs[m
+[1mindex fd714b9..86123e6 100644[m
+[1m--- a/astro.config.mjs[m
+[1m+++ b/astro.config.mjs[m
+[36m@@ -16,7 +16,7 @@[m [mexport default defineConfig({[m
+   },[m
+   adapter: cloudflare({[m
+     platformProxy: {[m
+[31m-      enabled: true,[m
+[32m+[m[32m      enabled: true[m
+     },[m
+   }),[m
+   integrations: [tailwind(), react(), icon()],[m
+[1mdiff --git a/package.json b/package.json[m
+[1mindex 3eeeddc..c06007b 100644[m
+[1m--- a/package.json[m
+[1m+++ b/package.json[m
+[36m@@ -21,7 +21,6 @@[m
+     "@types/react-dom": "^18.3.5",[m
+     "astro": "5.0.4",[m
+     "astro-icon": "^1.1.5",[m
+[31m-    "be-rpc-estimates": "link:be-rpc-estimates",[m
+     "nanoid": "^5.0.9",[m
+     "nanostores": "^0.11.3",[m
+     "posthog-js": "^1.205.1",[m
+[1mdiff --git a/src/components/nav/NavMain.astro b/src/components/nav/NavMain.astro[m
+[1mindex 56ab3e5..b0f6e99 100644[m
+[1m--- a/src/components/nav/NavMain.astro[m
+[1m+++ b/src/components/nav/NavMain.astro[m
+[36m@@ -2,28 +2,8 @@[m
+ import { shortTradesConst } from "@assets/info/estimateOptions";[m
+ ---[m
+ [m
+[31m-<header class="flex items-center p-4 sticky top-0">[m
+[32m+[m[32m<header class="flex items-center justify-center p-4 sticky top-0">[m
+ 	<a href="/" class="text-xl font-bold capitalize">[m
+ 		home upgrade services[m
+ 	</a>[m
+[31m-	<div class="gap-4 ml-auto items-center hidden sm:flex">[m
+[31m-		{[m
+[31m-			shortTradesConst.map((option) => ([m
+[31m-				<a[m
+[31m-					href={`/estimate/${option}/zip`}[m
+[31m-					class="opacity-30 hover:opacity-100"[m
+[31m-				>[m
+[31m-					{" "}[m
+[31m-					{option}{" "}[m
+[31m-				</a>[m
+[31m-			))[m
+[31m-		}[m
+[31m-		{[m
+[31m-			/*[m
+[31m-		<a href="/results" class="opacity-30 hover:opacity-100">[m
+[31m-			results[m
+[31m-		</a>[m
+[31m-		*/[m
+[31m-		}[m
+[31m-	</div>[m
+ </header>[m
+[1mdiff --git a/src/layouts/EstimateWrapper.astro b/src/layouts/EstimateWrapper.astro[m
+[1mindex 249c425..63c7e5d 100644[m
+[1m--- a/src/layouts/EstimateWrapper.astro[m
+[1m+++ b/src/layouts/EstimateWrapper.astro[m
+[36m@@ -19,7 +19,24 @@[m [mif (parseEstimateType.success) {[m
+ ---[m
+ [m
+ <Layout title={title}>[m
+[31m-	<div class="items-center container w-full h-full">[m
+[31m-		<slot />[m
+[32m+[m	[32m<div class="container max-w-2xl mx-auto px-4 py-8 h-full flex flex-col">[m
+[32m+[m		[32m<div class="bg-white rounded-xl shadow-2xl p-8">[m
+[32m+[m			[32m<slot />[m
+[32m+[m		[32m</div>[m
+[32m+[m
+[32m+[m		[32m<div class="flex items-center justify-center gap-4 mt-8">[m
+[32m+[m			[32m<svg width="100" height="24" viewBox="0 0 100 24" fill="none" xmlns="http://www.w3.org/2000/svg">[m
+[32m+[m				[32m<rect width="100" height="24" rx="4" fill="#FFC107"/>[m
+[32m+[m				[32m<path d="M20 8L22.5 13L20 18L17.5 13L20 8Z" fill="#FFE082"/>[m
+[32m+[m				[32m<path d="M35 8L37.5 13L35 18L32.5 13L35 8Z" fill="#FFE082"/>[m
+[32m+[m				[32m<path d="M50 8L52.5 13L50 18L47.5 13L50 8Z" fill="#FFE082"/>[m
+[32m+[m				[32m<path d="M65 8L67.5 13L65 18L62.5 13L65 8Z" fill="#FFE082"/>[m
+[32m+[m				[32m<path d="M80 8L82.5 13L80 18L77.5 13L80 8Z" fill="#FFE082"/>[m
+[32m+[m			[32m</svg>[m
+[32m+[m			[32m<div class="h-8 w-16 bg-blue-800 text-white text-xs font-bold rounded flex items-center justify-center">[m
+[32m+[m				[32mBBB[m
+[32m+[m			[32m</div>[m
+[32m+[m		[32m</div>[m
+ 	</div>[m
+ </Layout>[m
+[41m+[m
+[1mdiff --git a/src/layouts/Layout.astro b/src/layouts/Layout.astro[m
+[1mindex 2d6785a..39f4a95 100644[m
+[1m--- a/src/layouts/Layout.astro[m
+[1m+++ b/src/layouts/Layout.astro[m
+[36m@@ -29,10 +29,17 @@[m [mconst isLocal = Astro?.url?.host?.startsWith("localhost");[m
+ 		<meta name="generator" content={Astro.generator} />[m
+ 		<title>{titleFormatted()}</title>[m
+ 	</head>[m
+[31m-	<body class="text-white bg-slate-950 min-h-dvh flex flex-col">[m
+[32m+[m	[32m<body class="bg-white text-gray-900 min-h-dvh flex flex-col">[m
+ 		<NavMain />[m
+ 		<main class="flex flex-col grow h-full items-center">[m
+ 			<slot />[m
+ 		</main>[m
+[32m+[m		[32m<footer class="w-full text-center py-4 text-sm text-gray-500">[m
+[32m+[m			[32m<div class="flex justify-center gap-8">[m
+[32m+[m				[32m<a href="/privacy" class="hover:text-gray-700">Privacy Policy</a>[m
+[32m+[m				[32m<a href="/terms" class="hover:text-gray-700">Terms of Service</a>[m
+[32m+[m				[32m<a href="/pro" class="hover:text-gray-700">I'm a Pro</a>[m
+[32m+[m			[32m</div>[m
+[32m+[m		[32m</footer>[m
+ 	</body>[m
+ </html>[m
+[1mdiff --git a/src/pages/estimate/[estimateType]/action.astro b/src/pages/estimate/[estimateType]/action.astro[m
+[1mindex d6854da..bebae18 100644[m
+[1m--- a/src/pages/estimate/[estimateType]/action.astro[m
+[1m+++ b/src/pages/estimate/[estimateType]/action.astro[m
+[36m@@ -68,61 +68,31 @@[m [mif (Astro.request.method === "POST") {[m
+ ---[m
+ [m
+ <EstimateWrapper title={estimateType} estimateType={estimateType}>[m
+[31m-	<div[m
+[31m-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"[m
+[31m-	>[m
+[31m-		<h2 class="text-xl font-black">[m
+[31m-			{tradeOptions?.actionDescription}[m
+[31m-		</h2>[m
+[31m-		<form[m
+[31m-			class="flex flex-col items-center text-center gap-4 my-4"[m
+[31m-			method="post"[m
+[31m-		>[m
+[31m-			<div class="grid grid-cols-2 gap-4 p-8">[m
+[31m-				{[m
+[31m-					activeEstimateOptions.data.estimateAction.map([m
+[31m-						(actionOption) => {[m
+[31m-							return ([m
+[31m-								<label class="inline-flex items-center ">[m
+[31m-									<input[m
+[31m-										type="radio"[m
+[31m-										name="action"[m
+[31m-										checked={[m
+[31m-											existingStore.estimateAction ===[m
+[31m-											actionOption[m
+[31m-										}[m
+[31m-										value={[m
+[31m-											actionOption[m
+[31m-										}[m
+[31m-										class="hidden peer"[m
+[31m-									/>[m
+[31m-									<span class="px-4 w-full py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">[m
+[31m-										{[m
+[31m-											actionOption[m
+[31m-										}[m
+[31m-									</span>[m
+[31m-								</label>[m
+[31m-							);[m
+[31m-						},[m
+[31m-					)[m
+[31m-				}[m
+[31m-			</div>[m
+[31m-			<div class="flex gap-4 items-center">[m
+[31m-				<a[m
+[31m-					href={`/estimate/${estimateType}/zip`}[m
+[31m-					class="rounded-lg px-6 py-2 border disabled:opacity-20"[m
+[31m-				>[m
+[31m-					prev[m
+[31m-				</a>[m
+[31m-				<button[m
+[31m-					type="submit"[m
+[31m-					id="actionSubmitButton"[m
+[31m-					class="rounded-lg px-6 py-2 border disabled:opacity-20"[m
+[31m-					disabled={!existingActionParsed.success}[m
+[31m-				>[m
+[31m-					next[m
+[31m-				</butto
