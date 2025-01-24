@@ -5,118 +5,107 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
-// 0_- bun/link import!111
-import { estimateParser } from "be-rpc-estimates/src/zoddles/user/userEstimateType";
+import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
 
-const zr = Astro.locals.runtime.env.ZIP_METHODS;
+// Validation schemas
+const zipSchema = formSubmissionParser.pick({ zipCode: true });
+const estimateTypeSchema = shortTradeEnum;
 
-const pxs = await zr.newZipMethods();
+// Initialize ZIP service
+const zipService = await Astro.locals.runtime.env.ZIP_METHODS.newZipMethods();
 
-const fx = await pxs.listAllZips();
+// Validate estimate type from URL params
+const { estimateType } = Astro.params;
+const parsedEstimateType = estimateTypeSchema.safeParse(estimateType);
 
-console.log({ fx });
-
-let { estimateType } = Astro.params;
-
-const parseEstimateType = shortTradeEnum.safeParse(estimateType);
-
-if (!estimateType || !parseEstimateType.success) {
-	console.log("failed at zip");
-	return Astro.redirect("/");
+if (!estimateType || !parsedEstimateType.success) {
+    console.error("Invalid estimate type");
+    return Astro.redirect("/");
 }
 
-estimateType = parseEstimateType.data;
+const validatedEstimateType = parsedEstimateType.data;
+ProcessEstimateType(validatedEstimateType);
 
-ProcessEstimateType(parseEstimateType.data);
-
+// Get stored data
 const existingStore = estimateStore.get();
-const activeEstimateType = activeEstimateTypeStore.get();
 
-const cfInfo = Astro.locals.runtime.cf;
+// Get user location from Cloudflare
+const cfPostalCode = z.string()
+    .safeParse(Astro.locals.runtime.cf?.postalCode)
+// Initialize zip code from store or Cloudflare location
+const initialZipCode = existingStore.zipCode ?? cfPostalCode.data
 
-const cfColoPostalCode = z.string().safeParse(cfInfo?.postalCode);
-
-// init using either prev stashed result or cfColo zip
-// NOTE: this will source from the CF colo request is hitting...
-let zipCode: string | undefined =
-	existingStore.zipCode ?? cfColoPostalCode.data;
-
-const zipParser = estimateParser.pick({ zipCode: true });
-type ZipParser = z.infer<typeof zipParser>;
-
+// Handle form submission
 if (Astro.request.method === "POST") {
-	const formData = await Astro.request.formData();
+    const formData = await Astro.request.formData();
+    const submission = { zipCode: formData?.get("zipInput") as string };
+    const parsedZip = zipSchema.safeParse(submission);
 
-	const zipInput: ZipParser = {
-		zipCode: formData?.get("zipInput") as string,
-	};
+    if (parsedZip.success) {
+        const zipCode = parsedZip.data.zipCode;
+        
+        try {
+            const locationData = await zipService.uspsZipCheck(zipCode);
+            
+            if (!locationData?.defaultState || !locationData?.defaultCity) {
+                throw new Error('Invalid ZIP code location data');
+            }
 
-	const zipCodeParsed = zipParser.safeParse(zipInput);
+            estimateStore.set({
+                ...existingStore,
+                zipCode,
+                state: locationData.defaultState,
+                city: locationData.defaultCity,
+                estimateShortTrade: validatedEstimateType,
+            });
 
-	console.log({ zipCodeParsed });
-	if (zipCodeParsed.success) {
-		zipCode = zipCodeParsed.data.zipCode;
+			if (estimateType === 'roofing') {
+				return Astro.redirect(`/estimate/${validatedEstimateType}/projectDetails`);
+			}
 
-		const rpcZipTest = await pxs.uspsZipCheck(zipCode);
-
-		console.log({ rpcZipTest });
-
-		estimateStore.set({
-			...existingStore,
-			zipCode,
-			state: rpcZipTest?.defaultState,
-			city: rpcZipTest?.defaultCity,
-			estimateShortTrade: estimateType,
-		});
-		return Astro.redirect(`/estimate/${estimateType}/action`);
-	}
+            return Astro.redirect(`/estimate/${validatedEstimateType}/action`);
+        } catch (error) {
+            console.error('ZIP validation error:', error);
+            return new Response('Invalid ZIP code', {
+                status: 400,
+                statusText: 'Invalid ZIP code or service unavailable'
+            });
+        }
+    }
 }
 
-const formatEstimateTypeNoun = (estimateType: string) => {
-	if (estimateType.endsWith("s")) {
-		return estimateType.slice(0, -1);
-	}
-
-	return estimateType;
-};
+// Helper function to format estimate type display
+const formatEstimateTypeNoun = (type: string) => 
+    type.endsWith("s") ? type.slice(0, -1) : type;
 ---
 
-<EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<h2 class="text-xl font-black">
-			Let's find your local {
-				formatEstimateTypeNoun(estimateType)
-			} pros
-		</h2>
-		<p>Enter the location of your project</p>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
-			<input
-				type="text"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="zip code"
-				id="zipInput"
-				name="zipInput"
-				value={zipCode?.length ? zipCode : null}
-				minlength="5"
-				maxlength="5"
-				pattern="[0-9]{5}"
-				inputmode="numeric"
-			/>
-			{
-				existingStore.city && existingStore.state ? (
-					<div class="flex gap-2 items-center">
-						<p>
-							{existingStore.city},{" "}
-							{existingStore.state}{" "}
-						</p>
-
-						<svg
+<EstimateWrapper title={validatedEstimateType} estimateType={validatedEstimateType}>
+    <div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
+        <h2 class="text-xl font-black">
+            Let's find your local {formatEstimateTypeNoun(validatedEstimateType)} pros
+        </h2>
+        
+        <p>Enter the location of your project</p>
+        
+        <form class="flex flex-col items-center text-center gap-4 my-4" method="post">
+            <input
+                type="text"
+                required
+                id="zipInput"
+                name="zipInput"
+                placeholder="zip code"
+                value={initialZipCode ?? null}
+                class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+                minlength="5"
+                maxlength="5"
+                pattern="[0-9]{5}"
+                inputmode="numeric"
+            />
+            
+            {existingStore.city && existingStore.state && (
+                <div class="flex gap-2 items-center">
+                    <p>{existingStore.city}, {existingStore.state}</p>
+                    <svg
 							width="15"
 							height="15"
 							viewBox="0 0 15 15"
@@ -131,63 +120,67 @@ const formatEstimateTypeNoun = (estimateType: string) => {
 								clip-rule="evenodd"
 							/>
 						</svg>
-					</div>
-				) : null
-			}
-			<button
-				type="submit"
-				id="zipSubmitButton"
-				class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				disabled={zipCode?.length !== 5}
-			>
-				next
-			</button>
-		</form>
-	</div>
+                </div>
+            )}
+            
+            <button
+                type="submit"
+                id="zipSubmitButton"
+                disabled={initialZipCode?.length !== 5}
+                class="rounded-lg px-6 py-2 border disabled:opacity-20"
+            >
+                next
+            </button>
+        </form>
+    </div>
 </EstimateWrapper>
 
 <script>
-	import { z } from "zod";
+    import { z } from "zod";
 
-	const zipEl = document.getElementById(
-		"zipInput",
-	) as HTMLInputElement | null;
+    const ZIP_LENGTH = 5;
+    
+    const validators = {
+        zipString: z.string().length(ZIP_LENGTH),
+        zipNumber: z.coerce.number()
+    };
 
-	const zipSubmitButton = document.getElementById(
-		"zipSubmitButton",
-	) as HTMLButtonElement | null;
-	const targetParser = z.string().length(5);
-	const targetParserAsNumber = z.coerce.number();
+    class ZipFormValidator {
+        private zipInput: HTMLInputElement;
+        private submitButton: HTMLButtonElement;
 
-	if (zipEl && zipSubmitButton) {
-		console.log(zipEl.value);
+        constructor(zipInputId: string, submitButtonId: string) {
+            this.zipInput = document.getElementById(zipInputId) as HTMLInputElement;
+            this.submitButton = document.getElementById(submitButtonId) as HTMLButtonElement;
 
-		zipEl.addEventListener("input", (event) => {
-			const target = event.target as HTMLInputElement;
-			const targetParse = targetParser.safeParse(
-				target.value,
-			);
-			console.log(targetParse);
+            if (this.zipInput && this.submitButton) {
+                this.initializeEventListeners();
+            }
+        }
 
-			if (targetParse.success) {
-				const targetParseAsNumber =
-					targetParserAsNumber.safeParse(
-						targetParse.data,
-					);
+        private initializeEventListeners() {
+            this.zipInput.addEventListener("input", (event) => {
+                const input = (event.target as HTMLInputElement).value;
+                this.validateZipCode(input);
+            });
+        }
 
-				if (targetParseAsNumber.success) {
-					zipSubmitButton.removeAttribute(
-						"disabled",
-					);
-				}
-			} else {
-				zipSubmitButton.hasAttribute("disabled")
-					? null
-					: zipSubmitButton.setAttribute(
-							"disabled",
-							"",
-						);
-			}
-		});
-	}
+        private validateZipCode(input: string) {
+            const isValid = validators.zipString.safeParse(input).success &&
+                          validators.zipNumber.safeParse(input).success;
+
+            this.toggleSubmitButton(isValid);
+        }
+
+        private toggleSubmitButton(isValid: boolean) {
+            if (isValid) {
+                this.submitButton.removeAttribute("disabled");
+            } else if (!this.submitButton.hasAttribute("disabled")) {
+                this.submitButton.setAttribute("disabled", "");
+            }
+        }
+    }
+
+    // Initialize form validation
+    new ZipFormValidator("zipInput", "zipSubmitButton");
 </script>

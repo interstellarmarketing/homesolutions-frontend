@@ -1,72 +1,104 @@
 import { z } from "zod"
 
+/**
+ * Available trade types in the system
+ * @readonly
+ */
 export const shortTradesConst = ["bathroom", "roofing", "siding", "windows"] as const;
+export type ShortTrade = typeof shortTradesConst[number];
 
+/**
+ * Zod schema for trade types
+ */
 export const shortTradeEnum = z.enum(shortTradesConst);
-export type ShortTradeEnum = z.infer<typeof shortTradeEnum>
+export type ShortTradeEnum = z.infer<typeof shortTradeEnum>;
 
-export const estimateOption = z.object({
+/**
+ * Base schema for estimate options
+ */
+export const homeTypesConst = ["single-family home", "apartment", "mobile home", "other"] as const;
+
+export const baseEstimateOption = z.object({
 	estimateAction: z.enum(["replace", "repair"]),
 	type: z.string().nullable(),
+	homeType: z.enum(homeTypesConst).optional(),
 });
 
-export type EstimateOption = z.infer<typeof estimateOption>
+export type BaseEstimateOption = z.infer<typeof baseEstimateOption>;
 
-
-// INFO: utility for typesafe overwriting of existings fields
-// as well as arbitrary new fields
-function extendEstimateOptionSchema<T extends { [K in keyof EstimateOption]?: z.ZodType<any, any, any> }>(
+/**
+ * Type-safe schema extension utility
+ * @param extension - Schema fields to extend or override
+ */
+function extendEstimateOptionSchema<T extends Partial<Record<keyof BaseEstimateOption, z.ZodType>>>(
 	extension: T
 ) {
-	return estimateOption.extend(extension);
+	return baseEstimateOption.extend(extension);
 }
 
-
-
-// INFO: default `estimateAction` === ["repair", "replace"]
-export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
-	z.object({
+/**
+ * Trade-specific schema definitions
+ */
+const TradeSchemas = {
+	bathroom: z.object({
 		shortTrade: z.literal<ShortTradeEnum>("bathroom"),
 		data: extendEstimateOptionSchema({
 			type: z.null(),
 			estimateAction: z.enum(["enclosure", "updates", "conversion", "remodel", "walk-in"]),
+			homeType: z.enum(homeTypesConst).optional(),
 		}),
 	}),
-	z.object({
+	roofing: z.object({
 		shortTrade: z.literal<ShortTradeEnum>("roofing"),
 		data: extendEstimateOptionSchema({
-			type: z.enum(["asphalt", "tile", "flat", "metal", "wood"]),
+			type: z.enum(["asphalt", "cedar shake", "metal", "natural slate", "shingles", "tar", "tile", "other"]),
+			homeType: z.enum(homeTypesConst).optional(),
 		}),
 	}),
-	z.object({
+	siding: z.object({
 		shortTrade: z.literal<ShortTradeEnum>("siding"),
 		data: extendEstimateOptionSchema({
 			type: z.enum(["brickface", "metal", "stucco", "vinyl", "wood"]),
+			homeType: z.enum(homeTypesConst).optional(),
 		}),
 	}),
-	z.object({
+	windows: z.object({
 		shortTrade: z.literal<ShortTradeEnum>("windows"),
 		data: extendEstimateOptionSchema({
 			type: z.enum(["10+", "3-5", "6-9"]),
+			homeType: z.enum(homeTypesConst).optional(),
 		}),
 	}),
+} as const;
+
+/**
+ * Combined discriminated union of all trade schemas
+ */
+export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
+	TradeSchemas.bathroom,
+	TradeSchemas.roofing,
+	TradeSchemas.siding,
+	TradeSchemas.windows
 ]);
 
-export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>
+export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>;
 
-type ShortTradeSchemaType = z.infer<typeof shortTradeDiscriminatedUnion>;
-
-type ShortTradeFields<T extends ShortTradeEnum> = keyof ShortTradeSchemaType["data"];
-
+/**
+ * Mapping of trade types to their data structure
+ */
 type ShortTradeDataMap = {
 	[K in ShortTradeEnum]: {
-		[P in keyof z.infer<typeof shortTradeDiscriminatedUnion>['data']]:
-		P extends 'estimateAction' | 'type'
-		? z.infer<typeof shortTradeDiscriminatedUnion>['data'][P][]
-		: z.infer<typeof shortTradeDiscriminatedUnion>['data'][P];
+		[P in keyof ShortTradeDiscriminatedUnion['data']]: P extends 'estimateAction' | 'type' | 'homeType'
+			? ShortTradeDiscriminatedUnion['data'][P][]
+			: ShortTradeDiscriminatedUnion['data'][P];
 	};
 };
 
+/**
+ * Creates a type-safe trade object
+ * @param shortTrade - The trade type
+ * @param data - The trade-specific data
+ */
 function createShortTradeObject<K extends ShortTradeEnum>(
 	shortTrade: K,
 	data: ShortTradeDataMap[K]
@@ -74,60 +106,82 @@ function createShortTradeObject<K extends ShortTradeEnum>(
 	return { shortTrade, data };
 }
 
+/**
+ * Validates a trade object against its schema
+ * @param obj - The trade object to validate
+ */
 export function parseShortTradeObject<K extends ShortTradeEnum>(
 	obj: { shortTrade: K; data: ShortTradeDataMap[K] }
 ): ShortTradeDiscriminatedUnion {
 	return shortTradeDiscriminatedUnion.parse(obj);
 }
 
+/**
+ * Trade option configurations
+ */
 export const shortTradeObjects = [
 	createShortTradeObject("bathroom", {
 		estimateAction: ["enclosure", "updates", "conversion", "remodel", "walk-in"],
 		type: [null],
+		homeType: [...homeTypesConst]
 	}),
 	createShortTradeObject("roofing", {
 		estimateAction: ["replace", "repair"],
-		type: ["asphalt", "tile", "flat", "metal", "wood"],
+		type: ["asphalt", "cedar shake", "metal", "natural slate", "shingles", "tar", "tile", "other"],
+		homeType: [...homeTypesConst]
 	}),
 	createShortTradeObject("siding", {
 		estimateAction: ["replace", "repair"],
 		type: ["brickface", "metal", "stucco", "vinyl", "wood"],
+		homeType: [...homeTypesConst]
 	}),
 	createShortTradeObject("windows", {
 		estimateAction: ["replace", "repair"],
 		type: ["10+", "3-5", "6-9"],
+		homeType: [...homeTypesConst]
 	}),
-];
+] as const;
 
-const tradeOptionDescriptionsParser = z.object({
+/**
+ * Schema for trade descriptions
+ */
+const tradeOptionDescriptionsSchema = z.object({
 	shortTrade: shortTradeEnum,
 	actionDescription: z.string().optional(),
 	typeDescription: z.string().optional(),
 	shortTradeNoun: z.string().optional()
-})
+});
 
-export type TradeOptionDescriptions = z.infer<typeof tradeOptionDescriptionsParser>
+export type TradeOptionDescriptions = z.infer<typeof tradeOptionDescriptionsSchema>;
 
-export const tradeOptionDescriptions: TradeOptionDescriptions[] = [{
-	shortTrade: "roofing",
-	actionDescription: "Do you need to replace or repair an existing roof?",
-	typeDescription: "What type of roof are you looking for?",
-	shortTradeNoun: "roof"
-}, {
-	shortTrade: "bathroom",
-	actionDescription: "Which of these best describe your needs?",
-	typeDescription: "",
-	shortTradeNoun: ""
-}, {
-	shortTrade: "windows",
-	actionDescription: "Do you need to replace or repair existing windows?",
-	typeDescription: "How many windows do you need replaced?",
-	shortTradeNoun: ""
-}, {
-	shortTrade: "siding",
-	actionDescription: "Service Needed",
-	typeDescription: "Project Details",
-	shortTradeNoun: ""
-}]
+/**
+ * User-facing descriptions for each trade type
+ */
+export const tradeOptionDescriptions: readonly TradeOptionDescriptions[] = [
+	{
+		shortTrade: "roofing",
+		actionDescription: "Do you need to replace or repair an existing roof?",
+		typeDescription: "What type of roof are you looking for?",
+		shortTradeNoun: "roof"
+	},
+	{
+		shortTrade: "bathroom",
+		actionDescription: "Which of these best describe your needs?",
+		typeDescription: "",
+		shortTradeNoun: ""
+	},
+	{
+		shortTrade: "windows",
+		actionDescription: "Do you need to replace or repair existing windows?",
+		typeDescription: "How many windows do you need replaced?",
+		shortTradeNoun: ""
+	},
+	{
+		shortTrade: "siding",
+		actionDescription: "Service Needed",
+		typeDescription: "Project Details",
+		shortTradeNoun: ""
+	}
+] as const;
 
 

@@ -1,25 +1,64 @@
 ---
 import Layout from "./Layout.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
+import type { z } from "zod";
 
+/**
+ * Props interface for the EstimateWrapper component
+ * @property {string} title - The page title to be displayed in the browser
+ * @property {string} estimateType - The type of estimate being processed
+ */
 interface Props {
 	title: string;
 	estimateType: string;
 }
 
-let { title, estimateType } = Astro.props;
+/**
+ * Validates the estimate type and returns the parsed data or triggers a redirect
+ * @param {string} estimateType - The estimate type to validate
+ * @returns {z.infer<typeof shortTradeEnum> | Response} Parsed estimate type or redirect response
+ */
+function validateEstimateType(estimateType: string): z.infer<typeof shortTradeEnum> | Response {
+	const parseResult = shortTradeEnum.safeParse(estimateType);
 
-const parseEstimateType = shortTradeEnum.safeParse(estimateType);
+	if (!parseResult.success) {
+		// Log validation error for debugging (optional)
+		console.error('Invalid estimate type:', parseResult.error);
+		
+		return new Response(null, {
+			status: 302,
+			headers: { Location: '/' }
+		});
+	}
 
-if (parseEstimateType.success) {
-	estimateType = parseEstimateType.data;
-} else {
-	return Astro.redirect("/");
+	return parseResult.data;
 }
+
+// Destructure props with default values if needed
+const { 
+	title, 
+	estimateType: rawEstimateType 
+} = Astro.props;
+
+// Validate the estimate type
+const validationResult = validateEstimateType(rawEstimateType);
+
+// Handle redirect if validation failed
+if (validationResult instanceof Response) {
+	return validationResult;
+}
+
 ---
 
 <Layout title={title}>
-	<div class="items-center container w-full h-full">
+	{/* 
+		Main container with full width/height and centered content
+		Using a semantic main element for better accessibility
+	*/}
+	<main 
+		class="items-center container w-full h-full"
+		role="main"
+	>
 		<slot />
-	</div>
+	</main>
 </Layout>

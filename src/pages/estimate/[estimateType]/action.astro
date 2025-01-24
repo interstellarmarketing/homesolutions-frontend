@@ -1,4 +1,15 @@
 ---
+/**
+ * Estimate Action Page
+ * 
+ * This page handles the selection of specific actions for different types of estimates.
+ * It's part of a multi-step estimate process that includes:
+ * 1. Estimate type selection
+ * 2. ZIP code validation
+ * 3. Action selection (current page)
+ * 4. Project details
+ */
+
 import { z } from "zod";
 import { estimateStore } from "@stores/estimateProgress";
 import {
@@ -11,60 +22,65 @@ import {
 } from "@stores/activeEstimateType";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 
-let { estimateType } = Astro.params;
+// Schema definitions
+const actionSchema = z.string();
+const estimateTypeSchema = shortTradeEnum;
 
-const parseEstimateType = shortTradeEnum.safeParse(estimateType);
+// Extract and validate URL parameters
+const { estimateType: rawEstimateType } = Astro.params;
+const estimateTypeResult = estimateTypeSchema.safeParse(rawEstimateType);
 
-if (!estimateType || !parseEstimateType.success) {
+// Redirect to home if estimate type is invalid
+if (!rawEstimateType || !estimateTypeResult.success) {
 	return Astro.redirect("/");
 }
 
-estimateType = parseEstimateType.data;
+const estimateType = estimateTypeResult.data;
 
+// Get store data
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
 const activeEstimateOptions = computedEstimateOptions.get();
 
+// Validation checks
 if (!activeEstimateOptions) {
-	console.log("failed @ activeEstimateOptions");
+	console.error("Missing active estimate options");
 	return Astro.redirect("/");
 }
-
-console.log({ activeEstimateType });
-
-let { estimateAction } = existingStore;
 
 if (!existingStore?.zipCode?.length) {
 	return Astro.redirect(`/estimate/${estimateType}/zip`);
 }
 
+// Get trade-specific options
 const tradeOptions = tradeOptionDescriptions.find(
-	(x) => x.shortTrade === activeEstimateType,
+	(trade) => trade.shortTrade === activeEstimateType
 );
 
-const actionParser = z.string();
-
-const existingActionParsed = actionParser.safeParse(estimateAction);
-
+// Handle form submission
 if (Astro.request.method === "POST") {
-	const formData = await Astro.request.formData();
-
-	const getAction = formData.get("action");
-	const actionParsed = actionParser.safeParse(getAction);
-
-	if (actionParsed?.success) {
-		estimateAction = actionParsed?.data;
-
+	try {
+		const formData = await Astro.request.formData();
+		const action = actionSchema.parse(formData.get("action"));
+		
 		estimateStore.set({
 			...existingStore,
-			estimateAction: estimateAction,
+			estimateAction: action,
 		});
 
-		return Astro.redirect(
-			`/estimate/${estimateType}/projectDetails`,
-		);
+		if (estimateType === 'roofing') {
+			return Astro.redirect(`/estimate/${estimateType}/home-type`);
+		}
+
+		return Astro.redirect(`/estimate/${estimateType}/projectDetails`);
+	} catch (error) {
+		console.error("Form submission error:", error);
+		// Could add error handling here
 	}
 }
+
+// Validate existing action if present
+const existingActionValid = actionSchema.safeParse(existingStore.estimateAction).success;
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
@@ -109,18 +125,18 @@ if (Astro.request.method === "POST") {
 			</div>
 			<div class="flex gap-4 items-center">
 				<a
-					href={`/estimate/${estimateType}/zip`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					href="javascript:history.back()"
+					class="rounded-lg px-6 py-2 border hover:bg-gray-100 transition-colors"
 				>
-					prev
+					Previous
 				</a>
 				<button
 					type="submit"
 					id="actionSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled={!existingActionParsed.success}
+					class="rounded-lg px-6 py-2 border disabled:opacity-20 hover:bg-blue-50 transition-colors"
+					disabled={!existingActionValid}
 				>
-					next
+					Next
 				</button>
 			</div>
 		</form>
@@ -128,31 +144,28 @@ if (Astro.request.method === "POST") {
 </EstimateWrapper>
 
 <script>
-	const radioButtons = document.querySelectorAll(
-		'input[name="action"]',
-	) as NodeListOf<HTMLInputElement>;
-	const submitButton = document.getElementById(
-		"actionSubmitButton",
-	) as HTMLButtonElement | null;
+/**
+ * Client-side form validation and button state management
+ */
+const initializeFormValidation = () => {
+	const radioButtons = document.querySelectorAll<HTMLInputElement>('input[name="action"]');
+	const submitButton = document.getElementById('actionSubmitButton') as HTMLButtonElement | null;
 
-	if (radioButtons && submitButton) {
-		radioButtons.forEach((radioButton) => {
-			radioButton.addEventListener("change", () => {
-				const selectedValue = document.querySelector(
-					'input[name="action"]:checked',
-				) as HTMLInputElement | null;
-
-				if (selectedValue) {
-					submitButton.removeAttribute(
-						"disabled",
-					);
-				} else {
-					submitButton.setAttribute(
-						"disabled",
-						"",
-					);
-				}
-			});
-		});
+	if (!radioButtons || !submitButton) {
+		console.error('Required form elements not found');
+		return;
 	}
+
+	const updateSubmitButtonState = () => {
+		const isOptionSelected = document.querySelector('input[name="action"]:checked');
+		submitButton.disabled = !isOptionSelected;
+	};
+
+	radioButtons.forEach((radio) => {
+		radio.addEventListener('change', updateSubmitButtonState);
+	});
+};
+
+// Initialize form validation when the DOM is ready
+document.addEventListener('DOMContentLoaded', initializeFormValidation);
 </script>

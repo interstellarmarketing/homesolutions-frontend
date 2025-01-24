@@ -75,14 +75,13 @@ if (Astro.request.method === "POST") {
 
 			const db = await zDb.D1Methods();
 
-			const submitToDb = await db.insertSubmission(
-				{
-					...parseFinalizedStore.data,
-				},
-				"home_improvement",
-			);
+			// const submitToDb = await db.insertSubmission(
+			// 	{
+			// 		...parseFinalizedStore.data,
+			// 	},
+			// );
 
-			console.log({ submitToDb });
+			// console.log({ submitToDb });
 
 			resetEstimateFields();
 

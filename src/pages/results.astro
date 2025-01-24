@@ -1,22 +1,14 @@
 ---
 import Layout from "@layouts/Layout.astro";
 import { listSuccessResults } from "@utils/kv/storedResults";
-import { actions } from "astro:actions";
 
 const getPrevResults = await listSuccessResults(Astro);
 
-const { data: zipData, error } = await Astro.callAction(
-	actions.usps.listAllZips,
-	{},
-);
+const zipMethodsClass = Astro.locals.runtime.env.ZIP_METHODS;
+const zipMethods = await zipMethodsClass.newZipMethods();
+const zipData = await zipMethods.listAllZips();
 
-const db = Astro.locals.runtime.env.DB;
 
-const newDb = await db.D1Methods();
-
-const fx = await newDb.listAllRecords();
-
-console.log({ fx });
 ---
 
 <Layout title="Welcome to Astro.">

@@ -21,7 +21,7 @@
     "@types/react-dom": "^18.3.5",
     "astro": "5.0.4",
     "astro-icon": "^1.1.5",
-    "be-rpc-estimates": "link:be-rpc-estimates",
+    "be-rpc-estimates": "file:../homesolutions-backend",
     "nanoid": "^5.0.9",
     "nanostores": "^0.11.3",
     "posthog-js": "^1.205.1",
@@ -32,11 +32,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20241011.0",
+    "@cloudflare/workers-types": "^4.20241230.0",
     "@iconify-json/mdi": "^1.2.2",
     "@tailwindcss/forms": "^0.5.10",
     "prettier": "^3.4.2",
     "prettier-plugin-astro": "^0.14.1",
-    "wrangler": "^3.101.0"
+    "wrangler": "^3.105.0"
   }
 }

@@ -1,95 +1,120 @@
 ---
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import Layout from "@layouts/Layout.astro";
 import { estimateParser, estimateStore } from "@stores/estimateProgress";
 
-const { estimateType } = Astro.params;
+/**
+ * Validates and processes the contact form submission
+ * @param formData - Form data from the request
+ * @param existingStore - Current store data
+ * @param estimateType - Current estimate type
+ * @returns Response object for redirect or null if validation fails
+ */
+async function processContactForm(
+	formData: FormData,
+	existingStore: Record<string, any>,
+	estimateType: string
+): Promise<Response | null> {
+	const contactData = {
+		firstName: formData.get("firstNameInput"),
+		lastName: formData.get("lastNameInput")
+	};
 
+	const contactParsed = contactParser.safeParse(contactData);
+
+	if (!contactParsed.success) {
+		return null;
+	}
+
+	// Update store with new contact information
+	estimateStore.set({
+		...existingStore,
+		...contactParsed.data,
+	});
+
+	return new Response(null, {
+		status: 302,
+		headers: { Location: `/estimate/${estimateType}/address` }
+	});
+}
+
+// Route parameter validation
+const { estimateType } = Astro.params;
 if (!estimateType) {
 	return Astro.redirect("/");
 }
+
+// Initialize store and form state
 const existingStore = estimateStore.get();
+const { firstName, lastName } = existingStore;
 
-const cfInfo = Astro.locals.runtime.cf;
-
-//console.log({ cfInfo });
-
-let { firstName, lastName } = existingStore;
-
+// Create contact-specific parser from estimate schema
 const contactParser = estimateParser.pick({
 	firstName: true,
 	lastName: true,
 });
 
-const existingContactParsed = contactParser.safeParse({
-	firstName,
-	lastName,
-});
+// Validate existing contact data
+const existingContactParsed = contactParser.safeParse({ firstName, lastName });
 
+// Handle form submission
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
-	const firstName = formData.get("firstNameInput");
-	const lastName = formData.get("lastNameInput");
-
-	const contactParsed = contactParser.safeParse({
-		firstName,
-		lastName,
-	});
-
-	if (contactParsed.success) {
-		estimateStore.set({
-			...existingStore,
-			...contactParsed.data,
-		});
-		return Astro.redirect(`/estimate/${estimateType}/address`);
-	}
+	const response = await processContactForm(formData, existingStore, estimateType);
+	if (response) return response;
 }
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
+	<div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
 		<h2 class="text-xl font-black">Please enter your full name</h2>
 		<form
 			class="flex flex-col items-center text-center gap-4 my-4"
 			method="post"
+			novalidate
 		>
+			<!-- First Name Input -->
 			<input
 				type="text"
 				required
 				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="first name"
+				placeholder="First name"
 				id="firstNameInput"
 				name="firstNameInput"
 				value={firstName?.length ? firstName : null}
 				minlength="2"
+				autocomplete="given-name"
 			/>
+
+			<!-- Last Name Input -->
 			<input
 				type="text"
 				required
 				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="last name"
+				placeholder="Last name"
 				id="lastNameInput"
 				name="lastNameInput"
 				value={lastName?.length ? lastName : null}
 				minlength="2"
+				autocomplete="family-name"
 			/>
+
+			<!-- Navigation Controls -->
 			<div class="flex gap-4 items-center">
 				<a
-					href={`/estimate/${estimateType}/zip`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					href="javascript:history.back()"
+					class="rounded-lg px-6 py-2 border hover:bg-gray-100 transition-colors"
+					rel="prev"
 				>
-					prev
+					Previous
 				</a>
 
 				<button
 					type="submit"
-					id="zipSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					id="contactSubmitButton"
+					class="rounded-lg px-6 py-2 border disabled:opacity-20 hover:bg-gray-100 transition-colors"
 					disabled={!existingContactParsed.success}
 				>
-					next
+					Next
 				</button>
 			</div>
 		</form>
@@ -99,37 +124,49 @@ if (Astro.request.method === "POST") {
 <script>
 	import { z } from "zod";
 
-	const firstNameEl = document.getElementById(
-		"firstNameInput",
-	) as HTMLInputElement | null;
+	/**
+	 * Manages form validation and button state
+	 */
+	class ContactFormController {
+		private firstNameInput: HTMLInputElement | null;
+		private lastNameInput: HTMLInputElement | null;
+		private submitButton: HTMLButtonElement | null;
+		private readonly validator = z.string().min(2);
 
-	const lastNameEl = document.getElementById(
-		"lastNameInput",
-	) as HTMLInputElement | null;
+		constructor() {
+			this.firstNameInput = document.getElementById("firstNameInput") as HTMLInputElement;
+			this.lastNameInput = document.getElementById("lastNameInput") as HTMLInputElement;
+			this.submitButton = document.getElementById("contactSubmitButton") as HTMLButtonElement;
+			this.initialize();
+		}
 
-	const zipSubmitButton = document.getElementById(
-		"zipSubmitButton",
-	) as HTMLButtonElement | null;
-	const targetParser = z.string().min(3);
-
-	if (firstNameEl && lastNameEl && zipSubmitButton) {
-		lastNameEl.addEventListener("input", (event) => {
-			const target = event.target as HTMLInputElement;
-			const targetParse = targetParser.safeParse(
-				target.value,
-			);
-			console.log(targetParse);
-
-			if (targetParse.success) {
-				zipSubmitButton.removeAttribute("disabled");
-			} else {
-				zipSubmitButton.hasAttribute("disabled")
-					? null
-					: zipSubmitButton.setAttribute(
-							"disabled",
-							"",
-						);
+		/**
+		 * Sets up event listeners for form inputs
+		 */
+		private initialize(): void {
+			if (!this.firstNameInput || !this.lastNameInput || !this.submitButton) {
+				console.error("Required form elements not found");
+				return;
 			}
-		});
+
+			[this.firstNameInput, this.lastNameInput].forEach(input => {
+				input.addEventListener("input", () => this.validateForm());
+			});
+		}
+
+		/**
+		 * Validates the form and updates submit button state
+		 */
+		private validateForm(): void {
+			if (!this.firstNameInput || !this.lastNameInput || !this.submitButton) return;
+
+			const isFirstNameValid = this.validator.safeParse(this.firstNameInput.value).success;
+			const isLastNameValid = this.validator.safeParse(this.lastNameInput.value).success;
+
+			this.submitButton.disabled = !(isFirstNameValid && isLastNameValid);
+		}
 	}
+
+	// Initialize form controller
+	new ContactFormController();
 </script>
