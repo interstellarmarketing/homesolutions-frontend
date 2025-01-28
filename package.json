@@ -8,7 +8,8 @@
     "build": "astro check && astro build",
     "preview": "astro build && wrangler pages dev",
     "astro": "astro",
-    "deploy": "astro build && wrangler pages deploy",
+    "deploy:preview": "astro build && wrangler pages deploy",
+    "deploy:production": "astro build && wrangler pages deploy --branch main",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {

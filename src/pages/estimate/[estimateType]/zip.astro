@@ -2,7 +2,6 @@
 import { z } from "zod";
 import { estimateStore } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
 import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
@@ -38,8 +37,12 @@ const initialZipCode = existingStore.zipCode ?? cfPostalCode.data
 // Handle form submission
 if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
-    const submission = { zipCode: formData?.get("zipInput") as string };
-    const parsedZip = zipSchema.safeParse(submission);
+    const submission = { 
+        zipCode: formData?.get("zipInput") as string,
+        trustedFormCertUrl: formData?.get("xxTrustedFormCertUrl") as string,
+        trustedFormPingUrl: formData?.get("xxTrustedFormPingUrl") as string
+    };
+    const parsedZip = zipSchema.safeParse({ zipCode: submission.zipCode });
 
     if (parsedZip.success) {
         const zipCode = parsedZip.data.zipCode;
@@ -57,10 +60,15 @@ if (Astro.request.method === "POST") {
                 state: locationData.defaultState,
                 city: locationData.defaultCity,
                 estimateShortTrade: validatedEstimateType,
+                trackingParams: {
+                    ...existingStore.trackingParams,
+                    trustedFormCertUrl: submission.trustedFormCertUrl || undefined,
+                    trustedFormPingUrl: submission.trustedFormPingUrl || undefined
+                }
             });
 
 			if (estimateType === 'roofing') {
-				return Astro.redirect(`/estimate/${validatedEstimateType}/projectDetails`);
+				return Astro.redirect(`/estimate/${validatedEstimateType}/project-details`);
 			}
 
             return Astro.redirect(`/estimate/${validatedEstimateType}/action`);
@@ -88,6 +96,10 @@ const formatEstimateTypeNoun = (type: string) =>
         <p>Enter the location of your project</p>
         
         <form class="flex flex-col items-center text-center gap-4 my-4" method="post">
+            <!-- Hidden TrustedForm fields - Will be auto-populated by the script above -->
+            <input type="hidden" name="xxTrustedFormCertUrl" />
+            <input type="hidden" name="xxTrustedFormPingUrl" />
+            
             <input
                 type="text"
                 required

@@ -1,0 +1,169 @@
+---
+import { estimateStore, estimateParser } from "@stores/estimateProgress";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+
+/**
+ * Extract and validate estimate type from URL parameters
+ * Redirect to home if estimate type is missing
+ */
+const { estimateType } = Astro.params;
+if (!estimateType) {
+    return Astro.redirect("/");
+}
+
+/**
+ * Retrieve existing data from the estimate store
+ * Extract phone number for validation
+ */
+const existingStore = estimateStore.get();
+const { phone } = existingStore;
+
+/**
+ * Create a phone-specific parser from the main estimate parser
+ * This ensures we only validate the phone field
+ */
+const phoneParser = estimateParser.pick({
+    phone: true,
+});
+
+/**
+ * Validate existing phone data
+ * Used to determine initial button state
+ */
+const existingPhoneParsed = phoneParser.safeParse({ phone });
+
+/**
+ * Handle form submission
+ * Validates phone number and updates store if valid
+ * Redirects to email page on success
+ */
+if (Astro.request.method === "POST") {
+    const formData = await Astro.request.formData();
+    const phone = formData.get("phoneInput");
+
+    const phoneParsed = phoneParser.safeParse({ phone });
+
+    if (phoneParsed.success) {
+        // Update store with new phone data while preserving existing data
+        estimateStore.set({
+            ...existingStore,
+            ...phoneParsed.data,
+        });
+
+        return Astro.redirect(`/estimate/${estimateType}/address`);
+    }
+}
+---
+
+<EstimateWrapper title={estimateType} estimateType={estimateType}>
+    <div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
+        <h2 class="text-xl font-black">What's the best phone number to reach you?</h2>
+        <form class="flex flex-col items-center text-center gap-4 my-4" method="post" novalidate>
+            <input
+                type="tel"
+                required
+                class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+                placeholder="phone number"
+                id="phoneInput"
+                name="phoneInput"
+                value={phone ?? ""}
+                inputmode="tel"
+                pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+                title="Phone number format: (XXX) XXX-XXXX"
+                aria-label="Phone number"
+                autocomplete="tel"
+            />
+            <div class="flex gap-4 items-center">
+                <a
+                    href={`/estimate/${estimateType}/address`}
+                    class="rounded-lg px-6 py-2 border disabled:opacity-20"
+                    rel="prev"
+                >
+                    prev
+                </a>
+                <button
+                    type="submit"
+                    id="phoneSubmitButton"
+                    class="rounded-lg px-6 py-2 border disabled:opacity-20"
+                    disabled={!existingPhoneParsed?.success}
+                >
+                    next
+                </button>
+            </div>
+        </form>
+    </div>
+</EstimateWrapper>
+
+<script>
+    import { estimateParser } from "@stores/estimateProgress";
+
+    /**
+     * Controller class for phone form functionality
+     * Handles input formatting, validation, and button state
+     */
+    class PhoneFormController {
+        private phoneInput: HTMLInputElement | null;
+        private submitButton: HTMLButtonElement | null;
+        private phoneParser = estimateParser.pick({ phone: true });
+
+        constructor() {
+            // Initialize DOM elements
+            this.phoneInput = document.getElementById("phoneInput") as HTMLInputElement;
+            this.submitButton = document.getElementById("phoneSubmitButton") as HTMLButtonElement;
+            this.initialize();
+        }
+
+        /**
+         * Formats a phone number string to (XXX) XXX-XXXX format
+         * @param value - Raw phone number input
+         * @returns Formatted phone number string
+         */
+        private formatPhoneNumber(value: string): string {
+            // Remove non-digit characters
+            const phoneNumber = value.replace(/\D/g, "");
+            const phoneNumberLength = phoneNumber.length;
+
+            // Format based on length
+            if (phoneNumberLength < 4) return phoneNumber;
+            if (phoneNumberLength < 7) {
+                return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+            }
+            return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
+                3,
+                6
+            )}-${phoneNumber.slice(6, 10)}`;
+        }
+
+        /**
+         * Handles phone input events
+         * Formats input value and updates button state
+         */
+        private handlePhoneInput = (e: Event) => {
+            const input = e.target as HTMLInputElement;
+            const formattedNumber = this.formatPhoneNumber(input.value);
+            input.value = formattedNumber;
+
+            // Validate phone number and update button state
+            const isValid = this.phoneParser.safeParse({
+                phone: input.value,
+            }).success;
+
+            if (this.submitButton) {
+                this.submitButton.disabled = !isValid;
+            }
+        };
+
+        /**
+         * Initializes event listeners
+         * Sets up phone input handling
+         */
+        private initialize() {
+            if (this.phoneInput) {
+                this.phoneInput.addEventListener("input", this.handlePhoneInput);
+            }
+        }
+    }
+
+    // Initialize form controller when DOM is ready
+    new PhoneFormController();
+</script>

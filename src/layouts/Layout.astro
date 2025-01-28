@@ -1,6 +1,7 @@
 ---
 import NavMain from "@components/nav/NavMain.astro";
 import Posthog from "@components/anaytics/Posthog.astro";
+import TrustedForm from '@components/TrustedForm.astro';
 
 /**
  * Props interface for the Layout component
@@ -71,6 +72,7 @@ const formattedTitle = formatTitle(title);
 		
 		<!-- Page Title -->
 		<title>{formattedTitle}</title>
+		<TrustedForm />
 	</head>
 	<body class="text-white bg-slate-950 min-h-dvh flex flex-col">
 		<NavMain />

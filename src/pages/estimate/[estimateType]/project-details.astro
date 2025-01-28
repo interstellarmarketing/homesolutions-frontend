@@ -36,12 +36,9 @@ interface PageState {
  */
 function initializePage(params: Record<string, string | undefined>): PageState | Response {
 
-	console.log({ params });
 	// Validate the estimate type from URL parameters
 	const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
-	console.log({ parsedEstimateType });
-	
 	if (!parsedEstimateType.success) {
 		return new Response(null, { status: 302, headers: { Location: '/' } });
 	}
@@ -49,8 +46,6 @@ function initializePage(params: Record<string, string | undefined>): PageState |
 	const estimateType = parsedEstimateType.data;
 	const activeEstimateOptions = computedEstimateOptions.get();
 
-	console.log({ activeEstimateOptions, estimateType, computedEstimateOptions });
-	
 	// Ensure estimate options are available
 	if (!activeEstimateOptions) {
 		return new Response(null, { status: 302, headers: { Location: '/' } });
@@ -88,6 +83,7 @@ async function handleFormSubmission(request: Request, estimateType: string) {
 	estimateStore.set({
 		...existingStore,
 		estimateType: actionParsed.data,
+		projectDetails: actionParsed.data,
 	});
 
 	if (estimateType === "roofing") {

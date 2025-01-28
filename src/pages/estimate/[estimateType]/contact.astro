@@ -31,6 +31,13 @@ async function processContactForm(
 		...contactParsed.data,
 	});
 
+	if (estimateType === "roofing") {
+		return new Response(null, {
+			status: 302,
+			headers: { Location: `/estimate/${estimateType}/email` }
+		});
+	}
+
 	return new Response(null, {
 		status: 302,
 		headers: { Location: `/estimate/${estimateType}/address` }

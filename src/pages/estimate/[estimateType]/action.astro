@@ -72,7 +72,7 @@ if (Astro.request.method === "POST") {
 			return Astro.redirect(`/estimate/${estimateType}/home-type`);
 		}
 
-		return Astro.redirect(`/estimate/${estimateType}/projectDetails`);
+		return Astro.redirect(`/estimate/${estimateType}/project-details`);
 	} catch (error) {
 		console.error("Form submission error:", error);
 		// Could add error handling here

@@ -1,115 +1,138 @@
 ---
-import { z } from "zod";
-import Layout from "@layouts/Layout.astro";
-import { estimateParser, estimateStore } from "@stores/estimateProgress";
+import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 
-const { estimateType } = Astro.params;
+/**
+ * Processes the address form submission
+ * Validates and updates store with address data
+ */
+async function processAddressForm(
+	formData: FormData,
+	existingStore: Record<string, any>,
+	estimateType: string
+): Promise<Response | null> {
+	const addressData = {
+		streetAddress: formData.get("streetAddressInput"),
+		isHomeowner: formData.get("isHomeownerInput") === "on"
+	};
 
+	const addressParser = estimateParser.pick({
+		streetAddress: true,
+		isHomeowner: true
+	});
+
+	const addressParsed = addressParser.safeParse(addressData);
+
+	if (!addressParsed.success) {
+		console.error("Address validation failed:", addressParsed.error);
+		return null;
+	}
+
+	// Update store with new address data
+	estimateStore.set({
+		...existingStore,
+		...addressParsed.data
+	});
+
+	return new Response(null, {
+		status: 302,
+		headers: { Location: `/estimate/${estimateType}/thank-you` }
+	});
+}
+
+// Validate route parameters and prerequisites
+const { estimateType } = Astro.params;
 if (!estimateType) {
 	return Astro.redirect("/");
 }
-const existingStore = estimateStore.get();
 
+const existingStore = estimateStore.get();
 if (!existingStore.zipCode) {
 	return Astro.redirect(`/estimate/${estimateType}/zip`);
 }
 
-const cfInfo = Astro.locals.runtime.cf;
+// Extract existing data
+const { streetAddress, isHomeowner, city, state, zipCode } = existingStore;
 
-//console.log({ cfInfo });
-
-let { streetAddress, isHomeowner } = existingStore;
-
+// Create address-specific parser
 const addressParser = estimateParser.pick({
-	isHomeowner: true,
 	streetAddress: true,
+	isHomeowner: true
 });
 
+// Validate existing address data
 const existingAddressParsed = addressParser.safeParse({
 	streetAddress,
-	isHomeowner,
+	isHomeowner
 });
 
-type AddressParser = z.infer<typeof addressParser>;
-
+// Handle form submission
 if (Astro.request.method === "POST") {
 	const formData = await Astro.request.formData();
-	const extendedAddressParser = addressParser.extend({
-		isHomeowner: z.coerce.boolean(),
-	});
-
-	const addressParsed = extendedAddressParser.safeParse({
-		isHomeowner: formData.get("isHomeownerInput"),
-		streetAddress: formData.get("streetAddressInput"),
-	});
-
-	console.log(JSON.stringify(addressParsed));
-
-	if (addressParsed.success) {
-		estimateStore.set({
-			...existingStore,
-			...addressParsed.data,
-		});
-
-		return Astro.redirect(`/estimate/${estimateType}/finalize`);
-	}
+	const response = await processAddressForm(formData, existingStore, estimateType);
+	if (response) return response;
 }
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
+	<div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
 		<h2 class="text-xl font-black">What is your street address?</h2>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
+		
+		<form 
+			class="flex flex-col items-center text-center gap-4 my-4" 
 			method="post"
+			novalidate
 		>
-			<input
-				type="text"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="Street Address"
-				id="streetAddressInput"
-				name="streetAddressInput"
-				value={streetAddress?.length
-					? streetAddress
-					: null}
-				minlength="2"
-			/>
+			{/* Street Address Input */}
+			<div class="w-full max-w-md">
+				<input
+					type="text"
+					required
+					class="w-full bg-transparent rounded-lg border py-2 px-4 text-center"
+					placeholder="Street Address"
+					id="streetAddressInput"
+					name="streetAddressInput"
+					value={streetAddress ?? ""}
+					minlength="5"
+					autocomplete="street-address"
+					aria-label="Street address"
+				/>
+			</div>
 
-			<p>
-				{existingStore.city}, {existingStore.state}
-				{existingStore.zipCode}
+			{/* Location Display */}
+			<p class="text-gray-600">
+				{city}, {state} {zipCode}
 			</p>
 
-			<label class="flex gap-4 items-center">
+			{/* Homeowner Checkbox */}
+			<label class="flex items-center gap-4 cursor-pointer">
 				<input
 					type="checkbox"
 					checked={isHomeowner ?? true}
-					class="bg-transparent rounded-lg p-3"
-					placeholder="Street Address"
+					class="w-5 h-5 rounded border-gray-300"
 					id="isHomeownerInput"
 					name="isHomeownerInput"
+					aria-label="I am the homeowner"
 				/>
-				I'm the homeowner
+				<span>I'm the homeowner</span>
 			</label>
-			<div class="flex gap-4 items-center">
-				<a
-					href={`/estimate/${estimateType}/contact`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
 
+			{/* Navigation Controls */}
+			<div class="flex gap-4 items-center mt-4">
+				<a
+					href="javascript:history.back()"
+					class="rounded-lg px-6 py-2 border hover:bg-gray-100 transition-colors"
+					rel="prev"
+				>
+					Previous
+				</a>
 				<button
 					type="submit"
 					id="addressSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
+					class="rounded-lg px-6 py-2 border disabled:opacity-20 hover:bg-gray-100 transition-colors"
 					disabled={!existingAddressParsed.success}
 				>
-					next
+					Next
 				</button>
 			</div>
 		</form>
@@ -117,36 +140,64 @@ if (Astro.request.method === "POST") {
 </EstimateWrapper>
 
 <script>
-	import { z } from "zod";
+	import { estimateParser } from "@stores/estimateProgress";
 
-	const streetAddressInput = document.getElementById(
-		"streetAddressInput",
-	) as HTMLInputElement | null;
+	/**
+	 * Manages address form validation and UI state
+	 */
+	class AddressFormController {
+		private addressInput: HTMLInputElement | null;
+		private submitButton: HTMLButtonElement | null;
+		private addressParser = estimateParser.pick({ streetAddress: true });
 
-	const addressSubmitButton = document.getElementById(
-		"addressSubmitButton",
-	) as HTMLButtonElement | null;
+		constructor() {
+			this.addressInput = document.getElementById("streetAddressInput") as HTMLInputElement;
+			this.submitButton = document.getElementById("addressSubmitButton") as HTMLButtonElement;
+			this.initialize();
+		}
 
-	const targetParser = z.string().min(5);
+		/**
+		 * Validates the address input
+		 * @returns boolean indicating if address is valid
+		 */
+		private validateAddress(value: string): boolean {
+			return this.addressParser.safeParse({ streetAddress: value }).success;
+		}
 
-	if (streetAddressInput && addressSubmitButton) {
-		streetAddressInput.addEventListener("input", (event) => {
-			const target = event.target as HTMLInputElement;
-			const targetParse = targetParser.safeParse(
-				target.value,
-			);
-			console.log(targetParse);
-
-			if (targetParse.success) {
-				addressSubmitButton.removeAttribute("disabled");
-			} else {
-				addressSubmitButton.hasAttribute("disabled")
-					? null
-					: addressSubmitButton.setAttribute(
-							"disabled",
-							"",
-						);
+		/**
+		 * Updates submit button state based on validation
+		 */
+		private updateButtonState(isValid: boolean): void {
+			if (this.submitButton) {
+				this.submitButton.disabled = !isValid;
 			}
-		});
+		}
+
+		/**
+		 * Handles address input changes
+		 */
+		private handleAddressInput = (event: Event): void => {
+			const input = event.target as HTMLInputElement;
+			const isValid = this.validateAddress(input.value);
+			this.updateButtonState(isValid);
+		};
+
+		/**
+		 * Initializes event listeners and initial state
+		 */
+		private initialize(): void {
+			if (!this.addressInput || !this.submitButton) {
+				console.error("Required form elements not found");
+				return;
+			}
+
+			this.addressInput.addEventListener("input", this.handleAddressInput);
+			
+			// Set initial state
+			this.handleAddressInput({ target: this.addressInput } as unknown as Event);
+		}
 	}
+
+	// Initialize form controller when DOM is ready
+	new AddressFormController();
 </script>
