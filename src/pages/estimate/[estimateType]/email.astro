@@ -1,43 +1,44 @@
 ---
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
 
 /**
  * Processes the email form submission and handles final submission logic
  */
 async function processEmailForm(
-    formData: FormData,
-    existingStore: Record<string, any>
+  formData: FormData,
+  existingStore: Record<string, any>
 ): Promise<Response | null> {
-    const emailData = {
-        email: formData.get("emailInput")
-    };
+  const emailData = {
+    email: formData.get("emailInput"),
+  };
 
-    const emailParsed = emailParser.safeParse(emailData);
+  const emailParsed = emailParser.safeParse(emailData);
 
-    if (!emailParsed.success) {
-        return null;
-    }
+  if (!emailParsed.success) {
+    return null;
+  }
 
-    // Update store with new email
-    const updatedStore = {
-        ...existingStore,
-        ...emailParsed.data,
-    };
-    
-    estimateStore.set(updatedStore);
+  // Update store with new email
+  const updatedStore = {
+    ...existingStore,
+    ...emailParsed.data,
+  };
 
+  estimateStore.set(updatedStore);
 
-    return new Response(null, {
-        status: 302,
-        headers: { Location: `/estimate/${estimateType}/phone-number` }
-    });
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/estimate/${estimateType}/phone-number` },
+  });
 }
 
 // Route parameter validation
 const { estimateType } = Astro.params;
 if (!estimateType) {
-    return Astro.redirect("/");
+  return Astro.redirect("/");
 }
 
 // Initialize store and form state
@@ -46,7 +47,7 @@ const { email } = existingStore;
 
 // Create email-specific parser
 const emailParser = estimateParser.pick({
-    email: true,
+  email: true,
 });
 
 // Validate existing email data
@@ -54,106 +55,138 @@ const existingEmailParsed = emailParser.safeParse({ email });
 
 // Handle form submission
 if (Astro.request.method === "POST") {
-    const formData = await Astro.request.formData();
-    const response = await processEmailForm(formData, existingStore);
-    if (response) return response;
+  const formData = await Astro.request.formData();
+  const response = await processEmailForm(formData, existingStore);
+  if (response) return response;
 }
+
+const getStepNumber = () => {
+  switch (estimateType) {
+    case "roofing":
+      return 6;
+    default:
+      return 1;
+  }
+};
+
+const getStepHeader = () => {
+  switch (estimateType) {
+    default:
+      return "What's the best email to reach you?";
+  }
+};
+const stepNumber = getStepNumber();
+const totalSteps = getTotalSteps(estimateType);
+const stepHeader = getStepHeader();
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-    <div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
-        <h2 class="text-xl font-black">
-            What's the best email to reach you?
-        </h2>
-        {/* Email Form */}
-        <form 
-            class="flex flex-col items-center text-center gap-4 my-4" 
-            method="post"
-            novalidate
-        >
-            {/* Email Input Field */}
-            <input
-                type="email"
-                required
-                class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-                placeholder="email address"
-                id="emailInput"
-                name="emailInput"
-                value={email ?? ""}
-                autocomplete="email"
-                aria-label="Email address"
-            />
-
-            {/* Navigation Buttons */}
-            <div class="flex gap-4 items-center">
-                <a
-                    href={`/estimate/${estimateType}/phone`}
-                    class="rounded-lg px-6 py-2 border disabled:opacity-20"
-                    rel="prev"
-                >
-                    prev
-                </a>
-                <button
-                    type="submit"
-                    id="emailSubmitButton"
-                    class="rounded-lg px-6 py-2 border disabled:opacity-20"
-                    disabled={!existingEmailParsed?.success}
-                >
-                    next
-                </button>
+  <form method="post">
+    <StepLayout
+      stepHeader={stepHeader}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      estimateType={estimateType}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+    >
+      <div class="flex flex-col gap-4 text-center rounded-lg container">
+        <div class="w-full mx-auto flex flex-col gap-2">
+          <label
+            for="emailInput"
+            class="self-stretch text-[#111928] text-sm font-medium font-['Inter'] leading-[21px] text-left"
+          >
+            Your Email
+          </label>
+          <div class="relative">
+            <div
+              class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+            >
+              <img
+                src="/static/mail-box.svg"
+                alt="email icon"
+                class="w-5 h-5"
+              />
             </div>
-        </form>
-    </div>
+            <input
+              type="email"
+              required
+              class="w-full bg-gray-50 rounded-lg border border-gray-300 py-3.5 pl-10 pr-4 text-base font-normal font-['Inter'] leading-normal text-gray-500"
+              placeholder="Enter email address"
+              id="emailInput"
+              name="emailInput"
+              value={email ?? ""}
+              autocomplete="email"
+              aria-label="Email address"
+            />
+          </div>
+        </div>
+      </div>
+    </StepLayout>
+  </form>
 </EstimateWrapper>
 
 <script>
-    import { estimateParser } from "@stores/estimateProgress";
+  import { estimateParser } from "@stores/estimateProgress";
 
-    /**
-     * Controller class for email form functionality
-     * Handles validation and button state
-     */
-    class EmailFormController {
-        private emailInput: HTMLInputElement | null;
-        private submitButton: HTMLButtonElement | null;
-        private emailParser = estimateParser.pick({ email: true });
+  /**
+   * Controller class for email form functionality
+   * Handles validation and button state
+   */
+  class EmailFormController {
+    private emailInput: HTMLInputElement | null;
+    private submitButton: HTMLButtonElement | null;
+    private emailParser = estimateParser.pick({ email: true });
 
-        constructor() {
-            // Initialize DOM elements
-            this.emailInput = document.getElementById("emailInput") as HTMLInputElement;
-            this.submitButton = document.getElementById("emailSubmitButton") as HTMLButtonElement;
-            this.initialize();
-        }
-
-        /**
-         * Validates email format and updates button state
-         */
-        private handleEmailInput = (e: Event) => {
-            const input = e.target as HTMLInputElement;
-            
-            // Validate email and update button state
-            const isValid = this.emailParser.safeParse({
-                email: input.value,
-            }).success;
-
-            if (this.submitButton) {
-                this.submitButton.disabled = !isValid;
-            }
-        };
-
-        /**
-         * Initializes event listeners
-         * Sets up email input handling
-         */
-        private initialize() {
-            if (this.emailInput) {
-                this.emailInput.addEventListener("input", this.handleEmailInput);
-                // Trigger initial validation
-                this.handleEmailInput({ target: this.emailInput } as unknown as Event);
-            }
-        }
+    constructor() {
+      // Initialize DOM elements
+      this.emailInput = document.getElementById(
+        "emailInput"
+      ) as HTMLInputElement;
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.initialize();
     }
 
-    // Initialize form controller when DOM is ready
-    new EmailFormController();
+    /**
+     * Validates email format and updates button state
+     */
+    private handleEmailInput = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+
+      // Validate email and update button state
+      const isValid = this.emailParser.safeParse({
+        email: input.value,
+      }).success;
+
+      if (this.submitButton) {
+        this.submitButton.disabled = !isValid;
+      }
+    };
+
+    /**
+     * Initializes event listeners
+     * Sets up email input handling and checks initial state
+     */
+    private initialize() {
+      if (this.emailInput) {
+        // Check initial value
+        if (this.emailInput.value) {
+          const isValid = this.emailParser.safeParse({
+            email: this.emailInput.value,
+          }).success;
+
+          if (this.submitButton && isValid) {
+            this.submitButton.disabled = false;
+          }
+        }
+
+        this.emailInput.addEventListener("input", this.handleEmailInput);
+      }
+    }
+  }
+
+  // Initialize form controller when DOM is ready
+  new EmailFormController();
 </script>

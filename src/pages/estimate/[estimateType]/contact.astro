@@ -1,6 +1,8 @@
 ---
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateParser, estimateStore } from "@stores/estimateProgress";
+import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
 
 /**
  * Validates and processes the contact form submission
@@ -10,44 +12,44 @@ import { estimateParser, estimateStore } from "@stores/estimateProgress";
  * @returns Response object for redirect or null if validation fails
  */
 async function processContactForm(
-	formData: FormData,
-	existingStore: Record<string, any>,
-	estimateType: string
+  formData: FormData,
+  existingStore: Record<string, any>,
+  estimateType: string
 ): Promise<Response | null> {
-	const contactData = {
-		firstName: formData.get("firstNameInput"),
-		lastName: formData.get("lastNameInput")
-	};
+  const contactData = {
+    firstName: formData.get("firstNameInput"),
+    lastName: formData.get("lastNameInput"),
+  };
 
-	const contactParsed = contactParser.safeParse(contactData);
+  const contactParsed = contactParser.safeParse(contactData);
 
-	if (!contactParsed.success) {
-		return null;
-	}
+  if (!contactParsed.success) {
+    return null;
+  }
 
-	// Update store with new contact information
-	estimateStore.set({
-		...existingStore,
-		...contactParsed.data,
-	});
+  // Update store with new contact information
+  estimateStore.set({
+    ...existingStore,
+    ...contactParsed.data,
+  });
 
-	if (estimateType === "roofing") {
-		return new Response(null, {
-			status: 302,
-			headers: { Location: `/estimate/${estimateType}/email` }
-		});
-	}
+  if (estimateType === "roofing") {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/estimate/${estimateType}/email` },
+    });
+  }
 
-	return new Response(null, {
-		status: 302,
-		headers: { Location: `/estimate/${estimateType}/address` }
-	});
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/estimate/${estimateType}/address` },
+  });
 }
 
 // Route parameter validation
 const { estimateType } = Astro.params;
 if (!estimateType) {
-	return Astro.redirect("/");
+  return Astro.redirect("/");
 }
 
 // Initialize store and form state
@@ -56,8 +58,8 @@ const { firstName, lastName } = existingStore;
 
 // Create contact-specific parser from estimate schema
 const contactParser = estimateParser.pick({
-	firstName: true,
-	lastName: true,
+  firstName: true,
+  lastName: true,
 });
 
 // Validate existing contact data
@@ -65,115 +67,173 @@ const existingContactParsed = contactParser.safeParse({ firstName, lastName });
 
 // Handle form submission
 if (Astro.request.method === "POST") {
-	const formData = await Astro.request.formData();
-	const response = await processContactForm(formData, existingStore, estimateType);
-	if (response) return response;
+  const formData = await Astro.request.formData();
+  const response = await processContactForm(
+    formData,
+    existingStore,
+    estimateType
+  );
+  if (response) return response;
 }
+
+const getStepNumber = () => {
+  switch (estimateType) {
+    case "roofing":
+      return 5;
+    default:
+      return 4;
+  }
+};
+
+const getStepHeader = () => {
+  switch (estimateType) {
+    default:
+      return "Please enter your full name";
+  }
+};
+const stepNumber = getStepNumber();
+const totalSteps = getTotalSteps(estimateType);
+const stepHeader = getStepHeader();
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
-		<h2 class="text-xl font-black">Please enter your full name</h2>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-			novalidate
-		>
-			<!-- First Name Input -->
-			<input
-				type="text"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="First name"
-				id="firstNameInput"
-				name="firstNameInput"
-				value={firstName?.length ? firstName : null}
-				minlength="2"
-				autocomplete="given-name"
-			/>
+  <form method="post">
+    <StepLayout
+      stepHeader={stepHeader}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      estimateType={estimateType}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+    >
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        <div class="flex flex-col gap-2">
+          <label
+            for="firstNameInput"
+            class="text-[#111928] text-sm font-medium leading-[21px]"
+          >
+            First name
+          </label>
+          <div class="relative">
+            <img
+              src="/static/user.svg"
+              alt="user icon"
+              class="absolute left-4 top-1/2 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              required
+              id="firstNameInput"
+              name="firstNameInput"
+              placeholder="Enter first name"
+              value={firstName?.length ? firstName : null}
+              minlength="2"
+              autocomplete="given-name"
+              class="w-full h-[52px] pl-14 pr-4 py-3.5 bg-gray-50 rounded-lg border border-gray-300 text-gray-500 text-base font-normal leading-normal"
+            />
+          </div>
+        </div>
 
-			<!-- Last Name Input -->
-			<input
-				type="text"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="Last name"
-				id="lastNameInput"
-				name="lastNameInput"
-				value={lastName?.length ? lastName : null}
-				minlength="2"
-				autocomplete="family-name"
-			/>
-
-			<!-- Navigation Controls -->
-			<div class="flex gap-4 items-center">
-				<a
-					href="javascript:history.back()"
-					class="rounded-lg px-6 py-2 border hover:bg-gray-100 transition-colors"
-					rel="prev"
-				>
-					Previous
-				</a>
-
-				<button
-					type="submit"
-					id="contactSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20 hover:bg-gray-100 transition-colors"
-					disabled={!existingContactParsed.success}
-				>
-					Next
-				</button>
-			</div>
-		</form>
-	</div>
+        <div class="flex flex-col gap-2">
+          <label
+            for="lastNameInput"
+            class="text-[#111928] text-sm font-medium leading-[21px]"
+          >
+            Last name
+          </label>
+          <div class="relative">
+            <img
+              src="/static/user.svg"
+              alt="user icon"
+              class="absolute left-4 top-1/2 -translate-y-1/2"
+            />
+            <input
+              type="text"
+              required
+              id="lastNameInput"
+              name="lastNameInput"
+              placeholder="Enter last name"
+              value={lastName?.length ? lastName : null}
+              minlength="2"
+              autocomplete="family-name"
+              class="w-full h-[52px] pl-14 pr-4 py-3.5 bg-gray-50 rounded-lg border border-gray-300 text-gray-500 text-base font-normal leading-normal"
+            />
+          </div>
+        </div>
+      </div>
+    </StepLayout>
+  </form>
 </EstimateWrapper>
 
 <script>
-	import { z } from "zod";
+  import { z } from "zod";
 
-	/**
-	 * Manages form validation and button state
-	 */
-	class ContactFormController {
-		private firstNameInput: HTMLInputElement | null;
-		private lastNameInput: HTMLInputElement | null;
-		private submitButton: HTMLButtonElement | null;
-		private readonly validator = z.string().min(2);
+  /**
+   * Manages form validation and button state
+   */
+  class ContactFormController {
+    private firstNameInput: HTMLInputElement | null;
+    private lastNameInput: HTMLInputElement | null;
+    private submitButton: HTMLButtonElement | null;
+    private readonly validator = z.string().min(2);
 
-		constructor() {
-			this.firstNameInput = document.getElementById("firstNameInput") as HTMLInputElement;
-			this.lastNameInput = document.getElementById("lastNameInput") as HTMLInputElement;
-			this.submitButton = document.getElementById("contactSubmitButton") as HTMLButtonElement;
-			this.initialize();
-		}
+    constructor() {
+      this.firstNameInput = document.getElementById(
+        "firstNameInput"
+      ) as HTMLInputElement;
+      this.lastNameInput = document.getElementById(
+        "lastNameInput"
+      ) as HTMLInputElement;
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.initialize();
+    }
 
-		/**
-		 * Sets up event listeners for form inputs
-		 */
-		private initialize(): void {
-			if (!this.firstNameInput || !this.lastNameInput || !this.submitButton) {
-				console.error("Required form elements not found");
-				return;
-			}
+    /**
+     * Sets up event listeners for form inputs
+     */
+    private initialize(): void {
+      if (!this.firstNameInput || !this.lastNameInput || !this.submitButton) {
+        console.error("Required form elements not found");
+        return;
+      }
 
-			[this.firstNameInput, this.lastNameInput].forEach(input => {
-				input.addEventListener("input", () => this.validateForm());
-			});
-		}
+      // Check initial state using input values directly
+      const isFirstNameValid = this.validator.safeParse(
+        this.firstNameInput.value
+      ).success;
+      const isLastNameValid = this.validator.safeParse(
+        this.lastNameInput.value
+      ).success;
 
-		/**
-		 * Validates the form and updates submit button state
-		 */
-		private validateForm(): void {
-			if (!this.firstNameInput || !this.lastNameInput || !this.submitButton) return;
+      if (isFirstNameValid && isLastNameValid) {
+        this.submitButton.disabled = false;
+      }
 
-			const isFirstNameValid = this.validator.safeParse(this.firstNameInput.value).success;
-			const isLastNameValid = this.validator.safeParse(this.lastNameInput.value).success;
+      [this.firstNameInput, this.lastNameInput].forEach((input) => {
+        input.addEventListener("input", () => this.validateForm());
+      });
+    }
 
-			this.submitButton.disabled = !(isFirstNameValid && isLastNameValid);
-		}
-	}
+    /**
+     * Validates the form and updates submit button state
+     */
+    private validateForm(): void {
+      if (!this.firstNameInput || !this.lastNameInput || !this.submitButton)
+        return;
 
-	// Initialize form controller
-	new ContactFormController();
+      const isFirstNameValid = this.validator.safeParse(
+        this.firstNameInput.value
+      ).success;
+      const isLastNameValid = this.validator.safeParse(
+        this.lastNameInput.value
+      ).success;
+
+      this.submitButton.disabled = !(isFirstNameValid && isLastNameValid);
+    }
+  }
+
+  // Initialize form controller
+  new ContactFormController();
 </script>

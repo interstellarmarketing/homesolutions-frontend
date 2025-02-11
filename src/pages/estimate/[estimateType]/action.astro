@@ -1,7 +1,7 @@
 ---
 /**
  * Estimate Action Page
- * 
+ *
  * This page handles the selection of specific actions for different types of estimates.
  * It's part of a multi-step estimate process that includes:
  * 1. Estimate type selection
@@ -13,15 +13,16 @@
 import { z } from "zod";
 import { estimateStore } from "@stores/estimateProgress";
 import {
-	shortTradeEnum,
-	tradeOptionDescriptions,
+  shortTradeEnum,
+  tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
 import {
-	activeEstimateTypeStore,
-	computedEstimateOptions,
+  activeEstimateTypeStore,
+  computedEstimateOptions,
 } from "@stores/activeEstimateType";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-
+import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
 // Schema definitions
 const actionSchema = z.string();
 const estimateTypeSchema = shortTradeEnum;
@@ -32,7 +33,7 @@ const estimateTypeResult = estimateTypeSchema.safeParse(rawEstimateType);
 
 // Redirect to home if estimate type is invalid
 if (!rawEstimateType || !estimateTypeResult.success) {
-	return Astro.redirect("/");
+  return Astro.redirect("/");
 }
 
 const estimateType = estimateTypeResult.data;
@@ -44,128 +45,152 @@ const activeEstimateOptions = computedEstimateOptions.get();
 
 // Validation checks
 if (!activeEstimateOptions) {
-	console.error("Missing active estimate options");
-	return Astro.redirect("/");
+  console.error("Missing active estimate options");
+  return Astro.redirect("/");
 }
 
 if (!existingStore?.zipCode?.length) {
-	return Astro.redirect(`/estimate/${estimateType}/zip`);
+  return Astro.redirect(`/estimate/${estimateType}/zip`);
 }
 
 // Get trade-specific options
 const tradeOptions = tradeOptionDescriptions.find(
-	(trade) => trade.shortTrade === activeEstimateType
+  (trade) => trade.shortTrade === activeEstimateType
 );
 
 // Handle form submission
 if (Astro.request.method === "POST") {
-	try {
-		const formData = await Astro.request.formData();
-		const action = actionSchema.parse(formData.get("action"));
-		
-		estimateStore.set({
-			...existingStore,
-			estimateAction: action,
-		});
+  try {
+    const formData = await Astro.request.formData();
+    const action = actionSchema.parse(formData.get("action"));
 
-		if (estimateType === 'roofing') {
-			return Astro.redirect(`/estimate/${estimateType}/home-type`);
-		}
+    estimateStore.set({
+      ...existingStore,
+      estimateAction: action,
+    });
 
-		return Astro.redirect(`/estimate/${estimateType}/project-details`);
-	} catch (error) {
-		console.error("Form submission error:", error);
-		// Could add error handling here
-	}
+    if (estimateType === "roofing") {
+      return Astro.redirect(`/estimate/${estimateType}/home-type`);
+    }
+
+    return Astro.redirect(`/estimate/${estimateType}/project-details`);
+  } catch (error) {
+    console.error("Form submission error:", error);
+    // Could add error handling here
+  }
 }
 
-// Validate existing action if present
-const existingActionValid = actionSchema.safeParse(existingStore.estimateAction).success;
+const getStepNumber = () => {
+  switch (estimateType) {
+    case "roofing":
+      return 3;
+    default:
+      return 2;
+  }
+};
+
+const getStepHeader = () => {
+  switch (estimateType) {
+    case "roofing":
+      return tradeOptions?.actionDescription ?? "";
+    default:
+      return "What type of project are you looking to complete?";
+  }
+};
+
+const stepNumber = getStepNumber();
+const totalSteps = getTotalSteps(estimateType);
+const stepHeader = getStepHeader();
+
+console.log(existingStore.estimateAction);
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<h2 class="text-xl font-black">
-			{tradeOptions?.actionDescription}
-		</h2>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
-			<div class="grid grid-cols-2 gap-4 p-8">
-				{
-					activeEstimateOptions.data.estimateAction.map(
-						(actionOption) => {
-							return (
-								<label class="inline-flex items-center ">
-									<input
-										type="radio"
-										name="action"
-										checked={
-											existingStore.estimateAction ===
-											actionOption
-										}
-										value={
-											actionOption
-										}
-										class="hidden peer"
-									/>
-									<span class="px-4 w-full py-2 rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
-										{
-											actionOption
-										}
-									</span>
-								</label>
-							);
-						},
-					)
-				}
-			</div>
-			<div class="flex gap-4 items-center">
-				<a
-					href="javascript:history.back()"
-					class="rounded-lg px-6 py-2 border hover:bg-gray-100 transition-colors"
-				>
-					Previous
-				</a>
-				<button
-					type="submit"
-					id="actionSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20 hover:bg-blue-50 transition-colors"
-					disabled={!existingActionValid}
-				>
-					Next
-				</button>
-			</div>
-		</form>
-	</div>
+  <form method="post">
+    <!-- Add hidden input for initial state -->
+    <input
+      type="hidden"
+      id="hasInitialSelection"
+      value={existingStore.estimateAction ? "true" : "false"}
+    />
+
+    <StepLayout
+      stepHeader={stepHeader}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      estimateType={estimateType}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+    >
+      <div class="flex flex-col gap-4 text-center rounded-lg container">
+        <div class="grid grid-cols-2 gap-4">
+          {
+            activeEstimateOptions.data.estimateAction.map(
+              (actionOption, index) => {
+                return (
+                  <label class="inline-flex items-center ">
+                    <input
+                      type="radio"
+                      name="action"
+                      checked={existingStore.estimateAction === actionOption}
+                      value={actionOption}
+                      class="hidden peer"
+                    />
+                    <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
+                      {actionOption}
+                    </span>
+                  </label>
+                );
+              }
+            )
+          }
+        </div>
+      </div>
+    </StepLayout>
+  </form>
+
+  <script>
+    /**
+     * Client-side form validation and button state management
+     */
+    class FormController {
+      private radioButtons: NodeListOf<HTMLInputElement>;
+      private submitButton: HTMLButtonElement | null;
+
+      constructor() {
+        this.radioButtons = document.querySelectorAll('input[name="action"]');
+        this.submitButton = document.getElementById(
+          "nextStepButton"
+        ) as HTMLButtonElement;
+        this.initialize();
+      }
+
+      private initialize() {
+        if (!this.submitButton || !this.radioButtons.length) return;
+
+        // Check hidden field for initial state
+        const hasInitialSelection =
+          document
+            .getElementById("hasInitialSelection")
+            ?.getAttribute("value") === "true";
+        if (hasInitialSelection) {
+          this.submitButton.disabled = false;
+        }
+
+        this.radioButtons.forEach((radio) => {
+          radio.addEventListener("change", () => this.handleRadioChange());
+        });
+      }
+
+      private handleRadioChange() {
+        if (!this.submitButton) return;
+        const isSelected = Array.from(this.radioButtons).some(
+          (radio) => radio.checked
+        );
+        this.submitButton.disabled = !isSelected;
+      }
+    }
+
+    new FormController();
+  </script>
 </EstimateWrapper>
-
-<script>
-/**
- * Client-side form validation and button state management
- */
-const initializeFormValidation = () => {
-	const radioButtons = document.querySelectorAll<HTMLInputElement>('input[name="action"]');
-	const submitButton = document.getElementById('actionSubmitButton') as HTMLButtonElement | null;
-
-	if (!radioButtons || !submitButton) {
-		console.error('Required form elements not found');
-		return;
-	}
-
-	const updateSubmitButtonState = () => {
-		const isOptionSelected = document.querySelector('input[name="action"]:checked');
-		submitButton.disabled = !isOptionSelected;
-	};
-
-	radioButtons.forEach((radio) => {
-		radio.addEventListener('change', updateSubmitButtonState);
-	});
-};
-
-// Initialize form validation when the DOM is ready
-document.addEventListener('DOMContentLoaded', initializeFormValidation);
-</script>

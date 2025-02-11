@@ -3,17 +3,18 @@ import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateStore } from "@stores/estimateProgress";
 import {
-	shortTradeEnum,
-	tradeOptionDescriptions,
+  shortTradeEnum,
+  tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
 import {
-	activeEstimateTypeStore,
-	computedEstimateOptions,
+  activeEstimateTypeStore,
+  computedEstimateOptions,
 } from "@stores/activeEstimateType";
-
+import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
 // Define validation schemas using Zod
-const estimateTypeSchema = shortTradeEnum;  // Validates the estimate type against predefined trade options
-const actionSchema = z.string();  // Validates that the action is a string
+const estimateTypeSchema = shortTradeEnum; // Validates the estimate type against predefined trade options
+const actionSchema = z.string(); // Validates that the action is a string
 
 /**
  * Interface defining the structure of the page's state
@@ -23,10 +24,10 @@ const actionSchema = z.string();  // Validates that the action is a string
  * @property {string | undefined} currentSelection - Currently selected project type
  */
 interface PageState {
-	estimateType: string;
-	tradeDescription: string | undefined;
-	projectTypes: (string | null)[] | undefined;
-	currentSelection: string | undefined;
+  estimateType: string;
+  tradeDescription: string | undefined;
+  projectTypes: (string | null)[] | undefined;
+  currentSelection: string | undefined;
 }
 
 /**
@@ -34,34 +35,35 @@ interface PageState {
  * @param {Record<string, string | undefined>} params - URL parameters
  * @returns {PageState | Response} Either the page state or a redirect response
  */
-function initializePage(params: Record<string, string | undefined>): PageState | Response {
+function initializePage(
+  params: Record<string, string | undefined>
+): PageState | Response {
+  // Validate the estimate type from URL parameters
+  const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
-	// Validate the estimate type from URL parameters
-	const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
+  if (!parsedEstimateType.success) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
 
-	if (!parsedEstimateType.success) {
-		return new Response(null, { status: 302, headers: { Location: '/' } });
-	}
+  const estimateType = parsedEstimateType.data;
+  const activeEstimateOptions = computedEstimateOptions.get();
 
-	const estimateType = parsedEstimateType.data;
-	const activeEstimateOptions = computedEstimateOptions.get();
+  // Ensure estimate options are available
+  if (!activeEstimateOptions) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
 
-	// Ensure estimate options are available
-	if (!activeEstimateOptions) {
-		return new Response(null, { status: 302, headers: { Location: '/' } });
-	}
+  // Find the trade options for the current estimate type
+  const tradeOptions = tradeOptionDescriptions.find(
+    (option) => option.shortTrade === activeEstimateTypeStore.get()
+  );
 
-	// Find the trade options for the current estimate type
-	const tradeOptions = tradeOptionDescriptions.find(
-		(option) => option.shortTrade === activeEstimateTypeStore.get()
-	);
-
-	return {
-		estimateType,
-		tradeDescription: tradeOptions?.typeDescription,
-		projectTypes: activeEstimateOptions.data.type,
-		currentSelection: estimateStore.get().estimateAction
-	};
+  return {
+    estimateType,
+    tradeDescription: tradeOptions?.typeDescription,
+    projectTypes: activeEstimateOptions.data.type,
+    currentSelection: estimateStore.get().estimateAction,
+  };
 }
 
 /**
@@ -71,141 +73,179 @@ function initializePage(params: Record<string, string | undefined>): PageState |
  * @returns {Promise<Response | null>} Redirect response or null if validation fails
  */
 async function handleFormSubmission(request: Request, estimateType: string) {
-	const formData = await request.formData();
-	const actionParsed = actionSchema.safeParse(formData.get("action"));
+  const formData = await request.formData();
+  const actionParsed = actionSchema.safeParse(formData.get("action"));
 
-	if (!actionParsed.success) {
-		return null;
-	}
+  if (!actionParsed.success) {
+    return null;
+  }
 
-	// Update the estimate store with the new selection
-	const existingStore = estimateStore.get();
-	estimateStore.set({
-		...existingStore,
-		estimateType: actionParsed.data,
-		projectDetails: actionParsed.data,
-	});
+  // Update the estimate store with the new selection
+  const existingStore = estimateStore.get();
+  estimateStore.set({
+    ...existingStore,
+    estimateType: actionParsed.data,
+    projectDetails: actionParsed.data,
+  });
 
-	if (estimateType === "roofing") {
-		return new Response(null, {
-			status: 302,
-			headers: { Location: `/estimate/${estimateType}/action` }
-		});
-	}
+  if (estimateType === "roofing") {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/estimate/${estimateType}/action` },
+    });
+  }
 
-	return new Response(null, {
-		status: 302,
-		headers: { Location: `/estimate/${estimateType}/contact` }
-	});
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/estimate/${estimateType}/contact` },
+  });
 }
 
 // Initialize the page state
 const pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
-	return pageState;
+  return pageState;
 }
 
 // Handle null project types by redirecting to contact page
 if (pageState.projectTypes?.includes(null)) {
-	const existingStore = estimateStore.get();
-	estimateStore.set({
-		...existingStore,
-		estimateType: null,
-	});
-	return Astro.redirect(`/estimate/${pageState.estimateType}/contact`);
+  const existingStore = estimateStore.get();
+  estimateStore.set({
+    ...existingStore,
+    estimateType: null,
+  });
+
+  return Astro.redirect(`/estimate/${pageState.estimateType}/contact`);
 }
 
 // Process form submission if POST request
 if (Astro.request.method === "POST") {
-	const response = await handleFormSubmission(Astro.request, pageState.estimateType);
-	if (response) return response;
+  const response = await handleFormSubmission(
+    Astro.request,
+    pageState.estimateType
+  );
+
+  if (response) return response;
+}
+
+const getStepNumber = () => {
+  switch (pageState.estimateType) {
+    case "roofing":
+      return 2;
+    default:
+      return 3;
+  }
+};
+
+const getStepHeader = () => {
+  switch (pageState.estimateType) {
+    case "roofing":
+      return pageState.tradeDescription ?? "";
+    default:
+      return "What type of project are you looking to complete?";
+  }
+};
+
+const stepNumber = getStepNumber();
+const totalSteps = getTotalSteps(pageState.estimateType);
+const stepHeader = getStepHeader();
+
+const existingStore = estimateStore.get();
+
+if (existingStore.projectDetails) {
+  pageState.currentSelection = existingStore.projectDetails;
 }
 ---
 
 <!-- Template section -->
-<EstimateWrapper 
-	title={pageState.estimateType} 
-	estimateType={pageState.estimateType}
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
 >
-	<div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
-		<h2 class="text-xl font-black">
-			{pageState.tradeDescription}
-		</h2>
-		
-		<!-- Project type selection form -->
-		<form class="flex flex-col items-center text-center gap-4 my-4" method="post">
-			<div class="grid grid-cols-2 gap-4 p-8">
-				{pageState.projectTypes?.map((actionOption) => (
-					<label class="inline-flex items-center">
-						<input
-							type="radio"
-							name="action"
-							checked={pageState.currentSelection === actionOption}
-							value={actionOption}
-							class="hidden peer"
-						/>
-						<span class="px-4 py-2 w-full rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
-							{actionOption}
-						</span>
-					</label>
-				))}
-			</div>
-
-			<!-- Navigation buttons -->
-			<div class="flex gap-4 items-center">
-				<a
-					href="javascript:history.back()"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
-				<button
-					type="submit"
-					id="actionSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled
-				>
-					next
-				</button>
-			</div>
-		</form>
-	</div>
+  <form method="post">
+    <input
+      type="hidden"
+      id="hasInitialSelection"
+      value={existingStore.projectDetails ? "true" : "false"}
+    />
+    <StepLayout
+      stepHeader={stepHeader}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+      estimateType={pageState.estimateType}
+    >
+      <div class="flex flex-col gap-4 text-center rounded-lg container">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {
+            pageState.projectTypes?.map((actionOption) => (
+              <label class="inline-flex items-center w-full">
+                <input
+                  type="radio"
+                  name="action"
+                  checked={pageState.currentSelection === actionOption}
+                  value={actionOption}
+                  class="hidden peer"
+                />
+                <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
+                  {actionOption}
+                </span>
+              </label>
+            ))
+          }
+        </div>
+      </div>
+    </StepLayout>
+  </form>
 </EstimateWrapper>
 
 <script>
-	/**
-	 * Controls the form behavior and button states
-	 */
-	class FormController {
-		private radioButtons: NodeListOf<HTMLInputElement>;
-		private submitButton: HTMLButtonElement | null;
+  /**
+   * Controls the form behavior and button states
+   */
+  class FormController {
+    private radioButtons: NodeListOf<HTMLInputElement>;
+    private submitButton: HTMLButtonElement | null;
 
-		constructor() {
-			this.radioButtons = document.querySelectorAll('input[name="action"]');
-			this.submitButton = document.getElementById("actionSubmitButton") as HTMLButtonElement;
-			this.initialize();
-		}
+    constructor() {
+      this.radioButtons = document.querySelectorAll('input[name="action"]');
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.initialize();
+    }
 
-		/**
-		 * Sets up event listeners for radio buttons
-		 */
-		private initialize() {
-			if (!this.submitButton || !this.radioButtons.length) return;
+    /**
+     * Sets up event listeners for radio buttons and checks initial state
+     */
+    private initialize() {
+      if (!this.submitButton || !this.radioButtons.length) return;
 
-			this.radioButtons.forEach(radio => {
-				radio.addEventListener("change", () => this.handleRadioChange());
-			});
-		}
+      // Check hidden field for initial state
+      const hasInitialSelection =
+        document
+          .getElementById("hasInitialSelection")
+          ?.getAttribute("value") === "true";
+      if (hasInitialSelection) {
+        this.submitButton.disabled = false;
+      }
 
-		private handleRadioChange() {
-			if (!this.submitButton) return;
+      this.radioButtons.forEach((radio) => {
+        radio.addEventListener("change", () => this.handleRadioChange());
+      });
+    }
 
-			const isSelected = document.querySelector('input[name="action"]:checked');
-			this.submitButton.disabled = !isSelected;
-		}
-	}
+    private handleRadioChange() {
+      if (!this.submitButton) return;
 
-	// Initialize form controller
-	new FormController();
+      const isSelected = Array.from(this.radioButtons).some(
+        (radio) => radio.checked
+      );
+      this.submitButton.disabled = !isSelected;
+    }
+  }
+
+  new FormController();
 </script>

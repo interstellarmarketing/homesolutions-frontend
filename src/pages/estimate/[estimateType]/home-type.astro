@@ -3,161 +3,196 @@ import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateStore } from "@stores/estimateProgress";
 import {
-	shortTradeEnum,
-	tradeOptionDescriptions,
+  shortTradeEnum,
+  tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
 import { homeTypesConst } from "@assets/info/estimateOptions";
 import {
-	activeEstimateTypeStore,
-	computedEstimateOptions,
+  activeEstimateTypeStore,
+  computedEstimateOptions,
 } from "@stores/activeEstimateType";
+import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
 const homeTypeSchema = z.string();
 
 interface PageState {
-	estimateType: string;
-	tradeDescription: string | undefined;
-	homeTypes: typeof homeTypesConst;
-	currentSelection: string | undefined;
+  estimateType: string;
+  tradeDescription: string | undefined;
+  homeTypes: typeof homeTypesConst;
+  currentSelection: string | undefined;
 }
 
-function initializePage(params: Record<string, string | undefined>): PageState | Response {
-	const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
+function initializePage(
+  params: Record<string, string | undefined>
+): PageState | Response {
+  const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
-    console.log({parsedEstimateType, page: 'home-type'})
-	
-	if (!parsedEstimateType.success) {
-		return new Response(null, { status: 302, headers: { Location: '/' } });
-	}
+  console.log({ parsedEstimateType, page: "home-type" });
 
-	const estimateType = parsedEstimateType.data;
-	const activeEstimateOptions = computedEstimateOptions.get();
+  if (!parsedEstimateType.success) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
 
-    console.log({activeEstimateOptions, page: 'home-type'})
-	
-	if (!activeEstimateOptions) {
-		return new Response(null, { status: 302, headers: { Location: '/' } });
-	}
+  const estimateType = parsedEstimateType.data;
+  const activeEstimateOptions = computedEstimateOptions.get();
 
-	const tradeOptions = tradeOptionDescriptions.find(
-		(option) => option.shortTrade === activeEstimateTypeStore.get()
-	);
+  console.log({ activeEstimateOptions, page: "home-type" });
 
-	return {
-		estimateType,
-		tradeDescription: tradeOptions?.typeDescription,
-		homeTypes: homeTypesConst,
-		currentSelection: estimateStore.get().homeType
-	};
+  if (!activeEstimateOptions) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
+
+  const tradeOptions = tradeOptionDescriptions.find(
+    (option) => option.shortTrade === activeEstimateTypeStore.get()
+  );
+
+  return {
+    estimateType,
+    tradeDescription: tradeOptions?.typeDescription,
+    homeTypes: homeTypesConst,
+    currentSelection: estimateStore.get().homeType,
+  };
 }
 
 async function handleFormSubmission(request: Request, estimateType: string) {
-	const formData = await request.formData();
-	const homeTypeParsed = homeTypeSchema.safeParse(formData.get("homeType"));
+  const formData = await request.formData();
+  const homeTypeParsed = homeTypeSchema.safeParse(formData.get("homeType"));
 
-	if (!homeTypeParsed.success) {
-		return null;
-	}
+  if (!homeTypeParsed.success) {
+    return null;
+  }
 
-	const existingStore = estimateStore.get();
-	estimateStore.set({
-		...existingStore,
-		homeType: homeTypeParsed.data,
-	});
+  const existingStore = estimateStore.get();
+  estimateStore.set({
+    ...existingStore,
+    homeType: homeTypeParsed.data,
+  });
 
-	return new Response(null, {
-		status: 302,
-		headers: { Location: `/estimate/${estimateType}/contact` }
-	});
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/estimate/${estimateType}/contact` },
+  });
 }
 
 const pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
-	return pageState;
+  return pageState;
 }
 
 if (Astro.request.method === "POST") {
-	const response = await handleFormSubmission(Astro.request, pageState.estimateType);
-	if (response) return response;
+  const response = await handleFormSubmission(
+    Astro.request,
+    pageState.estimateType
+  );
+  if (response) return response;
 }
 
+const getStepNumber = () => {
+  switch (pageState.estimateType) {
+    case "roofing":
+      return 4;
+    default:
+      return 1;
+  }
+};
+
+const getStepHeader = () => {
+  switch (pageState.estimateType) {
+    case "roofing":
+      return "What type of home do you have?";
+    default:
+      return "What type of home do you have?";
+  }
+};
+const stepNumber = getStepNumber();
+const totalSteps = getTotalSteps(pageState.estimateType);
+const stepHeader = getStepHeader();
 ---
-<EstimateWrapper 
-	title={pageState.estimateType} 
-	estimateType={pageState.estimateType}
+
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
 >
-	<div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
-		<h2 class="text-xl font-black">
-			What type of home do you have?
-		</h2>
-		
-		<form class="flex flex-col items-center text-center gap-4 my-4" method="post">
-			<div class="grid grid-cols-2 gap-4 p-8">
-				{pageState.homeTypes.map((homeType) => (
-					<label class="inline-flex items-center">
-						<input
-							type="radio"
-							name="homeType"
-							checked={pageState.currentSelection === homeType}
-							value={homeType}
-							class="hidden peer"
-						/>
-						<span class="px-4 py-2 w-full rounded-md bg-gray-200 text-gray-700 cursor-pointer peer-checked:bg-blue-500 peer-checked:text-white transition-colors">
-							{homeType}
-						</span>
-					</label>
-				))}
-			</div>
+  <form method="post">
+    <input
+      type="hidden"
+      id="hasInitialSelection"
+      value={pageState.currentSelection ? "true" : "false"}
+    />
 
-			<div class="flex gap-4 items-center">
-				<a
-					href="javascript:history.back()"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
-				<button
-					type="submit"
-					id="actionSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled
-				>
-					next
-				</button>
-			</div>
-		</form>
-	</div>
+    <StepLayout
+      stepHeader={stepHeader}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      estimateType={pageState.estimateType}
+    >
+      <div class="flex flex-col gap-4 text-center rounded-lg container">
+        <div class="grid grid-cols-2 gap-4">
+          {
+            pageState.homeTypes.map((homeType, index) => (
+              <label class="inline-flex items-center">
+                <input
+                  type="radio"
+                  name="homeType"
+                  checked={pageState.currentSelection === homeType}
+                  value={homeType}
+                  class="hidden peer"
+                />
+                <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
+                  {homeType}
+                </span>
+              </label>
+            ))
+          }
+        </div>
+      </div>
+    </StepLayout>
+  </form>
+
+  <script>
+    class FormController {
+      private radioButtons: NodeListOf<HTMLInputElement>;
+      private submitButton: HTMLButtonElement | null;
+
+      constructor() {
+        this.radioButtons = document.querySelectorAll('input[name="homeType"]');
+        this.submitButton = document.getElementById(
+          "nextStepButton"
+        ) as HTMLButtonElement;
+        this.initialize();
+      }
+
+      private initialize() {
+        if (!this.submitButton || !this.radioButtons.length) return;
+
+        const hasInitialSelection = document.getElementById(
+          "hasInitialSelection"
+        ) as HTMLInputElement;
+        if (hasInitialSelection?.value === "true") {
+          this.submitButton.disabled = false;
+        }
+
+        this.radioButtons.forEach((radio) => {
+          radio.addEventListener("change", () => this.handleRadioChange());
+        });
+      }
+
+      private handleRadioChange() {
+        if (!this.submitButton) return;
+
+        const isSelected = Array.from(this.radioButtons).some(
+          (radio) => radio.checked
+        );
+        this.submitButton.disabled = !isSelected;
+      }
+    }
+
+    new FormController();
+  </script>
 </EstimateWrapper>
-
-<script>
-	class FormController {
-		private radioButtons: NodeListOf<HTMLInputElement>;
-		private submitButton: HTMLButtonElement | null;
-
-		constructor() {
-			this.radioButtons = document.querySelectorAll('input[name="homeType"]');
-			this.submitButton = document.getElementById("actionSubmitButton") as HTMLButtonElement;
-			this.initialize();
-		}
-
-		private initialize() {
-			if (!this.submitButton || !this.radioButtons.length) return;
-
-			this.radioButtons.forEach(radio => {
-				radio.addEventListener("change", () => this.handleRadioChange());
-			});
-		}
-
-		private handleRadioChange() {
-			if (!this.submitButton) return;
-
-			const isSelected = document.querySelector('input[name="homeType"]:checked');
-			this.submitButton.disabled = !isSelected;
-		}
-	}
-
-	new FormController();
-</script>

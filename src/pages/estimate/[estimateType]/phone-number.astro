@@ -1,14 +1,15 @@
 ---
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-
+import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
 /**
  * Extract and validate estimate type from URL parameters
  * Redirect to home if estimate type is missing
  */
 const { estimateType } = Astro.params;
 if (!estimateType) {
-    return Astro.redirect("/");
+  return Astro.redirect("/");
 }
 
 /**
@@ -23,7 +24,7 @@ const { phone } = existingStore;
  * This ensures we only validate the phone field
  */
 const phoneParser = estimateParser.pick({
-    phone: true,
+  phone: true,
 });
 
 /**
@@ -38,132 +39,172 @@ const existingPhoneParsed = phoneParser.safeParse({ phone });
  * Redirects to email page on success
  */
 if (Astro.request.method === "POST") {
-    const formData = await Astro.request.formData();
-    const phone = formData.get("phoneInput");
+  const formData = await Astro.request.formData();
+  const phone = formData.get("phoneInput");
 
-    const phoneParsed = phoneParser.safeParse({ phone });
+  const phoneParsed = phoneParser.safeParse({ phone });
 
-    if (phoneParsed.success) {
-        // Update store with new phone data while preserving existing data
-        estimateStore.set({
-            ...existingStore,
-            ...phoneParsed.data,
-        });
+  if (phoneParsed.success) {
+    // Update store with new phone data while preserving existing data
+    estimateStore.set({
+      ...existingStore,
+      ...phoneParsed.data,
+    });
 
-        return Astro.redirect(`/estimate/${estimateType}/address`);
-    }
+    return Astro.redirect(`/estimate/${estimateType}/address`);
+  }
 }
+
+const getStepNumber = () => {
+  switch (estimateType) {
+    case "roofing":
+      return 7;
+    default:
+      return 1;
+  }
+};
+
+const getStepHeader = () => {
+  switch (estimateType) {
+    default:
+      return "What's the best phone number to reach you?";
+  }
+};
+const stepNumber = getStepNumber();
+const totalSteps = getTotalSteps(estimateType);
+const stepHeader = getStepHeader();
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-    <div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
-        <h2 class="text-xl font-black">What's the best phone number to reach you?</h2>
-        <form class="flex flex-col items-center text-center gap-4 my-4" method="post" novalidate>
-            <input
-                type="tel"
-                required
-                class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-                placeholder="phone number"
-                id="phoneInput"
-                name="phoneInput"
-                value={phone ?? ""}
-                inputmode="tel"
-                pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
-                title="Phone number format: (XXX) XXX-XXXX"
-                aria-label="Phone number"
-                autocomplete="tel"
-            />
-            <div class="flex gap-4 items-center">
-                <a
-                    href={`/estimate/${estimateType}/address`}
-                    class="rounded-lg px-6 py-2 border disabled:opacity-20"
-                    rel="prev"
-                >
-                    prev
-                </a>
-                <button
-                    type="submit"
-                    id="phoneSubmitButton"
-                    class="rounded-lg px-6 py-2 border disabled:opacity-20"
-                    disabled={!existingPhoneParsed?.success}
-                >
-                    next
-                </button>
+  <form method="post">
+    <StepLayout
+      stepHeader={stepHeader}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      estimateType={estimateType}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+    >
+      <div class="flex flex-col gap-4 text-center rounded-lg container">
+        <div class="w-full mx-auto flex flex-col gap-2">
+          <label
+            for="phoneInput"
+            class="self-stretch text-[#111928] text-sm font-medium font-['Inter'] leading-[21px] text-left"
+          >
+            Phone Number
+          </label>
+          <div class="relative">
+            <div
+              class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+            >
+              <img src="/static/phone.svg" alt="phone icon" class="w-4 h-4" />
             </div>
-        </form>
-    </div>
+            <input
+              type="tel"
+              required
+              class="w-full bg-gray-50 rounded-lg border border-gray-300 py-3.5 pl-10 pr-4 text-base font-normal font-['Inter'] leading-normal text-gray-500"
+              placeholder="Enter phone number"
+              id="phoneInput"
+              name="phoneInput"
+              value={phone ?? ""}
+              inputmode="tel"
+              pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+              title="Phone number format: (XXX) XXX-XXXX"
+              aria-label="Phone number"
+              autocomplete="tel"
+            />
+          </div>
+        </div>
+      </div>
+    </StepLayout>
+  </form>
 </EstimateWrapper>
 
 <script>
-    import { estimateParser } from "@stores/estimateProgress";
+  import { estimateParser } from "@stores/estimateProgress";
 
-    /**
-     * Controller class for phone form functionality
-     * Handles input formatting, validation, and button state
-     */
-    class PhoneFormController {
-        private phoneInput: HTMLInputElement | null;
-        private submitButton: HTMLButtonElement | null;
-        private phoneParser = estimateParser.pick({ phone: true });
+  /**
+   * Controller class for phone form functionality
+   * Handles input formatting, validation, and button state
+   */
+  class PhoneFormController {
+    private phoneInput: HTMLInputElement | null;
+    private submitButton: HTMLButtonElement | null;
+    private phoneParser = estimateParser.pick({ phone: true });
 
-        constructor() {
-            // Initialize DOM elements
-            this.phoneInput = document.getElementById("phoneInput") as HTMLInputElement;
-            this.submitButton = document.getElementById("phoneSubmitButton") as HTMLButtonElement;
-            this.initialize();
-        }
-
-        /**
-         * Formats a phone number string to (XXX) XXX-XXXX format
-         * @param value - Raw phone number input
-         * @returns Formatted phone number string
-         */
-        private formatPhoneNumber(value: string): string {
-            // Remove non-digit characters
-            const phoneNumber = value.replace(/\D/g, "");
-            const phoneNumberLength = phoneNumber.length;
-
-            // Format based on length
-            if (phoneNumberLength < 4) return phoneNumber;
-            if (phoneNumberLength < 7) {
-                return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
-            }
-            return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
-                3,
-                6
-            )}-${phoneNumber.slice(6, 10)}`;
-        }
-
-        /**
-         * Handles phone input events
-         * Formats input value and updates button state
-         */
-        private handlePhoneInput = (e: Event) => {
-            const input = e.target as HTMLInputElement;
-            const formattedNumber = this.formatPhoneNumber(input.value);
-            input.value = formattedNumber;
-
-            // Validate phone number and update button state
-            const isValid = this.phoneParser.safeParse({
-                phone: input.value,
-            }).success;
-
-            if (this.submitButton) {
-                this.submitButton.disabled = !isValid;
-            }
-        };
-
-        /**
-         * Initializes event listeners
-         * Sets up phone input handling
-         */
-        private initialize() {
-            if (this.phoneInput) {
-                this.phoneInput.addEventListener("input", this.handlePhoneInput);
-            }
-        }
+    constructor() {
+      // Initialize DOM elements
+      this.phoneInput = document.getElementById(
+        "phoneInput"
+      ) as HTMLInputElement;
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.initialize();
     }
 
-    // Initialize form controller when DOM is ready
-    new PhoneFormController();
+    /**
+     * Formats a phone number string to (XXX) XXX-XXXX format
+     * @param value - Raw phone number input
+     * @returns Formatted phone number string
+     */
+    private formatPhoneNumber(value: string): string {
+      // Remove non-digit characters
+      const phoneNumber = value.replace(/\D/g, "");
+      const phoneNumberLength = phoneNumber.length;
+
+      // Format based on length
+      if (phoneNumberLength < 4) return phoneNumber;
+      if (phoneNumberLength < 7) {
+        return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+      }
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
+        3,
+        6
+      )}-${phoneNumber.slice(6, 10)}`;
+    }
+
+    /**
+     * Handles phone input events
+     * Formats input value and updates button state
+     */
+    private handlePhoneInput = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      const formattedNumber = this.formatPhoneNumber(input.value);
+      input.value = formattedNumber;
+
+      // Validate phone number and update button state
+      const isValid = this.phoneParser.safeParse({
+        phone: input.value,
+      }).success;
+
+      if (this.submitButton) {
+        this.submitButton.disabled = !isValid;
+      }
+    };
+
+    /**
+     * Initializes event listeners
+     * Sets up phone input handling and checks initial state
+     */
+    private initialize() {
+      if (this.phoneInput) {
+        // Check initial value
+        if (this.phoneInput.value) {
+          const isValid = this.phoneParser.safeParse({
+            phone: this.phoneInput.value,
+          }).success;
+
+          if (this.submitButton && isValid) {
+            this.submitButton.disabled = false;
+          }
+        }
+
+        this.phoneInput.addEventListener("input", this.handlePhoneInput);
+      }
+    }
+  }
+
+  // Initialize form controller when DOM is ready
+  new PhoneFormController();
 </script>

@@ -1,7 +1,9 @@
 ---
 import NavMain from "@components/nav/NavMain.astro";
 import Posthog from "@components/anaytics/Posthog.astro";
-import TrustedForm from '@components/TrustedForm.astro';
+import TrustedForm from "@components/TrustedForm.astro";
+import Rating from "@components/ratings/index.astro";
+import Footer from "@components/footer/index.astro";
 
 /**
  * Props interface for the Layout component
@@ -9,18 +11,18 @@ import TrustedForm from '@components/TrustedForm.astro';
  * @property {string} [description] - Optional page description
  */
 interface Props {
-	title?: string;
-	description?: string;
+  title?: string;
+  description?: string;
 }
 
 /**
  * Default SEO metadata configuration
  */
 const DEFAULT_SEO = {
-	title: "contracting estimates",
-	description: "Get accurate contracting estimates for your project",
-	siteName: "Contracting Estimates",
-	canonical: Astro.url.href,
+  title: "contracting estimates",
+  description: "Get accurate contracting estimates for your project",
+  siteName: "Contracting Estimates",
+  canonical: Astro.url.href,
 };
 
 /**
@@ -29,14 +31,11 @@ const DEFAULT_SEO = {
  * @returns {string} The formatted title
  */
 const formatTitle = (title?: string): string => {
-	return title ? `estimates - ${title}` : DEFAULT_SEO.title;
+  return title ? `Estimates - ${title}` : DEFAULT_SEO.title;
 };
 
 // Destructure props with default values
-const { 
-	title,
-	description = DEFAULT_SEO.description 
-} = Astro.props;
+const { title, description = DEFAULT_SEO.description } = Astro.props;
 
 // Environment-based configuration
 const isLocal = Astro?.url?.host?.startsWith("localhost");
@@ -45,39 +44,47 @@ const formattedTitle = formatTitle(title);
 
 <!doctype html>
 <html lang="en" class="h-full">
-	<head>
-		<!-- Character encoding -->
-		<meta charset="UTF-8" />
-		
-		<!-- Primary Meta Tags -->
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<meta name="description" content={description} />
-		<meta name="generator" content={Astro.generator} />
-		
-		<!-- Favicon -->
-		<link 
-			rel="icon" 
-			type="image/svg+xml" 
-			href="/favicon.svg"
-		/>
-		
-		<!-- Open Graph / Social Media Meta Tags -->
-		<meta property="og:type" content="website" />
-		<meta property="og:title" content={formattedTitle} />
-		<meta property="og:description" content={description} />
-		<meta property="og:url" content={Astro.url.href} />
-		
-		<!-- Analytics Integration -->
-		{!isLocal && <Posthog />}
-		
-		<!-- Page Title -->
-		<title>{formattedTitle}</title>
-		<TrustedForm />
-	</head>
-	<body class="text-white bg-slate-950 min-h-dvh flex flex-col">
-		<NavMain />
-		<main class="flex flex-col grow h-full items-center">
-			<slot />
-		</main>
-	</body>
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={formattedTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={Astro.url.href} />
+
+    {!isLocal && <Posthog />}
+
+    <title>{formattedTitle}</title>
+    <TrustedForm />
+  </head>
+  <body class="min-h-dvh flex flex-col">
+    <NavMain />
+    <main class="flex flex-col min-h-dvh">
+      <div class="flex-1 flex justify-center">
+        <div class="w-full max-w-3xl bg-white rounded-2xl mt-8 md:mt-16 mx-4">
+          <slot />
+        </div>
+      </div>
+      <div class="mt-auto">
+        <div class="w-full my-8 flex justify-center gap-4">
+          <Rating src="/static/layout/bbb.png" alt="BBB" />
+          <Rating src="/static/layout/google.png" alt="Google Rating" />
+        </div>
+        <Footer />
+      </div>
+    </main>
+  </body>
 </html>

@@ -51,14 +51,5 @@ if (validationResult instanceof Response) {
 ---
 
 <Layout title={title}>
-	{/* 
-		Main container with full width/height and centered content
-		Using a semantic main element for better accessibility
-	*/}
-	<main 
-		class="items-center container w-full h-full"
-		role="main"
-	>
-		<slot />
-	</main>
+	<slot />
 </Layout>

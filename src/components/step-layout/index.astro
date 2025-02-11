@@ -1,0 +1,115 @@
+---
+interface Props {
+  stepHeader: string;
+  stepNumber: number;
+  totalSteps: number;
+  hasNextStep?: boolean;
+  hasPrevStep?: boolean;
+  customButton?: boolean;
+  estimateType: string;
+}
+
+const {
+  stepHeader,
+  stepNumber,
+  totalSteps,
+  hasNextStep = false,
+  hasPrevStep = false,
+  customButton = false,
+  estimateType,
+} = Astro.props;
+
+const progressPercentage = (stepNumber / totalSteps) * 100;
+
+export const getEstimateHeader = (estimateType: string) => {
+  switch (estimateType) {
+    case "roofing":
+      return "Replace Your Roof<br />For As Low As $97/month";
+    default:
+      return "Get Your Free<br />Estimate";
+  }
+};
+
+const estimateHeader = getEstimateHeader(estimateType);
+---
+
+<div
+  class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] p-0 md:p-8"
+>
+  <div class="flex flex-col md:items-center gap-8 max-w-xl mx-auto">
+    <div class="flex flex-col items-center gap-2">
+      <h1
+        class="text-center text-[#2d3748] text-xl font-bold leading-7"
+        set:html={estimateHeader}
+      />
+    </div>
+
+    <div class="flex flex-col gap-2 w-full">
+      <span class="text-gray-500 text-xs font-medium leading-[18px]">
+        Step {stepNumber}
+      </span>
+      <div class="w-full relative h-1.5">
+        <div class="absolute w-full h-full bg-gray-200 rounded-sm"></div>
+        <div
+          class="absolute h-full bg-[#ffa726] rounded-sm transition-all duration-300"
+          style={`width: ${progressPercentage}%`}
+        >
+        </div>
+      </div>
+    </div>
+
+    <h2
+      class="text-left md:text-center text-[#2d3748] text-lg font-bold leading-normal w-2/3 md:w-full"
+    >
+      {stepHeader}
+    </h2>
+
+    <div class="w-full mb-2 md:mb-12">
+      <slot />
+    </div>
+
+    {
+      !customButton && (
+        <div
+          class={`w-full grid gap-4 ${hasNextStep && hasPrevStep ? "grid-cols-2" : "grid-cols-1"} max-w-md mx-auto`}
+        >
+          {hasPrevStep && (
+            <button
+              id="prevStepButton"
+              type="button"
+              onclick="window.history.back()"
+              class="h-12 px-5 py-3 bg-gray-50 rounded-lg border border-gray-200 flex justify-center items-center gap-2 w-full hover:bg-gray-100 transition-colors"
+            >
+              <img src="/static/arrow-left.svg" alt="Prev Step" />
+              <span class="text-[#2d3748] text-base font-medium leading-normal">
+                Prev Step
+              </span>
+            </button>
+          )}
+
+          {hasNextStep && (
+            <button
+              id="nextStepButton"
+              disabled
+              type="submit"
+              class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg flex justify-center items-center gap-2 w-full text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#ff9800] transition-colors"
+            >
+              <span class="text-base font-medium leading-normal">
+                Next Step
+              </span>
+              <img src="/static/arrow-right.svg" alt="Next Step" />
+            </button>
+          )}
+        </div>
+      )
+    }
+
+    {
+      customButton && (
+        <div class="w-full">
+          <slot name="custom-button" />
+        </div>
+      )
+    }
+  </div>
+</div>
