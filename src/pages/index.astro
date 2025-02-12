@@ -4,39 +4,33 @@ export const prerender = true;
 import Layout from "@layouts/Layout.astro";
 import { shortTradesConst } from "@assets/info/estimateOptions";
 import IndexSvgs from "@components/svgs/IndexSvgs.astro";
+
+return Astro.redirect("/estimate/roofing");
 ---
 
 <Layout title="Home Upgrade Services">
-	<div class="flex flex-col items-center text-center h-full grow gap-4">
-		<div class="flex flex-col my-auto gap-8">
-			<h1 class="text-xl">
-				<span class="font-black text-2xl">
-					Find & Book Estimates
-				</span>
-				<br />
-				With Top Local Contractors
-			</h1>
-			<div
-				class="grid grid-cols-2 md:grid-cols-4 mx-auto my-auto gap-4"
-			>
-				{
-					shortTradesConst.map((option) => (
-						<a
-							href={`/estimate/${option}/zip`}
-							class="flex  gap-2 px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
-						>
-							<p>{option}</p>
-							<div class="flex ml-auto items-center">
-								<IndexSvgs
-									shortTrade={
-										option
-									}
-								/>
-							</div>
-						</a>
-					))
-				}
-			</div>
-		</div>
-	</div>
+  <div class="flex flex-col items-center text-center h-full grow gap-4">
+    <div class="flex flex-col my-auto gap-8">
+      <h1 class="text-xl">
+        <span class="font-black text-2xl"> Find & Book Estimates </span>
+        <br />
+        With Top Local Contractors
+      </h1>
+      <div class="grid grid-cols-2 md:grid-cols-4 mx-auto my-auto gap-4">
+        {
+          shortTradesConst.map((option) => (
+            <a
+              href={`/estimate/${option}/zip`}
+              class="flex  gap-2 px-4 py-2 border rounded-lg opacity-50 hover:opacity-100"
+            >
+              <p>{option}</p>
+              <div class="flex ml-auto items-center">
+                <IndexSvgs shortTrade={option} />
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </div>
 </Layout>
