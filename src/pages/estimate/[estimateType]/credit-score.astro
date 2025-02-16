@@ -28,7 +28,7 @@ function initializePage(
 
   return {
     estimateType: parsedEstimateType.data,
-    currentSelection: estimateStore.get().creditScoreAboveOrEqualTo640,
+    currentSelection: estimateStore.get().creditScoreAboveOrEqual640,
   };
 }
 
@@ -37,18 +37,18 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   const creditScore = formData.get("creditScore");
 
   // Convert the string value to boolean
-  const creditScoreAboveOrEqualTo640 = creditScore === "true";
+  const creditScoreAboveOrEqual640 = creditScore === "true";
 
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    creditScoreAboveOrEqualTo640,
+    creditScoreAboveOrEqual640: !!creditScoreAboveOrEqual640,
   });
 
   return new Response(null, {
     status: 302,
     headers: {
-      Location: `/estimate/${estimateType}/contact?csh=${creditScoreAboveOrEqualTo640 ? 1 : 0}`,
+      Location: `/estimate/${estimateType}/contact?csh=${creditScoreAboveOrEqual640 ? 1 : 0}`,
     },
   });
 }
