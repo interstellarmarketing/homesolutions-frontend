@@ -1,4 +1,6 @@
 ---
+import Spinner from "@components/spinner/index.astro";
+import Rating from "@components/ratings/index.astro";
 interface Props {
   stepHeader: string;
   stepNumber: number;
@@ -7,6 +9,9 @@ interface Props {
   hasPrevStep?: boolean;
   customButton?: boolean;
   estimateType: string;
+  delaySubmit?: boolean;
+  showLoadingOnSubmit?: boolean;
+  loadingButtonText?: string;
 }
 
 const {
@@ -17,6 +22,9 @@ const {
   hasPrevStep = false,
   customButton = false,
   estimateType,
+  delaySubmit = false,
+  showLoadingOnSubmit = false,
+  loadingButtonText = "Processing...",
 } = Astro.props;
 
 const progressPercentage = (stepNumber / totalSteps) * 100;
@@ -34,7 +42,7 @@ const estimateHeader = getEstimateHeader(estimateType);
 ---
 
 <div
-  class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] p-0 md:p-8"
+  class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] p-0 md:p-8 mb-16"
 >
   <div class="flex flex-col md:items-center gap-8 max-w-xl mx-auto">
     <div class="flex flex-col items-center gap-2">
@@ -92,12 +100,22 @@ const estimateHeader = getEstimateHeader(estimateType);
               id="nextStepButton"
               disabled
               type="submit"
-              class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg flex justify-center items-center gap-2 w-full text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#ff9800] transition-colors"
+              class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg flex justify-center items-center gap-2 w-full text-white disabled:opacity-75 disabled:cursor-not-allowed hover:bg-[#ff9800] transition-colors"
+              data-delay-submit={delaySubmit}
+              data-show-loading={showLoadingOnSubmit}
+              data-loading-text={loadingButtonText}
             >
-              <span class="text-base font-medium leading-normal">
+              <div class="hidden button-spinner">
+                <Spinner size="sm" />
+              </div>
+              <span class="text-base font-medium leading-normal button-text">
                 Next Step
               </span>
-              <img src="/static/arrow-right.svg" alt="Next Step" />
+              <img
+                src="/static/arrow-right.svg"
+                alt="Next Step"
+                class="button-arrow"
+              />
             </button>
           )}
         </div>
@@ -112,4 +130,84 @@ const estimateHeader = getEstimateHeader(estimateType);
       )
     }
   </div>
+  <div class="w-full mt-12 flex justify-center gap-4">
+    <Rating src="/static/layout/bbb.svg" alt="BBB" />
+    <Rating src="/static/layout/google.svg" alt="Google Rating" />
+  </div>
 </div>
+
+<script>
+  class ButtonLoadingHandler {
+    private button: HTMLButtonElement;
+    private textSpan!: HTMLSpanElement;
+    private arrow!: HTMLImageElement;
+    private spinner!: HTMLDivElement;
+    private originalText!: string;
+    private loadingText!: string;
+
+    constructor(buttonId: string) {
+      this.button = document.getElementById(buttonId) as HTMLButtonElement;
+      if (!this.button) return;
+
+      this.textSpan = this.button.querySelector(
+        ".button-text"
+      ) as HTMLSpanElement;
+      this.arrow = this.button.querySelector(
+        ".button-arrow"
+      ) as HTMLImageElement;
+      this.spinner = this.button.querySelector(
+        ".button-spinner"
+      ) as HTMLDivElement;
+
+      this.originalText = this.textSpan.textContent || "Next Step";
+      this.loadingText = this.button.dataset.loadingText || "Processing...";
+
+      this.initialize();
+    }
+
+    private initialize() {
+      const form = this.button.closest("form");
+      if (!form) return;
+
+      const shouldDelay = this.button.dataset.delaySubmit === "true";
+      const showLoadingOnSubmit = this.button.dataset.showLoading === "true";
+
+      if (shouldDelay) {
+        form.addEventListener("submit", this.handleDelayedSubmit.bind(this));
+      } else if (showLoadingOnSubmit) {
+        form.addEventListener("submit", this.handleLoadingSubmit.bind(this));
+      }
+    }
+
+    private async handleDelayedSubmit(e: SubmitEvent) {
+      e.preventDefault();
+      const form = e.target as HTMLFormElement;
+
+      this.setLoadingState(true);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      form.submit();
+    }
+
+    private handleLoadingSubmit(e: SubmitEvent) {
+      this.setLoadingState(true);
+    }
+
+    private setLoadingState(isLoading: boolean) {
+      if (isLoading) {
+        this.textSpan.textContent = this.loadingText;
+        this.arrow.classList.add("hidden");
+        this.spinner.classList.remove("hidden");
+        this.button.disabled = true;
+      } else {
+        this.textSpan.textContent = this.originalText;
+        this.arrow.classList.remove("hidden");
+        this.spinner.classList.add("hidden");
+        this.button.disabled = false;
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    new ButtonLoadingHandler("nextStepButton");
+  });
+</script>

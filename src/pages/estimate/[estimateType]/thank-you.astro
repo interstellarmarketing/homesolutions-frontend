@@ -11,6 +11,7 @@ async function formatStoreForSubmission(
   const submission: any = {
     // Required contact information
     streetAddress: store.streetAddress,
+    creditScoreAboveOrEqualTo640: store.creditScoreAboveOrEqualTo640,
     city: store.city,
     state: store.state,
     zipCode: store.zipCode,
@@ -55,10 +56,6 @@ async function formatStoreForSubmission(
   return submission;
 }
 
-// Add error state variable
-let submissionError = false;
-let error = "";
-
 /**
  * Processes the final submission and resets the store
  */
@@ -71,10 +68,7 @@ async function processFinalSubmission(
     const db = await zDb.D1Methods();
     await db.insertSubmission(formattedSubmission as any);
   } catch (error) {
-    console.log({ error });
     console.error("Error processing submission:", error);
-    submissionError = true;
-    error = error;
   }
 }
 
@@ -93,88 +87,100 @@ await processFinalSubmission(existingStore);
   <div
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
   >
-    {
-      submissionError ? (
-        <div class="flex flex-col items-center gap-8 max-w-xl mx-auto">
-          <div class="text-center text-red-600">
-            <h2 class="text-xl font-bold mb-2">Something went wrong</h2>
-            <p class="mb-4">
-              We couldn't process your submission. Please try again.
-            </p>
-            <button
-              onclick="history.back()"
-              class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg inline-flex items-center hover:bg-[#ff9800] transition-colors text-white font-medium"
-            >
-              Try Again
-            </button>
-          </div>
+    <div class="flex flex-col items-center gap-8 max-w-2xl mx-auto">
+      <div class="] flex-col justify-start items-center gap-8 inline-flex">
+        <div
+          class="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center bg-[#d0fadf] rounded-full border-[12px] md:border-[16px] border-[#ebfdf2]"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            class="h-10 w-10 text-green-700 md:w-12 md:h-12 md:stroke-[2]"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4.5 12.75l6 6 9-13.5"></path>
+          </svg>
         </div>
-      ) : (
-        <div class="flex flex-col items-center gap-8 max-w-xl mx-auto">
-          <div class="] flex-col justify-start items-center gap-8 inline-flex">
-            <div class="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center bg-[#d0fadf] rounded-full border-[12px] md:border-[16px] border-[#ebfdf2]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="2"
-                stroke="currentColor"
-                class="h-10 w-10 text-green-700 md:w-12 md:h-12 md:stroke-[2]"
+        <div
+          class="self-stretch flex-col justify-start items-center gap-6 flex"
+        >
+          <div
+            class="self-stretch text-center text-[#1d3557] text-3xl font-bold font-['Inter'] leading-9 max-w-lg"
+          >
+            Thank you for your submission!
+          </div>
+          <div
+            class="w-full text-center text-[#2d3748] text-sm font-medium font-['Inter'] leading-[21px] max-w-md"
+          >
+            {
+              estimateType === "roofing" ? (
+                <div class="mb-8">
+                  <p class="mb-4">
+                    Please be on the lookout for a phone call and text message
+                    in the next few minutes. Our roof repair and installation
+                    team will be calling you to:
+                  </p>
+                  <ul class="text-left list-disc pl-6 space-y-2 my-4">
+                    <li>Qualify your home</li>
+                    <li>Get more background on your desired roofing project</li>
+                    <li>
+                      Schedule you for a free in-home consultation with one of
+                      our experts
+                    </li>
+                  </ul>
+                </div>
+              ) : (
+                <p class="mb-4">
+                  We'll be in touch with matching pros in {existingStore.city},{" "}
+                  {existingStore.state} shortly.
+                </p>
+              )
+            }
+            <div class="w-full">
+              <a
+                href={`/estimate/${estimateType}/zip`}
+                class="h-12 px-5 py-3 bg-[#ffa726] w-full rounded-lg justify-center items-center gap-2 inline-flex hover:bg-[#ff9800] transition-colors"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M4.5 12.75l6 6 9-13.5"
-                />
-              </svg>
-            </div>
-            <div class="self-stretch flex-col justify-start items-center gap-6 flex">
-              <div class="self-stretch text-center text-[#1d3557] text-3xl font-bold font-['Inter'] leading-9 max-w-md">
-                Thank you for your submission!
-              </div>
-              <div class="w-full text-center text-[#2d3748] text-sm font-medium font-['Inter'] leading-[21px] max-w-xs">
-                We'll be in touch with matching pros in {existingStore.city},{" "}
-                {existingStore.state} shortly.
-              </div>
-              <div class="w-full">
-                <a
-                  href={`/estimate/${estimateType}/zip`}
-                  class="h-12 px-5 py-3 bg-[#ffa726] w-full rounded-lg justify-center items-center gap-2 inline-flex hover:bg-[#ff9800] transition-colors"
+                <span
+                  class="text-white text-base font-medium font-['Inter'] leading-normal"
                 >
-                  <span class="text-white text-base font-medium font-['Inter'] leading-normal">
-                    Return Home
-                  </span>
-                </a>
-              </div>
+                  Return Home
+                </span>
+              </a>
             </div>
           </div>
         </div>
-      )
-    }
-  </div>
+      </div>
+    </div>
 
-  <script define:vars={{ email: existingStore.email }}>
-    if (email) {
-      fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          system: {
-            timestamp: new Date().toISOString(),
+    <script define:vars={{ email: existingStore.email }}>
+      if (email) {
+        fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          client: {
-            email: email,
-          },
-        }),
-      })
-        .then((response) => response.text())
-        .then((hashedEmail) => {
-          console.log("Hashed email for Google:", hashedEmail);
-          // Send to Google here
+          body: JSON.stringify({
+            system: {
+              timestamp: new Date().toISOString(),
+            },
+            client: {
+              email: email,
+            },
+          }),
         })
-        .catch((error) => console.error("Error:", error));
-    }
-  </script>
+          .then((response) => response.text())
+          .then((hashedEmail) => {
+            console.log("Hashed email for Google:", hashedEmail);
+            // Send to Google here
+          })
+          .catch((error) => console.error("Error:", error));
+      }
+    </script>
+  </div>
 </EstimateWrapper>

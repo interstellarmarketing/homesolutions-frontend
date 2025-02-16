@@ -105,6 +105,8 @@ const stepHeader = getStepHeader();
       estimateType={estimateType}
       hasNextStep
       hasPrevStep={stepNumber > 1}
+      showLoadingOnSubmit={estimateType === "roofing"}
+      loadingButtonText="Processing...."
     >
       <div
         class="flex flex-col gap-4 text-center rounded-lg container w-full max-w-md mx-auto"

@@ -2,27 +2,19 @@
 import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateStore } from "@stores/estimateProgress";
-import {
-  shortTradeEnum,
-  tradeOptionDescriptions,
-} from "@assets/info/estimateOptions";
-import { homeTypesConst } from "@assets/info/estimateOptions";
-import {
-  activeEstimateTypeStore,
-  computedEstimateOptions,
-} from "@stores/activeEstimateType";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
-const homeTypeSchema = z.string();
+const creditScoreSchema = z.string();
+
+const creditScoreOptions = ["Above 640", "Below 640"];
 
 interface PageState {
   estimateType: string;
-  tradeDescription: string | undefined;
-  homeTypes: typeof homeTypesConst;
-  currentSelection: string | undefined;
+  currentSelection: boolean | undefined;
 }
 
 function initializePage(
@@ -30,57 +22,34 @@ function initializePage(
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
-  console.log({ parsedEstimateType, page: "home-type" });
-
   if (!parsedEstimateType.success) {
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
-  const estimateType = parsedEstimateType.data;
-  const activeEstimateOptions = computedEstimateOptions.get();
-
-  console.log({ activeEstimateOptions, page: "home-type" });
-
-  if (!activeEstimateOptions) {
-    return new Response(null, { status: 302, headers: { Location: "/" } });
-  }
-
-  const tradeOptions = tradeOptionDescriptions.find(
-    (option) => option.shortTrade === activeEstimateTypeStore.get()
-  );
-
   return {
-    estimateType,
-    tradeDescription: tradeOptions?.typeDescription,
-    homeTypes: homeTypesConst,
-    currentSelection: estimateStore.get().homeType,
+    estimateType: parsedEstimateType.data,
+    currentSelection: estimateStore.get().creditScoreAboveOrEqualTo640,
   };
 }
 
 async function handleFormSubmission(request: Request, estimateType: string) {
   const formData = await request.formData();
-  const homeTypeParsed = homeTypeSchema.safeParse(formData.get("homeType"));
+  const creditScore = formData.get("creditScore");
 
-  if (!homeTypeParsed.success) {
-    return null;
-  }
+  // Convert the string value to boolean
+  const creditScoreAboveOrEqualTo640 = creditScore === "true";
 
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    homeType: homeTypeParsed.data,
+    creditScoreAboveOrEqualTo640,
   });
-
-  if (estimateType === "roofing") {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `/estimate/${estimateType}/credit-score` },
-    });
-  }
 
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/contact` },
+    headers: {
+      Location: `/estimate/${estimateType}/contact?csh=${creditScoreAboveOrEqualTo640 ? 1 : 0}`,
+    },
   });
 }
 
@@ -101,23 +70,15 @@ if (Astro.request.method === "POST") {
 const getStepNumber = () => {
   switch (pageState.estimateType) {
     case "roofing":
-      return 4;
+      return 5;
     default:
-      return 1;
+      return 2;
   }
 };
 
-const getStepHeader = () => {
-  switch (pageState.estimateType) {
-    case "roofing":
-      return "What type of home do you have?";
-    default:
-      return "What type of home do you have?";
-  }
-};
 const stepNumber = getStepNumber();
 const totalSteps = getTotalSteps(pageState.estimateType);
-const stepHeader = getStepHeader();
+const stepHeader = "What is your credit score?";
 ---
 
 <EstimateWrapper
@@ -141,22 +102,34 @@ const stepHeader = getStepHeader();
     >
       <div class="flex flex-col gap-4 text-center rounded-lg container">
         <div class="grid grid-cols-2 gap-4">
-          {
-            pageState.homeTypes.map((homeType, index) => (
-              <label class="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="homeType"
-                  checked={pageState.currentSelection === homeType}
-                  value={homeType}
-                  class="hidden peer"
-                />
-                <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
-                  {homeType}
-                </span>
-              </label>
-            ))
-          }
+          <label class="inline-flex items-center">
+            <input
+              type="radio"
+              name="creditScore"
+              checked={pageState.currentSelection === true}
+              value="true"
+              class="hidden peer"
+            />
+            <span
+              class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2"
+            >
+              Credit score above 640
+            </span>
+          </label>
+          <label class="inline-flex items-center">
+            <input
+              type="radio"
+              name="creditScore"
+              checked={pageState.currentSelection === false}
+              value="false"
+              class="hidden peer"
+            />
+            <span
+              class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2"
+            >
+              Credit score below 640
+            </span>
+          </label>
         </div>
       </div>
     </StepLayout>
@@ -168,7 +141,9 @@ const stepHeader = getStepHeader();
       private submitButton: HTMLButtonElement | null;
 
       constructor() {
-        this.radioButtons = document.querySelectorAll('input[name="homeType"]');
+        this.radioButtons = document.querySelectorAll(
+          'input[name="creditScore"]'
+        );
         this.submitButton = document.getElementById(
           "nextStepButton"
         ) as HTMLButtonElement;

@@ -2,7 +2,7 @@
 import NavMain from "@components/nav/NavMain.astro";
 import Posthog from "@components/anaytics/Posthog.astro";
 import TrustedForm from "@components/TrustedForm.astro";
-import Rating from "@components/ratings/index.astro";
+
 import Footer from "@components/footer/index.astro";
 
 /**
@@ -74,15 +74,11 @@ const formattedTitle = formatTitle(title);
     <NavMain />
     <main class="flex flex-col min-h-dvh">
       <div class="flex-1 flex justify-center">
-        <div class="w-full max-w-3xl bg-white rounded-2xl mt-8 md:mt-16 mx-4">
+        <div class="w-full max-w-3xl bg-white rounded-2xl mt-8 mx-4">
           <slot />
         </div>
       </div>
       <div class="mt-auto">
-        <div class="w-full my-8 flex justify-center gap-4">
-          <Rating src="/static/layout/bbb.png" alt="BBB" />
-          <Rating src="/static/layout/google.png" alt="Google Rating" />
-        </div>
         <Footer />
       </div>
     </main>
