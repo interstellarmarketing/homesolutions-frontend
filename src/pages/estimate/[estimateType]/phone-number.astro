@@ -3,6 +3,14 @@ import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 /**
  * Extract and validate estimate type from URL parameters
  * Redirect to home if estimate type is missing
@@ -10,6 +18,15 @@ import StepLayout from "@components/step-layout/index.astro";
 const { estimateType } = Astro.params;
 if (!estimateType) {
   return Astro.redirect("/");
+}
+
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "phone-number",
+    estimateType: validatedEstimateType.data,
+  });
 }
 
 /**
@@ -36,7 +53,7 @@ const existingPhoneParsed = phoneParser.safeParse({ phone });
 /**
  * Handle form submission
  * Validates phone number and updates store if valid
- * Redirects to email page on success
+ * Redirects to the next page on success using the store
  */
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
@@ -51,18 +68,35 @@ if (Astro.request.method === "POST") {
       ...phoneParsed.data,
     });
 
+    // Get the next step from the store
+    if (validatedEstimateType.success) {
+      const nextStep = getNextStep(validatedEstimateType.data, "phone-number");
+
+      if (nextStep) {
+        return Astro.redirect(`/estimate/${estimateType}/${nextStep}`);
+      }
+    }
+
+    // Fallback to original logic
     return Astro.redirect(`/estimate/${estimateType}/address`);
   }
 }
 
-const getStepNumber = () => {
-  switch (estimateType) {
-    case "roofing":
-      return 8;
-    default:
-      return 1;
-  }
-};
+// Get previous page URL for back button
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "phone-number")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${estimateType}/${prevStep}`
+  : `/estimate/${estimateType}/email`;
+
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "phone-number")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 
 const getStepHeader = () => {
   switch (estimateType) {
@@ -70,8 +104,6 @@ const getStepHeader = () => {
       return "What's the best phone number to reach you?";
   }
 };
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(estimateType);
 const stepHeader = getStepHeader();
 ---
 

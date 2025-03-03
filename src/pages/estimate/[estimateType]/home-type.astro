@@ -1,22 +1,29 @@
 ---
 import { z } from "zod";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateStore } from "@stores/estimateProgress";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
+  homeTypesConst,
 } from "@assets/info/estimateOptions";
-import { homeTypesConst } from "@assets/info/estimateOptions";
 import {
   activeEstimateTypeStore,
   computedEstimateOptions,
 } from "@stores/activeEstimateType";
-import { getTotalSteps } from "@utils/layout";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 import StepLayout from "@components/step-layout/index.astro";
+import { getTotalSteps } from "@utils/layout";
 
-// Define validation schemas using Zod
+// Schema definitions
+const homeTypeSchema = z.enum(homeTypesConst);
 const estimateTypeSchema = shortTradeEnum;
-const homeTypeSchema = z.string();
 
 interface PageState {
   estimateType: string;
@@ -30,13 +37,18 @@ function initializePage(
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
-  console.log({ parsedEstimateType, page: "home-type" });
-
   if (!parsedEstimateType.success) {
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
   const estimateType = parsedEstimateType.data;
+
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "home-type",
+    estimateType: estimateType,
+  });
+
   const activeEstimateOptions = computedEstimateOptions.get();
 
   console.log({ activeEstimateOptions, page: "home-type" });
@@ -71,6 +83,20 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     homeType: homeTypeParsed.data,
   });
 
+  // Get the next step from the store
+  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "home-type");
+
+    if (nextStep) {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+      });
+    }
+  }
+
+  // Fallback to original logic
   if (estimateType === "roofing") {
     return new Response(null, {
       status: 302,
@@ -90,22 +116,24 @@ if (pageState instanceof Response) {
   return pageState;
 }
 
-if (Astro.request.method === "POST") {
-  const response = await handleFormSubmission(
-    Astro.request,
-    pageState.estimateType
-  );
-  if (response) return response;
-}
+// Get previous page URL for back button
+const validatedEstimateType = estimateTypeSchema.safeParse(
+  pageState.estimateType
+);
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "home-type")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${pageState.estimateType}/${prevStep}`
+  : `/estimate/${pageState.estimateType}/action`;
 
-const getStepNumber = () => {
-  switch (pageState.estimateType) {
-    case "roofing":
-      return 4;
-    default:
-      return 1;
-  }
-};
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "home-type")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 
 const getStepHeader = () => {
   switch (pageState.estimateType) {
@@ -115,8 +143,6 @@ const getStepHeader = () => {
       return "What type of home do you have?";
   }
 };
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(pageState.estimateType);
 const stepHeader = getStepHeader();
 ---
 

@@ -1,8 +1,6 @@
+import { getTotalSteps as getStoreSteps } from "@stores/estimateStepsStore";
+import type { ShortTradeEnum } from "@assets/info/estimateOptions";
+
 export const getTotalSteps = (estimateType: string) => {
-  switch (estimateType) {
-    case "roofing":
-      return 9;
-    default:
-      return 5;
-  }
+  return getStoreSteps(estimateType as ShortTradeEnum);
 };

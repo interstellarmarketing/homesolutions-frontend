@@ -1,6 +1,8 @@
 ---
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { estimateStepsStore } from "@stores/estimateStepsStore";
 
 /**
  * Formats store data to match the backend submission schema
@@ -76,6 +78,15 @@ async function processFinalSubmission(
 const { estimateType } = Astro.params;
 if (!estimateType) {
   return Astro.redirect("/");
+}
+
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "thank-you",
+    estimateType: validatedEstimateType.data,
+  });
 }
 
 // Get and validate store data

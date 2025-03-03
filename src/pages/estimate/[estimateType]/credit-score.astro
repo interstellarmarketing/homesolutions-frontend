@@ -5,6 +5,13 @@ import { estimateStore } from "@stores/estimateProgress";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -26,6 +33,12 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "credit-score",
+    estimateType: parsedEstimateType.data,
+  });
+
   return {
     estimateType: parsedEstimateType.data,
     currentSelection: estimateStore.get().creditScoreAboveOrEqual640,
@@ -45,6 +58,22 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     creditScoreAboveOrEqual640: !!creditScoreAboveOrEqual640,
   });
 
+  // Get the next step from the store
+  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "credit-score");
+
+    if (nextStep) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `/estimate/${estimateType}/${nextStep}?csh=${creditScoreAboveOrEqual640 ? 1 : 0}`,
+        },
+      });
+    }
+  }
+
+  // Fallback to original logic
   return new Response(null, {
     status: 302,
     headers: {
@@ -67,17 +96,25 @@ if (Astro.request.method === "POST") {
   if (response) return response;
 }
 
-const getStepNumber = () => {
-  switch (pageState.estimateType) {
-    case "roofing":
-      return 5;
-    default:
-      return 2;
-  }
-};
+// Get previous page URL for back button
+const validatedEstimateType = estimateTypeSchema.safeParse(
+  pageState.estimateType
+);
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "credit-score")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${pageState.estimateType}/${prevStep}`
+  : `/estimate/${pageState.estimateType}/home-type`;
 
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(pageState.estimateType);
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "credit-score")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
+
 const stepHeader = "What is your credit score?";
 ---
 

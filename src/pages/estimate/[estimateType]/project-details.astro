@@ -1,27 +1,38 @@
 ---
+/**
+ * Project Details Page
+ * Collects information about the specific project details
+ * for the customer's estimate
+ */
+
 import { z } from "zod";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateStore } from "@stores/estimateProgress";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import {
+  activeEstimateTypeStore,
+  computedEstimateOptions,
+} from "@stores/activeEstimateType";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
 import {
-  activeEstimateTypeStore,
-  computedEstimateOptions,
-} from "@stores/activeEstimateType";
-import { getTotalSteps } from "@utils/layout";
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 import StepLayout from "@components/step-layout/index.astro";
-// Define validation schemas using Zod
-const estimateTypeSchema = shortTradeEnum; // Validates the estimate type against predefined trade options
-const actionSchema = z.string(); // Validates that the action is a string
+import { getTotalSteps } from "@utils/layout";
+
+// Schema definitions
+const actionSchema = z.string();
+const estimateTypeSchema = shortTradeEnum;
 
 /**
- * Interface defining the structure of the page's state
- * @property {string} estimateType - The type of estimate being processed
- * @property {string | undefined} tradeDescription - Description of the trade service
- * @property {string[] | undefined} projectTypes - Available project types for selection
- * @property {string | undefined} currentSelection - Currently selected project type
+ * Represents the state of the page
+ * @interface PageState
  */
 interface PageState {
   estimateType: string;
@@ -47,6 +58,12 @@ function initializePage(
 
   const estimateType = parsedEstimateType.data;
   const activeEstimateOptions = computedEstimateOptions.get();
+
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "project-details",
+    estimateType: estimateType,
+  });
 
   // Ensure estimate options are available
   if (!activeEstimateOptions) {
@@ -80,29 +97,45 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     return null;
   }
 
-  // Update the estimate store with the new selection
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    estimateType: actionParsed.data,
     projectDetails: actionParsed.data,
   });
 
-  if (estimateType === "roofing") {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `/estimate/${estimateType}/action` },
-    });
+  // Get the next step from the store
+  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "project-details");
+
+    if (nextStep) {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+      });
+    }
   }
 
+  // Fallback to original logic if next step not found
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/contact` },
+    headers: { Location: `/estimate/${estimateType}/address` },
   });
 }
 
-// Initialize the page state
-const pageState = initializePage(Astro.params);
+// Process the page based on the request method
+let pageState: PageState | Response;
+if (Astro.request.method === "POST") {
+  const result = await handleFormSubmission(
+    Astro.request,
+    Astro.params.estimateType || ""
+  );
+  if (result) {
+    return result;
+  }
+}
+
+pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
   return pageState;
@@ -119,24 +152,24 @@ if (pageState.projectTypes?.includes(null)) {
   return Astro.redirect(`/estimate/${pageState.estimateType}/contact`);
 }
 
-// Process form submission if POST request
-if (Astro.request.method === "POST") {
-  const response = await handleFormSubmission(
-    Astro.request,
-    pageState.estimateType
-  );
+// Get previous page URL for back button
+const validatedEstimateType = estimateTypeSchema.safeParse(
+  pageState.estimateType
+);
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "project-details")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${pageState.estimateType}/${prevStep}`
+  : `/estimate/${pageState.estimateType}/zip`;
 
-  if (response) return response;
-}
-
-const getStepNumber = () => {
-  switch (pageState.estimateType) {
-    case "roofing":
-      return 2;
-    default:
-      return 3;
-  }
-};
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "project-details")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 
 const getStepHeader = () => {
   switch (pageState.estimateType) {
@@ -147,8 +180,6 @@ const getStepHeader = () => {
   }
 };
 
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(pageState.estimateType);
 const stepHeader = getStepHeader();
 
 const existingStore = estimateStore.get();

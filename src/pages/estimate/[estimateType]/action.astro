@@ -20,6 +20,13 @@ import {
   activeEstimateTypeStore,
   computedEstimateOptions,
 } from "@stores/activeEstimateType";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
@@ -42,6 +49,12 @@ const estimateType = estimateTypeResult.data;
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
 const activeEstimateOptions = computedEstimateOptions.get();
+
+// Update the estimate steps store with current page
+estimateStepsStore.set({
+  currentStep: "action",
+  estimateType: estimateType,
+});
 
 // Validation checks
 if (!activeEstimateOptions) {
@@ -69,6 +82,14 @@ if (Astro.request.method === "POST") {
       estimateAction: action,
     });
 
+    // Get the next step from the store
+    const nextStep = getNextStep(estimateType, "action");
+
+    if (nextStep) {
+      return Astro.redirect(`/estimate/${estimateType}/${nextStep}`);
+    }
+
+    // Fallback to original logic if next step not found
     if (estimateType === "roofing") {
       return Astro.redirect(`/estimate/${estimateType}/home-type`);
     }
@@ -80,14 +101,9 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const getStepNumber = () => {
-  switch (estimateType) {
-    case "roofing":
-      return 3;
-    default:
-      return 2;
-  }
-};
+// Get step number and total steps from the store
+const stepNumber = getCurrentStepNumber(estimateType, "action");
+const totalSteps = getStoreSteps(estimateType);
 
 const getStepHeader = () => {
   switch (estimateType) {
@@ -98,8 +114,6 @@ const getStepHeader = () => {
   }
 };
 
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(estimateType);
 const stepHeader = getStepHeader();
 
 console.log(existingStore.estimateAction);

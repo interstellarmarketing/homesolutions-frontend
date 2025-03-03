@@ -3,13 +3,22 @@ import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 
 /**
  * Processes the email form submission and handles final submission logic
  */
 async function processEmailForm(
   formData: FormData,
-  existingStore: Record<string, any>
+  existingStore: Record<string, any>,
+  estimateType: string
 ): Promise<Response | null> {
   const emailData = {
     email: formData.get("emailInput"),
@@ -29,6 +38,20 @@ async function processEmailForm(
 
   estimateStore.set(updatedStore);
 
+  // Get the next step from the store
+  const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "email");
+
+    if (nextStep) {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+      });
+    }
+  }
+
+  // Fallback to original logic
   return new Response(null, {
     status: 302,
     headers: { Location: `/estimate/${estimateType}/phone-number` },
@@ -39,6 +62,15 @@ async function processEmailForm(
 const { estimateType } = Astro.params;
 if (!estimateType) {
   return Astro.redirect("/");
+}
+
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "email",
+    estimateType: validatedEstimateType.data,
+  });
 }
 
 // Initialize store and form state
@@ -56,18 +88,29 @@ const existingEmailParsed = emailParser.safeParse({ email });
 // Handle form submission
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
-  const response = await processEmailForm(formData, existingStore);
+  const response = await processEmailForm(
+    formData,
+    existingStore,
+    estimateType
+  );
   if (response) return response;
 }
 
-const getStepNumber = () => {
-  switch (estimateType) {
-    case "roofing":
-      return 7;
-    default:
-      return 1;
-  }
-};
+// Get previous page URL for back button
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "email")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${estimateType}/${prevStep}`
+  : `/estimate/${estimateType}/address`;
+
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "email")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 
 const getStepHeader = () => {
   switch (estimateType) {
@@ -75,8 +118,6 @@ const getStepHeader = () => {
       return "What's the best email to reach you?";
   }
 };
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(estimateType);
 const stepHeader = getStepHeader();
 ---
 

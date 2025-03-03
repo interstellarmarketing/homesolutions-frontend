@@ -1,6 +1,12 @@
 ---
 import { z } from "zod";
 import { estimateStore } from "@stores/estimateProgress";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
@@ -30,22 +36,20 @@ ProcessEstimateType(validatedEstimateType);
 // Get stored data
 const existingStore = estimateStore.get();
 
+// Update the estimate steps store with current page
+estimateStepsStore.set({
+  currentStep: "zip",
+  estimateType: validatedEstimateType,
+});
+
 // Get user location from Cloudflare
 const cfPostalCode = z.string().safeParse(Astro.locals.runtime.cf?.postalCode);
 // Initialize zip code from store or Cloudflare location
 const initialZipCode = existingStore.zipCode ?? cfPostalCode.data;
 
-const getStepNumber = () => {
-  switch (validatedEstimateType) {
-    case "roofing":
-      return 1;
-    default:
-      return 1;
-  }
-};
-
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(validatedEstimateType);
+// Get step number and total steps from the store
+const stepNumber = getCurrentStepNumber(validatedEstimateType, "zip");
+const totalSteps = getStoreSteps(validatedEstimateType);
 
 // Handle form submission
 if (Astro.request.method === "POST") {
@@ -80,6 +84,14 @@ if (Astro.request.method === "POST") {
         },
       });
 
+      // Get the next step from the store
+      const nextStep = getNextStep(validatedEstimateType, "zip");
+
+      if (nextStep) {
+        return Astro.redirect(`/estimate/${validatedEstimateType}/${nextStep}`);
+      }
+
+      // Fallback to original logic if next step not found
       if (estimateType === "roofing") {
         return Astro.redirect(
           `/estimate/${validatedEstimateType}/project-details`
