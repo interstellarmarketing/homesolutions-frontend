@@ -1,50 +1,32 @@
 import { atom } from "nanostores";
 import type { ShortTradeEnum } from "@assets/info/estimateOptions";
 
+const defaultSteps = [
+    "zip",
+    "action",
+    "project-details",
+    "contact",
+    "address",
+    "thank-you",
+];
+
 // Define the steps for each estimate type
 export const estimateSteps = {
-    // Roofing flow steps (9 steps total as per getTotalSteps)
     roofing: [
         "zip",
         "project-details",
         "action",
         "home-type",
         "credit-score",
-        "address",
+        "contact",
         "email",
         "phone-number",
-        "contact",
-        "finalize",
-        "thank-you",
-    ],
-    // Default flow steps (5 steps total as per getTotalSteps)
-    bathroom: [
-        "zip",
-        "action",
-        "project-details",
         "address",
-        "contact",
-        "finalize",
         "thank-you",
     ],
-    siding: [
-        "zip",
-        "action",
-        "project-details",
-        "address",
-        "contact",
-        "finalize",
-        "thank-you",
-    ],
-    windows: [
-        "zip",
-        "action",
-        "project-details",
-        "address",
-        "contact",
-        "finalize",
-        "thank-you",
-    ],
+    bathroom: defaultSteps,
+    siding: defaultSteps,
+    windows: defaultSteps,
 };
 
 // Interface for the estimate steps store

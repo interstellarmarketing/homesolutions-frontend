@@ -88,6 +88,8 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   if (validatedEstimateType.success) {
     const nextStep = getNextStep(validatedEstimateType.data, "home-type");
 
+    console.log({ nextStep, page: "home-type" });
+
     if (nextStep) {
       return new Response(null, {
         status: 302,
@@ -110,7 +112,19 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   });
 }
 
-const pageState = initializePage(Astro.params);
+// Process the page based on the request method
+let pageState: PageState | Response;
+if (Astro.request.method === "POST") {
+  const result = await handleFormSubmission(
+    Astro.request,
+    Astro.params.estimateType || ""
+  );
+  if (result) {
+    return result;
+  }
+}
+
+pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
   return pageState;
