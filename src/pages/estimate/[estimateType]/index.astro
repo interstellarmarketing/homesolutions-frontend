@@ -2,6 +2,7 @@
 import { estimateStore } from "@stores/estimateProgress";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
 import { shortTradesConst } from "@assets/info/estimateOptions";
+import { appendQueryParams } from "@utils/queryParams";
 
 // Get estimate type from URL
 const { estimateType } = Astro.params;
@@ -44,6 +45,7 @@ estimateStepsStore.set({
   estimateType: estimateType as "bathroom" | "roofing" | "siding" | "windows",
 });
 
-// Redirect to zip page
-return Astro.redirect(`/estimate/${estimateType}/zip`);
+// Redirect to zip page with query params preserved
+const redirectUrl = `/estimate/${estimateType}/zip`;
+return Astro.redirect(appendQueryParams(redirectUrl, searchParams));
 ---

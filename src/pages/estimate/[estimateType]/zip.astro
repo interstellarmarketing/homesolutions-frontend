@@ -13,6 +13,7 @@ import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
 import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
 import StepLayout from "@components/step-layout/index.astro";
 import { getTotalSteps } from "@utils/layout";
+import { appendQueryParams } from "@utils/queryParams";
 
 // Validation schemas
 const zipSchema = formSubmissionParser.pick({ zipCode: true });
@@ -88,13 +89,17 @@ if (Astro.request.method === "POST") {
       const nextStep = getNextStep(validatedEstimateType, "zip");
 
       if (nextStep) {
-        return Astro.redirect(`/estimate/${validatedEstimateType}/${nextStep}`);
+        const redirectUrl = `/estimate/${validatedEstimateType}/${nextStep}`;
+        return Astro.redirect(
+          appendQueryParams(redirectUrl, Astro.url.searchParams)
+        );
       }
 
       // Fallback to original logic if next step not found
       if (estimateType === "roofing") {
+        const redirectUrl = `/estimate/${validatedEstimateType}/project-details`;
         return Astro.redirect(
-          `/estimate/${validatedEstimateType}/project-details`
+          appendQueryParams(redirectUrl, Astro.url.searchParams)
         );
       }
 

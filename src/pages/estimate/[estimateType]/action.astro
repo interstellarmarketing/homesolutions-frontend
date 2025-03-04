@@ -30,6 +30,7 @@ import {
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
+import { appendQueryParams } from "@utils/queryParams";
 // Schema definitions
 const actionSchema = z.string();
 const estimateTypeSchema = shortTradeEnum;
@@ -86,12 +87,21 @@ if (Astro.request.method === "POST") {
     const nextStep = getNextStep(estimateType, "action");
 
     if (nextStep) {
-      return Astro.redirect(`/estimate/${estimateType}/${nextStep}`);
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+        },
+      });
     }
 
     // Fallback to original logic if next step not found
     if (estimateType === "roofing") {
-      return Astro.redirect(`/estimate/${estimateType}/home-type`);
+      const redirectUrl = `/estimate/${estimateType}/home-type`;
+      return Astro.redirect(
+        appendQueryParams(redirectUrl, Astro.url.searchParams)
+      );
     }
 
     return Astro.redirect(`/estimate/${estimateType}/project-details`);

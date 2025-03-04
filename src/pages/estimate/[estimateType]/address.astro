@@ -11,6 +11,7 @@ import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 /**
  * Processes the address form submission
@@ -19,7 +20,8 @@ import {
 async function processAddressForm(
   formData: FormData,
   existingStore: Record<string, any>,
-  estimateType: string
+  estimateType: string,
+  searchParams: URLSearchParams
 ): Promise<Response | null> {
   const addressData = {
     streetAddress: formData.get("streetAddressInput"),
@@ -56,17 +58,19 @@ async function processAddressForm(
     const nextStep = getNextStep(validatedEstimateType.data, "address");
 
     if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
       return new Response(null, {
         status: 302,
-        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+        headers: { Location: appendQueryParams(redirectUrl, searchParams) },
       });
     }
   }
 
   // Fallback to original logic
+  const redirectUrl = `/estimate/${estimateType}/thank-you`;
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/thank-you` },
+    headers: { Location: appendQueryParams(redirectUrl, searchParams) },
   });
 }
 
@@ -87,7 +91,8 @@ if (validatedEstimateType.success) {
 
 const existingStore = estimateStore.get();
 if (!existingStore.zipCode) {
-  return Astro.redirect(`/estimate/${estimateType}/zip`);
+  const redirectUrl = `/estimate/${estimateType}/zip`;
+  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
 }
 
 // Extract existing data
@@ -99,7 +104,8 @@ if (Astro.request.method === "POST") {
   const response = await processAddressForm(
     formData,
     existingStore,
-    estimateType
+    estimateType,
+    Astro.url.searchParams
   );
   if (response) return response;
 }

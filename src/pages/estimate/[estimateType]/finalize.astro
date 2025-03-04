@@ -15,6 +15,7 @@ import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 const { estimateType } = Astro.params;
 
@@ -106,12 +107,21 @@ if (Astro.request.method === "POST") {
         const nextStep = getNextStep(validatedEstimateType.data, "finalize");
 
         if (nextStep) {
-          return Astro.redirect(`/estimate/${estimateType}/${nextStep}`);
+          const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+            },
+          });
         }
       }
 
       // Fallback to original logic
-      return Astro.redirect("/success");
+      const redirectUrl = `/estimate/${estimateType}/thank-you`;
+      return Astro.redirect(
+        appendQueryParams(redirectUrl, Astro.url.searchParams)
+      );
     }
 
     console.log(JSON.stringify(parseFinalizedStore));

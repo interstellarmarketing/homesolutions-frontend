@@ -12,6 +12,7 @@ import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -57,6 +58,7 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     ...existingStore,
     creditScoreAboveOrEqual640: !!creditScoreAboveOrEqual640,
   });
+  Astro.url.searchParams.append("csh", creditScoreAboveOrEqual640 ? "1" : "0");
 
   // Get the next step from the store
   const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
@@ -64,22 +66,19 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     const nextStep = getNextStep(validatedEstimateType.data, "credit-score");
 
     if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
       return new Response(null, {
         status: 302,
         headers: {
-          Location: `/estimate/${estimateType}/${nextStep}?csh=${creditScoreAboveOrEqual640 ? 1 : 0}`,
+          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
         },
       });
     }
   }
 
   // Fallback to original logic
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: `/estimate/${estimateType}/contact?csh=${creditScoreAboveOrEqual640 ? 1 : 0}`,
-    },
-  });
+  const redirectUrl = `/estimate/${estimateType}/contact`;
+  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
 }
 
 const pageState = initializePage(Astro.params);

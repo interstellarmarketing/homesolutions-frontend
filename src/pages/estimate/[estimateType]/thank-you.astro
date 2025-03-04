@@ -3,7 +3,7 @@ import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
-
+import { appendQueryParams } from "@utils/queryParams";
 /**
  * Formats store data to match the backend submission schema
  */
@@ -77,7 +77,7 @@ async function processFinalSubmission(
 // Validate route parameters
 const { estimateType } = Astro.params;
 if (!estimateType) {
-  return Astro.redirect("/");
+  return Astro.redirect(appendQueryParams("/", Astro.url.searchParams));
 }
 
 const validatedEstimateType = shortTradeEnum.safeParse(estimateType);

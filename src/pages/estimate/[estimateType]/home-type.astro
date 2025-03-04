@@ -20,6 +20,7 @@ import {
 } from "@stores/estimateStepsStore";
 import StepLayout from "@components/step-layout/index.astro";
 import { getTotalSteps } from "@utils/layout";
+import { appendQueryParams } from "@utils/queryParams";
 
 // Schema definitions
 const homeTypeSchema = z.enum(homeTypesConst);
@@ -91,9 +92,15 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     console.log({ nextStep, page: "home-type" });
 
     if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
       return new Response(null, {
         status: 302,
-        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+        headers: {
+          Location: appendQueryParams(
+            redirectUrl,
+            new URL(request.url).searchParams
+          ),
+        },
       });
     }
   }

@@ -11,18 +11,21 @@ import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 /**
  * Validates and processes the contact form submission
  * @param formData - Form data from the request
  * @param existingStore - Current store data
  * @param estimateType - Current estimate type
+ * @param searchParams - URL search parameters to preserve
  * @returns Response object for redirect or null if validation fails
  */
 async function processContactForm(
   formData: FormData,
   existingStore: Record<string, any>,
-  estimateType: string
+  estimateType: string,
+  searchParams: URLSearchParams
 ): Promise<Response | null> {
   const contactData = {
     firstName: formData.get("firstNameInput"),
@@ -47,24 +50,27 @@ async function processContactForm(
     const nextStep = getNextStep(validatedEstimateType.data, "contact");
 
     if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
       return new Response(null, {
         status: 302,
-        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+        headers: { Location: appendQueryParams(redirectUrl, searchParams) },
       });
     }
   }
 
   // Fallback to original logic
   if (estimateType === "roofing") {
+    const redirectUrl = `/estimate/${estimateType}/email`;
     return new Response(null, {
       status: 302,
-      headers: { Location: `/estimate/${estimateType}/email` },
+      headers: { Location: appendQueryParams(redirectUrl, searchParams) },
     });
   }
 
+  const redirectUrl = `/estimate/${estimateType}/address`;
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/address` },
+    headers: { Location: appendQueryParams(redirectUrl, searchParams) },
   });
 }
 
@@ -102,7 +108,8 @@ if (Astro.request.method === "POST") {
   const response = await processContactForm(
     formData,
     existingStore,
-    estimateType
+    estimateType,
+    Astro.url.searchParams
   );
   if (response) return response;
 }

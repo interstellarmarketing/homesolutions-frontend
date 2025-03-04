@@ -24,7 +24,7 @@ import {
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
 import StepLayout from "@components/step-layout/index.astro";
-import { getTotalSteps } from "@utils/layout";
+import { appendQueryParams } from "@utils/queryParams";
 
 // Schema definitions
 const actionSchema = z.string();
@@ -100,6 +100,7 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
+    estimateAction: actionParsed.data,
     projectDetails: actionParsed.data,
   });
 
@@ -111,7 +112,12 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     if (nextStep) {
       return new Response(null, {
         status: 302,
-        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+        headers: {
+          Location: appendQueryParams(
+            `/estimate/${estimateType}/${nextStep}`,
+            Astro.url.searchParams
+          ),
+        },
       });
     }
   }

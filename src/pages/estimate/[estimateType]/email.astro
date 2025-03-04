@@ -11,6 +11,7 @@ import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 /**
  * Processes the email form submission and handles final submission logic
@@ -44,18 +45,19 @@ async function processEmailForm(
     const nextStep = getNextStep(validatedEstimateType.data, "email");
 
     if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
       return new Response(null, {
         status: 302,
-        headers: { Location: `/estimate/${estimateType}/${nextStep}` },
+        headers: {
+          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+        },
       });
     }
   }
 
   // Fallback to original logic
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `/estimate/${estimateType}/phone-number` },
-  });
+  const redirectUrl = `/estimate/${estimateType}/phone-number`;
+  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
 }
 
 // Route parameter validation
