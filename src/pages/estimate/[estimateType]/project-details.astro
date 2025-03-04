@@ -100,7 +100,6 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    estimateAction: actionParsed.data,
     projectDetails: actionParsed.data,
   });
 
