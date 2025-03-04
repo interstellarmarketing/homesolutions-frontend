@@ -4,7 +4,7 @@ import { z } from "zod"
  * Available trade types in the system
  * @readonly
  */
-export const shortTradesConst = ["bathroom", "roofing", "siding", "windows"] as const;
+export const shortTradesConst = ["bathroom", "roofing", "siding", "windows", "solar"] as const;
 export type ShortTrade = typeof shortTradesConst[number];
 
 /**
@@ -89,8 +89,8 @@ export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminate
 type ShortTradeDataMap = {
 	[K in ShortTradeEnum]: {
 		[P in keyof ShortTradeDiscriminatedUnion['data']]: P extends 'estimateAction' | 'type' | 'homeType'
-			? ShortTradeDiscriminatedUnion['data'][P][]
-			: ShortTradeDiscriminatedUnion['data'][P];
+		? ShortTradeDiscriminatedUnion['data'][P][]
+		: ShortTradeDiscriminatedUnion['data'][P];
 	};
 };
 

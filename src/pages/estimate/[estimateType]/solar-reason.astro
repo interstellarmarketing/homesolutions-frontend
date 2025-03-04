@@ -1,0 +1,275 @@
+---
+/**
+ * Solar Reason Page
+ * Collects information about the main reason
+ * why the customer is interested in going solar
+ */
+
+import { z } from "zod";
+import { estimateStore } from "@stores/estimateProgress";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import {
+  activeEstimateTypeStore,
+  computedEstimateOptions,
+} from "@stores/activeEstimateType";
+import {
+  shortTradeEnum,
+  tradeOptionDescriptions,
+} from "@assets/info/estimateOptions";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
+import StepLayout from "@components/step-layout/index.astro";
+import { appendQueryParams } from "@utils/queryParams";
+
+// Schema definitions
+const actionSchema = z.string();
+const estimateTypeSchema = shortTradeEnum;
+
+// Solar reason options
+const solarReasonOptions = [
+  "Lower My Electric Bill",
+  "Power Outages",
+  "Go Green",
+  "Increase Home Value",
+  "Adding Panels To My System",
+];
+
+/**
+ * Represents the state of the page
+ * @interface PageState
+ */
+interface PageState {
+  estimateType: string;
+  tradeDescription: string | undefined;
+  currentSelection: string | undefined;
+}
+
+/**
+ * Initializes the page state based on URL parameters
+ * @param {Record<string, string | undefined>} params - URL parameters
+ * @returns {PageState | Response} Either the page state or a redirect response
+ */
+function initializePage(
+  params: Record<string, string | undefined>
+): PageState | Response {
+  // Validate the estimate type from URL parameters
+  const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
+
+  if (!parsedEstimateType.success) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
+
+  const estimateType = parsedEstimateType.data;
+  const activeEstimateOptions = computedEstimateOptions.get();
+
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "solar-reason",
+    estimateType: estimateType,
+  });
+
+  // Ensure estimate options are available
+  if (!activeEstimateOptions) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
+
+  // Find the trade options for the current estimate type
+  const tradeOptions = tradeOptionDescriptions.find(
+    (option) => option.shortTrade === activeEstimateTypeStore.get()
+  );
+
+  return {
+    estimateType,
+    tradeDescription: tradeOptions?.typeDescription,
+    currentSelection: estimateStore.get().solarReason || undefined,
+  };
+}
+
+/**
+ * Handles form submission and updates the estimate store
+ * @param {Request} request - The incoming request object
+ * @param {string} estimateType - The current estimate type
+ * @returns {Promise<Response | null>} Redirect response or null if validation fails
+ */
+async function handleFormSubmission(request: Request, estimateType: string) {
+  const formData = await request.formData();
+  const actionParsed = actionSchema.safeParse(formData.get("action"));
+
+  if (!actionParsed.success) {
+    return null;
+  }
+
+  const existingStore = estimateStore.get();
+  estimateStore.set({
+    ...existingStore,
+    solarReason: actionParsed.data,
+  });
+
+  // Get the next step from the store
+  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "solar-reason");
+
+    if (nextStep) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: appendQueryParams(
+            `/estimate/${estimateType}/${nextStep}`,
+            Astro.url.searchParams
+          ),
+        },
+      });
+    }
+  }
+
+  // Fallback to original logic if next step not found
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/estimate/${estimateType}/address` },
+  });
+}
+
+// Process the page based on the request method
+let pageState: PageState | Response;
+if (Astro.request.method === "POST") {
+  const result = await handleFormSubmission(
+    Astro.request,
+    Astro.params.estimateType || ""
+  );
+  if (result) {
+    return result;
+  }
+}
+
+pageState = initializePage(Astro.params);
+
+if (pageState instanceof Response) {
+  return pageState;
+}
+
+// Get previous page URL for back button
+const validatedEstimateType = estimateTypeSchema.safeParse(
+  pageState.estimateType
+);
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "solar-reason")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${pageState.estimateType}/${prevStep}`
+  : `/estimate/${pageState.estimateType}/project-details`;
+
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "solar-reason")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
+
+// Always set the specific solar question
+const stepHeader = "What's the main reason you're interested in going solar?";
+
+const existingStore = estimateStore.get();
+
+if (existingStore.solarReason) {
+  pageState.currentSelection = existingStore.solarReason;
+}
+---
+
+<!-- Template section -->
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
+>
+  <form method="post">
+    <input
+      type="hidden"
+      id="hasInitialSelection"
+      value={existingStore.solarReason ? "true" : "false"}
+    />
+    <StepLayout
+      stepHeader={stepHeader}
+      stepNumber={stepNumber}
+      totalSteps={totalSteps}
+      hasNextStep
+      hasPrevStep={stepNumber > 1}
+      estimateType={pageState.estimateType}
+    >
+      <div class="flex flex-col gap-4 text-center rounded-lg container">
+        <div class="flex flex-wrap justify-center gap-4">
+          {
+            solarReasonOptions.map((reasonOption) => (
+              <label class="inline-flex items-center w-full md:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]">
+                <input
+                  type="radio"
+                  name="action"
+                  checked={pageState.currentSelection === reasonOption}
+                  value={reasonOption}
+                  class="hidden peer"
+                />
+                <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2">
+                  {reasonOption}
+                </span>
+              </label>
+            ))
+          }
+        </div>
+      </div>
+    </StepLayout>
+  </form>
+</EstimateWrapper>
+
+<script>
+  /**
+   * Controls the form behavior and button states
+   */
+  class FormController {
+    private radioButtons: NodeListOf<HTMLInputElement>;
+    private submitButton: HTMLButtonElement | null;
+
+    constructor() {
+      this.radioButtons = document.querySelectorAll('input[name="action"]');
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.initialize();
+    }
+
+    /**
+     * Sets up event listeners for radio buttons and checks initial state
+     */
+    private initialize() {
+      if (!this.submitButton || !this.radioButtons.length) return;
+
+      // Check hidden field for initial state
+      const hasInitialSelection =
+        document
+          .getElementById("hasInitialSelection")
+          ?.getAttribute("value") === "true";
+      if (hasInitialSelection) {
+        this.submitButton.disabled = false;
+      }
+
+      this.radioButtons.forEach((radio) => {
+        radio.addEventListener("change", () => this.handleRadioChange());
+      });
+    }
+
+    private handleRadioChange() {
+      if (!this.submitButton) return;
+
+      const isSelected = Array.from(this.radioButtons).some(
+        (radio) => radio.checked
+      );
+      this.submitButton.disabled = !isSelected;
+    }
+  }
+
+  new FormController();
+</script>

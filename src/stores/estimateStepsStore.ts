@@ -24,6 +24,19 @@ export const estimateSteps = {
         "address",
         "thank-you",
     ],
+    solar: [
+        "solar-reason",
+        "zip",
+        "project-details",
+        "action",
+        "home-type",
+        "credit-score",
+        "contact",
+        "email",
+        "phone-number",
+        "address",
+        "thank-you",
+    ],
     bathroom: defaultSteps,
     siding: defaultSteps,
     windows: defaultSteps,
@@ -49,6 +62,11 @@ export const getCurrentStepIndex = (estimateType: ShortTradeEnum, currentStep: s
 
     const index = estimateSteps[estimateType].indexOf(currentStep);
     return index >= 0 ? index : 0;
+};
+
+// Helper function to get the first step
+export const getFirstStep = (estimateType: ShortTradeEnum): string => {
+    return estimateSteps[estimateType][0];
 };
 
 // Helper function to get the next step

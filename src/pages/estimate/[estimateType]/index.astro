@@ -1,16 +1,17 @@
 ---
 import { estimateStore } from "@stores/estimateProgress";
-import { estimateStepsStore } from "@stores/estimateStepsStore";
-import { shortTradesConst } from "@assets/info/estimateOptions";
+import { estimateStepsStore, getFirstStep } from "@stores/estimateStepsStore";
+import {
+  shortTradesConst,
+  type ShortTradeEnum,
+} from "@assets/info/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 
 // Get estimate type from URL
 const { estimateType } = Astro.params;
 if (
   !estimateType ||
-  !shortTradesConst.includes(
-    estimateType as "bathroom" | "roofing" | "siding" | "windows"
-  )
+  !shortTradesConst.includes(estimateType as ShortTradeEnum)
 ) {
   return Astro.redirect("/");
 }
@@ -39,13 +40,15 @@ estimateStore.set({
   ),
 });
 
+const firstStep = getFirstStep(estimateType as ShortTradeEnum);
+
 // Initialize the estimate steps store
 estimateStepsStore.set({
-  currentStep: "zip",
-  estimateType: estimateType as "bathroom" | "roofing" | "siding" | "windows",
+  currentStep: firstStep,
+  estimateType: estimateType as ShortTradeEnum,
 });
 
 // Redirect to zip page with query params preserved
-const redirectUrl = `/estimate/${estimateType}/zip`;
+const redirectUrl = `/estimate/${estimateType}/${firstStep}`;
 return Astro.redirect(appendQueryParams(redirectUrl, searchParams));
 ---
