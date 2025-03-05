@@ -3,18 +3,29 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { estimateParser, estimateStore } from "@stores/estimateProgress";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 /**
  * Validates and processes the contact form submission
  * @param formData - Form data from the request
  * @param existingStore - Current store data
  * @param estimateType - Current estimate type
+ * @param searchParams - URL search parameters to preserve
  * @returns Response object for redirect or null if validation fails
  */
 async function processContactForm(
   formData: FormData,
   existingStore: Record<string, any>,
-  estimateType: string
+  estimateType: string,
+  searchParams: URLSearchParams
 ): Promise<Response | null> {
   const contactData = {
     firstName: formData.get("firstNameInput"),
@@ -33,16 +44,33 @@ async function processContactForm(
     ...contactParsed.data,
   });
 
+  // Get the next step from the store
+  const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "contact");
+
+    if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
+      return new Response(null, {
+        status: 302,
+        headers: { Location: appendQueryParams(redirectUrl, searchParams) },
+      });
+    }
+  }
+
+  // Fallback to original logic
   if (estimateType === "roofing") {
+    const redirectUrl = `/estimate/${estimateType}/email`;
     return new Response(null, {
       status: 302,
-      headers: { Location: `/estimate/${estimateType}/email` },
+      headers: { Location: appendQueryParams(redirectUrl, searchParams) },
     });
   }
 
+  const redirectUrl = `/estimate/${estimateType}/address`;
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/address` },
+    headers: { Location: appendQueryParams(redirectUrl, searchParams) },
   });
 }
 
@@ -50,6 +78,15 @@ async function processContactForm(
 const { estimateType } = Astro.params;
 if (!estimateType) {
   return Astro.redirect("/");
+}
+
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "contact",
+    estimateType: validatedEstimateType.data,
+  });
 }
 
 // Initialize store and form state
@@ -71,19 +108,27 @@ if (Astro.request.method === "POST") {
   const response = await processContactForm(
     formData,
     existingStore,
-    estimateType
+    estimateType,
+    Astro.url.searchParams
   );
   if (response) return response;
 }
 
-const getStepNumber = () => {
-  switch (estimateType) {
-    case "roofing":
-      return 6;
-    default:
-      return 4;
-  }
-};
+// Get previous page URL for back button
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "contact")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${estimateType}/${prevStep}`
+  : `/estimate/${estimateType}/credit-score`;
+
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "contact")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 
 const getStepHeader = () => {
   switch (estimateType) {
@@ -91,8 +136,6 @@ const getStepHeader = () => {
       return "Please enter your full name";
   }
 };
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(estimateType);
 const stepHeader = getStepHeader();
 ---
 

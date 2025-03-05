@@ -3,6 +3,15 @@ import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
+import { shortTradeEnum } from "@assets/info/estimateOptions";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 /**
  * Processes the address form submission
@@ -11,7 +20,8 @@ import StepLayout from "@components/step-layout/index.astro";
 async function processAddressForm(
   formData: FormData,
   existingStore: Record<string, any>,
-  estimateType: string
+  estimateType: string,
+  searchParams: URLSearchParams
 ): Promise<Response | null> {
   const addressData = {
     streetAddress: formData.get("streetAddressInput"),
@@ -42,9 +52,25 @@ async function processAddressForm(
     ...addressParsed.data,
   });
 
+  // Get the next step from the store
+  const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+  if (validatedEstimateType.success) {
+    const nextStep = getNextStep(validatedEstimateType.data, "address");
+
+    if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
+      return new Response(null, {
+        status: 302,
+        headers: { Location: appendQueryParams(redirectUrl, searchParams) },
+      });
+    }
+  }
+
+  // Fallback to original logic
+  const redirectUrl = `/estimate/${estimateType}/thank-you`;
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/thank-you` },
+    headers: { Location: appendQueryParams(redirectUrl, searchParams) },
   });
 }
 
@@ -54,9 +80,19 @@ if (!estimateType) {
   return Astro.redirect("/");
 }
 
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "address",
+    estimateType: validatedEstimateType.data,
+  });
+}
+
 const existingStore = estimateStore.get();
 if (!existingStore.zipCode) {
-  return Astro.redirect(`/estimate/${estimateType}/zip`);
+  const redirectUrl = `/estimate/${estimateType}/zip`;
+  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
 }
 
 // Extract existing data
@@ -68,7 +104,8 @@ if (Astro.request.method === "POST") {
   const response = await processAddressForm(
     formData,
     existingStore,
-    estimateType
+    estimateType,
+    Astro.url.searchParams
   );
   if (response) return response;
 }
@@ -76,14 +113,21 @@ if (Astro.request.method === "POST") {
 // Add this near the top of your frontmatter
 const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
 
-const getStepNumber = () => {
-  switch (estimateType) {
-    case "roofing":
-      return 8;
-    default:
-      return 5;
-  }
-};
+// Get previous page URL for back button
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "address")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${estimateType}/${prevStep}`
+  : `/estimate/${estimateType}/project-details`;
+
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "address")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 
 const getStepHeader = () => {
   switch (estimateType) {
@@ -91,8 +135,6 @@ const getStepHeader = () => {
       return "What is your street address?";
   }
 };
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(estimateType);
 const stepHeader = getStepHeader();
 ---
 

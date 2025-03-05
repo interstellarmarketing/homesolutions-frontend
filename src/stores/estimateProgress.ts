@@ -16,7 +16,10 @@ export const estimateParser = z.object({
   homeType: z.string(),
   estimateType: z.string().nullable(),
   projectDetails: z.string().nullable(),
+  solarReason: z.string().nullable().optional(),
   creditScoreAboveOrEqual640: z.boolean().optional(),
+  electricBillOver100: z.boolean().optional(),
+  shadedRoof: z.boolean().optional(),
   trackingParams: z
     .object({
       utm_source: z.string().optional(),

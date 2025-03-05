@@ -4,12 +4,32 @@ import { resultIdStore } from "@stores/stashedResultId";
 import { storeSuccessResult } from "@utils/kv/storedResults";
 import { resetEstimateFields } from "@utils/stores/resetFields";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { shortTradeDiscriminatedUnion } from "@assets/info/estimateOptions";
+import {
+  shortTradeDiscriminatedUnion,
+  shortTradeEnum,
+} from "@assets/info/estimateOptions";
+import {
+  estimateStepsStore,
+  getNextStep,
+  getPreviousStep,
+  getCurrentStepNumber,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 
 const { estimateType } = Astro.params;
 
 if (!estimateType) {
-	return Astro.redirect("/");
+  return Astro.redirect("/");
+}
+
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "finalize",
+    estimateType: validatedEstimateType.data,
+  });
 }
 
 let existingStore = estimateStore.get();
@@ -17,229 +37,250 @@ let existingStore = estimateStore.get();
 let { phone, email } = existingStore;
 
 const phoneEmailParser = estimateParser.pick({
-	phone: true,
-	email: true,
+  phone: true,
+  email: true,
 });
 
 const existingPhoneEmailParser = phoneEmailParser.safeParse({
-	phone,
-	email,
+  phone,
+  email,
 });
 
 if (Astro.request.method === "POST") {
-	const formData = await Astro.request.formData();
+  const formData = await Astro.request.formData();
 
-	const phone = formData.get("phoneInput");
-	const email = formData.get("emailInput");
+  const phone = formData.get("phoneInput");
+  const email = formData.get("emailInput");
 
-	const phoneEmailParsed = phoneEmailParser.safeParse({ phone, email });
+  const phoneEmailParsed = phoneEmailParser.safeParse({ phone, email });
 
-	if (phoneEmailParsed.success) {
-		console.log({ preFinalStore: existingStore });
+  if (phoneEmailParsed.success) {
+    console.log({ preFinalStore: existingStore });
 
-		existingStore = {
-			...existingStore,
-			...phoneEmailParsed.data,
-		};
+    existingStore = {
+      ...existingStore,
+      ...phoneEmailParsed.data,
+    };
 
-		console.log({ finalfinalstore: existingStore });
+    console.log({ finalfinalstore: existingStore });
 
-		estimateStore.set({
-			...existingStore,
-			...phoneEmailParsed.data,
-		});
+    estimateStore.set({
+      ...existingStore,
+      ...phoneEmailParsed.data,
+    });
 
-		const parseFinalizedStore =
-			estimateParser.safeParse(existingStore);
+    const parseFinalizedStore = estimateParser.safeParse(existingStore);
 
-		const testDiscriminatorParse =
-			shortTradeDiscriminatedUnion.safeParse({
-				shortTrade: existingStore.estimateShortTrade,
-				data: {
-					type: existingStore.estimateType,
-					estimateAction:
-						existingStore.estimateAction,
-				},
-			});
+    const testDiscriminatorParse = shortTradeDiscriminatedUnion.safeParse({
+      shortTrade: existingStore.estimateShortTrade,
+      data: {
+        type: existingStore.estimateType,
+        estimateAction: existingStore.estimateAction,
+      },
+    });
 
-		console.log({ x: JSON.stringify(testDiscriminatorParse) });
+    console.log({ x: JSON.stringify(testDiscriminatorParse) });
 
-		if (parseFinalizedStore.success) {
-			const { resultId } = await storeSuccessResult(
-				Astro,
-				parseFinalizedStore.data,
-			);
-			resultIdStore.set({ ...resultId });
+    if (parseFinalizedStore.success) {
+      const { resultId } = await storeSuccessResult(
+        Astro,
+        parseFinalizedStore.data
+      );
+      resultIdStore.set({ ...resultId });
 
-			const zDb = Astro.locals.runtime.env.DB;
+      const zDb = Astro.locals.runtime.env.DB;
 
-			const db = await zDb.D1Methods();
+      const db = await zDb.D1Methods();
 
-			// const submitToDb = await db.insertSubmission(
-			// 	{
-			// 		...parseFinalizedStore.data,
-			// 	},
-			// );
+      // const submitToDb = await db.insertSubmission(
+      // 	{
+      // 		...parseFinalizedStore.data,
+      // 	},
+      // );
 
-			// console.log({ submitToDb });
+      // console.log({ submitToDb });
 
-			resetEstimateFields();
+      resetEstimateFields();
 
-			return Astro.redirect("/success");
-		}
+      // Get the next step from the store
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(validatedEstimateType.data, "finalize");
 
-		console.log(JSON.stringify(parseFinalizedStore));
-	} else {
-		console.log(JSON.stringify(phoneEmailParsed));
-	}
+        if (nextStep) {
+          const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+            },
+          });
+        }
+      }
+
+      // Fallback to original logic
+      const redirectUrl = `/estimate/${estimateType}/thank-you`;
+      return Astro.redirect(
+        appendQueryParams(redirectUrl, Astro.url.searchParams)
+      );
+    }
+
+    console.log(JSON.stringify(parseFinalizedStore));
+  } else {
+    console.log(JSON.stringify(phoneEmailParsed));
+  }
 }
+
+// Get previous page URL for back button
+const prevStep = validatedEstimateType.success
+  ? getPreviousStep(validatedEstimateType.data, "finalize")
+  : null;
+const prevUrl = prevStep
+  ? `/estimate/${estimateType}/${prevStep}`
+  : `/estimate/${estimateType}/contact`;
+
+// Get step number and total from store
+const stepNumber = validatedEstimateType.success
+  ? getCurrentStepNumber(validatedEstimateType.data, "finalize")
+  : 1;
+const totalSteps = validatedEstimateType.success
+  ? getStoreSteps(validatedEstimateType.data)
+  : 5;
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
-	<div
-		class="flex flex-col gap-4 text-center border rounded-lg p-8 container"
-	>
-		<div
-			class="flex mx-auto items-center justify-center text-green-600"
-		>
-			<svg
-				width="150"
-				height="150"
-				viewBox="0 0 15 15"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
-				><path
-					d="M7.49991 0.877045C3.84222 0.877045 0.877075 3.84219 0.877075 7.49988C0.877075 11.1575 3.84222 14.1227 7.49991 14.1227C11.1576 14.1227 14.1227 11.1575 14.1227 7.49988C14.1227 3.84219 11.1576 0.877045 7.49991 0.877045ZM1.82708 7.49988C1.82708 4.36686 4.36689 1.82704 7.49991 1.82704C10.6329 1.82704 13.1727 4.36686 13.1727 7.49988C13.1727 10.6329 10.6329 13.1727 7.49991 13.1727C4.36689 13.1727 1.82708 10.6329 1.82708 7.49988ZM10.1589 5.53774C10.3178 5.31191 10.2636 5.00001 10.0378 4.84109C9.81194 4.68217 9.50004 4.73642 9.34112 4.96225L6.51977 8.97154L5.35681 7.78706C5.16334 7.59002 4.84677 7.58711 4.64973 7.78058C4.45268 7.97404 4.44978 8.29061 4.64325 8.48765L6.22658 10.1003C6.33054 10.2062 6.47617 10.2604 6.62407 10.2483C6.77197 10.2363 6.90686 10.1591 6.99226 10.0377L10.1589 5.53774Z"
-					fill="currentColor"
-					fill-rule="evenodd"
-					clip-rule="evenodd"></path></svg
-			>
-		</div>
-		<h2 class="text-xl font-black">
-			We have matching pros in {existingStore.city}, {
-				existingStore.state
-			}!
-		</h2>
-		<p>Where should we send your matches?</p>
-		<form
-			class="flex flex-col items-center text-center gap-4 my-4"
-			method="post"
-		>
-			<input
-				type="tel"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="phone number"
-				id="phoneInput"
-				name="phoneInput"
-				value={phone ?? ""}
-				inputmode="tel"
-				pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
-				title="Phone number format: (XXX) XXX-XXXX"
-			/>
-			<input
-				type="email"
-				required
-				class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
-				placeholder="email"
-				id="emailInput"
-				name="emailInput"
-				value={email?.length ? email : null}
-			/>
-			<div class="flex gap-4 items-center">
-				<a
-					href={`/estimate/${estimateType}/address`}
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-				>
-					prev
-				</a>
+  <div class="flex flex-col gap-4 text-center border rounded-lg p-8 container">
+    <div class="flex mx-auto items-center justify-center text-green-600">
+      <svg
+        width="150"
+        height="150"
+        viewBox="0 0 15 15"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        ><path
+          d="M7.49991 0.877045C3.84222 0.877045 0.877075 3.84219 0.877075 7.49988C0.877075 11.1575 3.84222 14.1227 7.49991 14.1227C11.1576 14.1227 14.1227 11.1575 14.1227 7.49988C14.1227 3.84219 11.1576 0.877045 7.49991 0.877045ZM1.82708 7.49988C1.82708 4.36686 4.36689 1.82704 7.49991 1.82704C10.6329 1.82704 13.1727 4.36686 13.1727 7.49988C13.1727 10.6329 10.6329 13.1727 7.49991 13.1727C4.36689 13.1727 1.82708 10.6329 1.82708 7.49988ZM10.1589 5.53774C10.3178 5.31191 10.2636 5.00001 10.0378 4.84109C9.81194 4.68217 9.50004 4.73642 9.34112 4.96225L6.51977 8.97154L5.35681 7.78706C5.16334 7.59002 4.84677 7.58711 4.64973 7.78058C4.45268 7.97404 4.44978 8.29061 4.64325 8.48765L6.22658 10.1003C6.33054 10.2062 6.47617 10.2604 6.62407 10.2483C6.77197 10.2363 6.90686 10.1591 6.99226 10.0377L10.1589 5.53774Z"
+          fill="currentColor"
+          fill-rule="evenodd"
+          clip-rule="evenodd"></path></svg
+      >
+    </div>
+    <h2 class="text-xl font-black">
+      We have matching pros in {existingStore.city}, {existingStore.state}!
+    </h2>
+    <p>Where should we send your matches?</p>
+    <form
+      class="flex flex-col items-center text-center gap-4 my-4"
+      method="post"
+    >
+      <input
+        type="tel"
+        required
+        class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+        placeholder="phone number"
+        id="phoneInput"
+        name="phoneInput"
+        value={phone ?? ""}
+        inputmode="tel"
+        pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
+        title="Phone number format: (XXX) XXX-XXXX"
+      />
+      <input
+        type="email"
+        required
+        class="bg-transparent rounded-lg border py-2 px-4 text-center max-w-2/3"
+        placeholder="email"
+        id="emailInput"
+        name="emailInput"
+        value={email?.length ? email : null}
+      />
+      <div class="flex gap-4 items-center">
+        <a
+          href={prevUrl}
+          class="rounded-lg px-6 py-2 border disabled:opacity-20"
+        >
+          prev
+        </a>
 
-				<button
-					type="submit"
-					id="finalizeSubmitButton"
-					class="rounded-lg px-6 py-2 border disabled:opacity-20"
-					disabled={!existingPhoneEmailParser?.success}
-				>
-					next
-				</button>
-			</div>
-		</form>
-	</div>
+        <button
+          type="submit"
+          id="finalizeSubmitButton"
+          class="rounded-lg px-6 py-2 border disabled:opacity-20"
+          disabled={!existingPhoneEmailParser?.success}
+        >
+          next
+        </button>
+      </div>
+    </form>
+  </div>
 </EstimateWrapper>
 
 <script>
-	import { estimateParser } from "@stores/estimateProgress";
+  import { estimateParser } from "@stores/estimateProgress";
 
-	const emailInputEl = document.getElementById(
-		"emailInput",
-	) as HTMLInputElement | null;
+  const emailInputEl = document.getElementById(
+    "emailInput"
+  ) as HTMLInputElement | null;
 
-	const phoneInputEl = document.getElementById(
-		"phoneInput",
-	) as HTMLInputElement | null;
+  const phoneInputEl = document.getElementById(
+    "phoneInput"
+  ) as HTMLInputElement | null;
 
-	const finalizeSubmitButton = document.getElementById(
-		"finalizeSubmitButton",
-	) as HTMLButtonElement | null;
+  const finalizeSubmitButton = document.getElementById(
+    "finalizeSubmitButton"
+  ) as HTMLButtonElement | null;
 
-	function formatPhoneNumber(value: string): string {
-		const phoneNumber = value.replace(/\D/g, "");
-		const phoneNumberLength = phoneNumber.length;
+  function formatPhoneNumber(value: string): string {
+    const phoneNumber = value.replace(/\D/g, "");
+    const phoneNumberLength = phoneNumber.length;
 
-		if (phoneNumberLength < 4) return phoneNumber;
-		if (phoneNumberLength < 7) {
-			return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
-		}
-		return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
-	}
+    if (phoneNumberLength < 4) return phoneNumber;
+    if (phoneNumberLength < 7) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    }
+    return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+  }
 
-	const emailParser = estimateParser.pick({
-		email: true,
-	});
+  const emailParser = estimateParser.pick({
+    email: true,
+  });
 
-	const phoneParser = estimateParser.pick({
-		phone: true,
-	});
+  const phoneParser = estimateParser.pick({
+    phone: true,
+  });
 
-	if (emailInputEl && phoneInputEl && finalizeSubmitButton) {
-		let resultHolder = {
-			phone: false,
-			email: false,
-		};
+  if (emailInputEl && phoneInputEl && finalizeSubmitButton) {
+    let resultHolder = {
+      phone: false,
+      email: false,
+    };
 
-		const updateButtonState = () => {
-			console.log({ resultHolder });
-			if (resultHolder.phone && resultHolder.email) {
-				finalizeSubmitButton.removeAttribute(
-					"disabled",
-				);
-			} else {
-				finalizeSubmitButton.setAttribute(
-					"disabled",
-					"",
-				);
-			}
-		};
+    const updateButtonState = () => {
+      console.log({ resultHolder });
+      if (resultHolder.phone && resultHolder.email) {
+        finalizeSubmitButton.removeAttribute("disabled");
+      } else {
+        finalizeSubmitButton.setAttribute("disabled", "");
+      }
+    };
 
-		phoneInputEl.addEventListener("input", (e: Event) => {
-			const input = e.target as HTMLInputElement;
-			const formattedNumber = formatPhoneNumber(input.value);
-			input.value = formattedNumber;
-			const tryParse = phoneParser.safeParse({
-				phone: input.value,
-			});
+    phoneInputEl.addEventListener("input", (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      const formattedNumber = formatPhoneNumber(input.value);
+      input.value = formattedNumber;
+      const tryParse = phoneParser.safeParse({
+        phone: input.value,
+      });
 
-			resultHolder.phone = tryParse.success;
-			updateButtonState();
-		});
+      resultHolder.phone = tryParse.success;
+      updateButtonState();
+    });
 
-		emailInputEl.addEventListener("input", (event) => {
-			const target = event.target as HTMLInputElement;
-			const targetParse = emailParser.safeParse({
-				email: target.value,
-			});
-			resultHolder.email = targetParse.success;
-			updateButtonState();
-		});
-	}
+    emailInputEl.addEventListener("input", (event) => {
+      const target = event.target as HTMLInputElement;
+      const targetParse = emailParser.safeParse({
+        email: target.value,
+      });
+      resultHolder.email = targetParse.success;
+      updateButtonState();
+    });
+  }
 </script>

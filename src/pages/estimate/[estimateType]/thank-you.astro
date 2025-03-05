@@ -1,7 +1,9 @@
 ---
 import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-
+import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { estimateStepsStore } from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
 /**
  * Formats store data to match the backend submission schema
  */
@@ -53,6 +55,12 @@ async function formatStoreForSubmission(
     submission.roofType = store.projectDetails;
   }
 
+  switch (store.estimateType) {
+    case "solar":
+      submission.solarType = store.projectDetails;
+      break;
+  }
+
   return submission;
 }
 
@@ -75,7 +83,16 @@ async function processFinalSubmission(
 // Validate route parameters
 const { estimateType } = Astro.params;
 if (!estimateType) {
-  return Astro.redirect("/");
+  return Astro.redirect(appendQueryParams("/", Astro.url.searchParams));
+}
+
+const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
+if (validatedEstimateType.success) {
+  // Update the estimate steps store with current page
+  estimateStepsStore.set({
+    currentStep: "thank-you",
+    estimateType: validatedEstimateType.data,
+  });
 }
 
 // Get and validate store data
@@ -143,7 +160,7 @@ await processFinalSubmission(existingStore);
             }
             <div class="w-full">
               <a
-                href={`/estimate/${estimateType}/zip`}
+                href={`/estimate/${estimateType}`}
                 class="h-12 px-5 py-3 bg-[#ffa726] w-full rounded-lg justify-center items-center gap-2 inline-flex hover:bg-[#ff9800] transition-colors"
               >
                 <span

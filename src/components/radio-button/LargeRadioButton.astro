@@ -1,0 +1,41 @@
+---
+/**
+ * LargeRadioButton component
+ * Renders a single radio button with custom styling
+ */
+
+interface Props {
+  name: string;
+  value: string;
+  checked: boolean;
+  label: string;
+  customClass?: string;
+  capitalize?: boolean;
+}
+
+const {
+  name,
+  value,
+  checked,
+  label,
+  customClass = "",
+  capitalize = false,
+} = Astro.props;
+
+const labelClass = capitalize ? "capitalize" : "";
+---
+
+<label class={`inline-flex items-center ${customClass}`}>
+  <input
+    type="radio"
+    name={name}
+    checked={checked}
+    value={value}
+    class="hidden peer"
+  />
+  <span
+    class={`w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 ${labelClass}`}
+  >
+    {label}
+  </span>
+</label>

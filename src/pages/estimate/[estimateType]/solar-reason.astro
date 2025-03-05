@@ -1,8 +1,8 @@
 ---
 /**
- * Project Details Page
- * Collects information about the specific project details
- * for the customer's estimate
+ * Solar Reason Page
+ * Collects information about the main reason
+ * why the customer is interested in going solar
  */
 
 import { z } from "zod";
@@ -31,6 +31,15 @@ import { appendQueryParams } from "@utils/queryParams";
 const actionSchema = z.string();
 const estimateTypeSchema = shortTradeEnum;
 
+// Solar reason options
+const solarReasonOptions = [
+  "Lower My Electric Bill",
+  "Power Outages",
+  "Go Green",
+  "Increase Home Value",
+  "Adding Panels To My System",
+];
+
 /**
  * Represents the state of the page
  * @interface PageState
@@ -38,7 +47,6 @@ const estimateTypeSchema = shortTradeEnum;
 interface PageState {
   estimateType: string;
   tradeDescription: string | undefined;
-  projectTypes: (string | null)[] | undefined;
   currentSelection: string | undefined;
 }
 
@@ -62,7 +70,7 @@ function initializePage(
 
   // Update the estimate steps store with current page
   estimateStepsStore.set({
-    currentStep: "project-details",
+    currentStep: "solar-reason",
     estimateType: estimateType,
   });
 
@@ -79,8 +87,7 @@ function initializePage(
   return {
     estimateType,
     tradeDescription: tradeOptions?.typeDescription,
-    projectTypes: activeEstimateOptions.data.type,
-    currentSelection: estimateStore.get().estimateAction,
+    currentSelection: estimateStore.get().solarReason || undefined,
   };
 }
 
@@ -101,13 +108,13 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    projectDetails: actionParsed.data,
+    solarReason: actionParsed.data,
   });
 
   // Get the next step from the store
   const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
   if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "project-details");
+    const nextStep = getNextStep(validatedEstimateType.data, "solar-reason");
 
     if (nextStep) {
       return new Response(null, {
@@ -147,56 +154,33 @@ if (pageState instanceof Response) {
   return pageState;
 }
 
-// Handle null project types by redirecting to contact page
-if (pageState.projectTypes?.includes(null)) {
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    estimateType: null,
-  });
-
-  return Astro.redirect(`/estimate/${pageState.estimateType}/contact`);
-}
-
 // Get previous page URL for back button
 const validatedEstimateType = estimateTypeSchema.safeParse(
   pageState.estimateType
 );
 const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "project-details")
+  ? getPreviousStep(validatedEstimateType.data, "solar-reason")
   : null;
 const prevUrl = prevStep
   ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/zip`;
+  : `/estimate/${pageState.estimateType}/project-details`;
 
 // Get step number and total from store
 const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "project-details")
+  ? getCurrentStepNumber(validatedEstimateType.data, "solar-reason")
   : 1;
 const totalSteps = validatedEstimateType.success
   ? getStoreSteps(validatedEstimateType.data)
   : 5;
 
-const getStepHeader = () => {
-  switch (pageState.estimateType) {
-    case "roofing":
-      return pageState.tradeDescription ?? "";
-    default:
-      return "What type of project are you looking to complete?";
-  }
-};
-
-const stepHeader = getStepHeader();
+// Always set the specific solar question
+const stepHeader = "What's the main reason you're interested in going solar?";
 
 const existingStore = estimateStore.get();
 
-if (existingStore.projectDetails) {
-  pageState.currentSelection = existingStore.projectDetails;
+if (existingStore.solarReason) {
+  pageState.currentSelection = existingStore.solarReason;
 }
-
-// Filter out null values from projectTypes
-const validProjectTypes =
-  pageState.projectTypes?.filter((type): type is string => type !== null) ?? [];
 ---
 
 <!-- Template section -->
@@ -208,7 +192,7 @@ const validProjectTypes =
     <input
       type="hidden"
       id="hasInitialSelection"
-      value={existingStore.projectDetails ? "true" : "false"}
+      value={existingStore.solarReason ? "true" : "false"}
     />
     <StepLayout
       stepHeader={stepHeader}
@@ -219,10 +203,10 @@ const validProjectTypes =
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
-        options={validProjectTypes}
+        options={solarReasonOptions}
         name="action"
         currentSelection={pageState.currentSelection}
-        layout="grid4"
+        layout="flex"
         capitalize={true}
       />
     </StepLayout>

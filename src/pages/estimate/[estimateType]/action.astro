@@ -10,19 +10,26 @@
  * 4. Project details
  */
 
-import { z } from "zod";
-import { estimateStore } from "@stores/estimateProgress";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
+import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
+import StepLayout from "@components/step-layout/index.astro";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   activeEstimateTypeStore,
   computedEstimateOptions,
 } from "@stores/activeEstimateType";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
-import StepLayout from "@components/step-layout/index.astro";
+import { estimateStore } from "@stores/estimateProgress";
+import {
+  estimateStepsStore,
+  getCurrentStepNumber,
+  getNextStep,
+  getTotalSteps as getStoreSteps,
+} from "@stores/estimateStepsStore";
+import { appendQueryParams } from "@utils/queryParams";
+import { z } from "zod";
 // Schema definitions
 const actionSchema = z.string();
 const estimateTypeSchema = shortTradeEnum;
@@ -42,6 +49,12 @@ const estimateType = estimateTypeResult.data;
 const existingStore = estimateStore.get();
 const activeEstimateType = activeEstimateTypeStore.get();
 const activeEstimateOptions = computedEstimateOptions.get();
+
+// Update the estimate steps store with current page
+estimateStepsStore.set({
+  currentStep: "action",
+  estimateType: estimateType,
+});
 
 // Validation checks
 if (!activeEstimateOptions) {
@@ -69,8 +82,25 @@ if (Astro.request.method === "POST") {
       estimateAction: action,
     });
 
+    // Get the next step from the store
+    const nextStep = getNextStep(estimateType, "action");
+
+    if (nextStep) {
+      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+        },
+      });
+    }
+
+    // Fallback to original logic if next step not found
     if (estimateType === "roofing") {
-      return Astro.redirect(`/estimate/${estimateType}/home-type`);
+      const redirectUrl = `/estimate/${estimateType}/home-type`;
+      return Astro.redirect(
+        appendQueryParams(redirectUrl, Astro.url.searchParams)
+      );
     }
 
     return Astro.redirect(`/estimate/${estimateType}/project-details`);
@@ -80,14 +110,9 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const getStepNumber = () => {
-  switch (estimateType) {
-    case "roofing":
-      return 3;
-    default:
-      return 2;
-  }
-};
+// Get step number and total steps from the store
+const stepNumber = getCurrentStepNumber(estimateType, "action");
+const totalSteps = getStoreSteps(estimateType);
 
 const getStepHeader = () => {
   switch (estimateType) {
@@ -98,8 +123,6 @@ const getStepHeader = () => {
   }
 };
 
-const stepNumber = getStepNumber();
-const totalSteps = getTotalSteps(estimateType);
 const stepHeader = getStepHeader();
 
 console.log(existingStore.estimateAction);
@@ -122,30 +145,13 @@ console.log(existingStore.estimateAction);
       hasNextStep
       hasPrevStep={stepNumber > 1}
     >
-      <div class="flex flex-col gap-4 text-center rounded-lg container">
-        <div class="grid grid-cols-2 gap-4">
-          {
-            activeEstimateOptions.data.estimateAction.map(
-              (actionOption, index) => {
-                return (
-                  <label class="inline-flex items-center ">
-                    <input
-                      type="radio"
-                      name="action"
-                      checked={existingStore.estimateAction === actionOption}
-                      value={actionOption}
-                      class="hidden peer"
-                    />
-                    <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
-                      {actionOption}
-                    </span>
-                  </label>
-                );
-              }
-            )
-          }
-        </div>
-      </div>
+      <LargeRadioButtonGroup
+        options={activeEstimateOptions.data.estimateAction}
+        name="action"
+        currentSelection={existingStore.estimateAction}
+        layout="grid2"
+        capitalize={true}
+      />
     </StepLayout>
   </form>
 

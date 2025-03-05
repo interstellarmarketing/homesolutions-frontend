@@ -18,7 +18,10 @@ import { appendQueryParams } from "@utils/queryParams";
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
 
-const creditScoreOptions = ["Credit score above 640", "Credit score below 640"];
+const electricBillOptions = [
+  "Electric Bill Above $100",
+  "Electric Bill Below $100",
+];
 
 interface PageState {
   estimateType: string;
@@ -36,34 +39,34 @@ function initializePage(
 
   // Update the estimate steps store with current page
   estimateStepsStore.set({
-    currentStep: "credit-score",
+    currentStep: "electric-bill",
     estimateType: parsedEstimateType.data,
   });
 
   return {
     estimateType: parsedEstimateType.data,
-    currentSelection: estimateStore.get().creditScoreAboveOrEqual640,
+    currentSelection: estimateStore.get().electricBillOver100,
   };
 }
 
 async function handleFormSubmission(request: Request, estimateType: string) {
   const formData = await request.formData();
-  const creditScore = formData.get("creditScore");
+  const electricBill = formData.get("electricBill");
 
   // Convert the string value to boolean
-  const creditScoreAboveOrEqual640 = creditScore === "Credit score above 640";
+  const electricBillOver100 = electricBill === "Electric Bill Above $100";
 
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    creditScoreAboveOrEqual640: !!creditScoreAboveOrEqual640,
+    electricBillOver100: !!electricBillOver100,
   });
-  Astro.url.searchParams.append("csh", creditScoreAboveOrEqual640 ? "1" : "0");
+  Astro.url.searchParams.append("ebh", electricBillOver100 ? "1" : "0");
 
   // Get the next step from the store
   const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
   if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "credit-score");
+    const nextStep = getNextStep(validatedEstimateType.data, "electric-bill");
 
     if (nextStep) {
       const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
@@ -100,7 +103,7 @@ const validatedEstimateType = estimateTypeSchema.safeParse(
   pageState.estimateType
 );
 const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "credit-score")
+  ? getPreviousStep(validatedEstimateType.data, "electric-bill")
   : null;
 const prevUrl = prevStep
   ? `/estimate/${pageState.estimateType}/${prevStep}`
@@ -108,21 +111,21 @@ const prevUrl = prevStep
 
 // Get step number and total from store
 const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "credit-score")
+  ? getCurrentStepNumber(validatedEstimateType.data, "electric-bill")
   : 1;
 const totalSteps = validatedEstimateType.success
   ? getStoreSteps(validatedEstimateType.data)
   : 5;
 
-const stepHeader = "What is your credit score?";
+const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
 
 // Transform boolean value to string for the radio component
 const currentSelection =
   pageState.currentSelection === undefined
     ? undefined
     : pageState.currentSelection
-      ? "Credit score above 640"
-      : "Credit score below 640";
+      ? "Electric Bill Above $100"
+      : "Electric Bill Below $100";
 ---
 
 <EstimateWrapper
@@ -134,8 +137,8 @@ const currentSelection =
       type="hidden"
       id="hasInitialSelection"
       value={pageState.currentSelection !== undefined
-        ? "Credit score above 640"
-        : "Credit score below 640"}
+        ? "Electric Bill Above $100"
+        : "Electric Bill Below $100"}
     />
 
     <StepLayout
@@ -147,8 +150,8 @@ const currentSelection =
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
-        options={creditScoreOptions}
-        name="creditScore"
+        options={electricBillOptions}
+        name="electricBill"
         currentSelection={currentSelection}
         layout="grid2"
       />
@@ -162,7 +165,7 @@ const currentSelection =
 
       constructor() {
         this.radioButtons = document.querySelectorAll(
-          'input[name="creditScore"]'
+          'input[name="electricBill"]'
         );
         this.submitButton = document.getElementById(
           "nextStepButton"
@@ -198,3 +201,4 @@ const currentSelection =
     new FormController();
   </script>
 </EstimateWrapper>
+
