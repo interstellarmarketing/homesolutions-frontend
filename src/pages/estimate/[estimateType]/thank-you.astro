@@ -55,6 +55,12 @@ async function formatStoreForSubmission(
     submission.roofType = store.projectDetails;
   }
 
+  switch (store.estimateType) {
+    case "solar":
+      submission.solarType = store.projectDetails;
+      break;
+  }
+
   return submission;
 }
 

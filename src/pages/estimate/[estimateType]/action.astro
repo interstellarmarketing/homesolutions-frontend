@@ -10,27 +10,26 @@
  * 4. Project details
  */
 
-import { z } from "zod";
-import { estimateStore } from "@stores/estimateProgress";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
+import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
+import StepLayout from "@components/step-layout/index.astro";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   activeEstimateTypeStore,
   computedEstimateOptions,
 } from "@stores/activeEstimateType";
+import { estimateStore } from "@stores/estimateProgress";
 import {
   estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
   getCurrentStepNumber,
+  getNextStep,
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
-import StepLayout from "@components/step-layout/index.astro";
 import { appendQueryParams } from "@utils/queryParams";
+import { z } from "zod";
 // Schema definitions
 const actionSchema = z.string();
 const estimateTypeSchema = shortTradeEnum;
@@ -146,30 +145,13 @@ console.log(existingStore.estimateAction);
       hasNextStep
       hasPrevStep={stepNumber > 1}
     >
-      <div class="flex flex-col gap-4 text-center rounded-lg container">
-        <div class="grid grid-cols-2 gap-4">
-          {
-            activeEstimateOptions.data.estimateAction.map(
-              (actionOption, index) => {
-                return (
-                  <label class="inline-flex items-center ">
-                    <input
-                      type="radio"
-                      name="action"
-                      checked={existingStore.estimateAction === actionOption}
-                      value={actionOption}
-                      class="hidden peer"
-                    />
-                    <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
-                      {actionOption}
-                    </span>
-                  </label>
-                );
-              }
-            )
-          }
-        </div>
-      </div>
+      <LargeRadioButtonGroup
+        options={activeEstimateOptions.data.estimateAction}
+        name="action"
+        currentSelection={existingStore.estimateAction}
+        layout="grid2"
+        capitalize={true}
+      />
     </StepLayout>
   </form>
 

@@ -1,0 +1,79 @@
+---
+/**
+ * LargeRadioButtonGroup component
+ * Renders a group of radio buttons with configurable layout
+ */
+import LargeRadioButton from "./LargeRadioButton.astro";
+
+interface Props {
+  options: string[] | readonly string[];
+  name: string;
+  currentSelection?: string;
+  /**
+   * Layout options:
+   * - "default": 2 columns
+   * - "grid2": 2 columns (like credit-score and action pages)
+   * - "grid4": 4 column grid that collapses to 2 columns on mobile (like project-details)
+   * - "flex": flexible layout with responsive widths (like solar-reason)
+   */
+  layout?: "default" | "grid2" | "grid4" | "flex";
+  /** Whether to capitalize the option labels */
+  capitalize?: boolean;
+}
+
+const {
+  options,
+  name,
+  currentSelection,
+  layout = "default",
+  capitalize = false,
+} = Astro.props;
+
+/**
+ * Get layout classes based on the provided layout type
+ */
+const getLayoutClasses = () => {
+  switch (layout) {
+    case "grid2":
+      return "grid grid-cols-2 gap-4";
+    case "grid4":
+      return "grid grid-cols-2 md:grid-cols-4 gap-4";
+    case "flex":
+      return "flex flex-wrap justify-center gap-4";
+    default:
+      return "grid grid-cols-2 gap-4";
+  }
+};
+
+/**
+ * Get item classes based on the provided layout type
+ */
+const getItemClasses = () => {
+  switch (layout) {
+    case "flex":
+      return "w-full md:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]";
+    default:
+      return "w-full";
+  }
+};
+
+const layoutClasses = getLayoutClasses();
+const itemClasses = getItemClasses();
+---
+
+<div class="flex flex-col gap-4 text-center rounded-lg container">
+  <div class={layoutClasses}>
+    {
+      options.map((option) => (
+        <LargeRadioButton
+          name={name}
+          value={option}
+          checked={currentSelection === option}
+          label={option}
+          customClass={itemClasses}
+          capitalize={capitalize}
+        />
+      ))
+    }
+  </div>
+</div>

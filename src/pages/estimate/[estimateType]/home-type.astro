@@ -19,6 +19,7 @@ import {
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
 import StepLayout from "@components/step-layout/index.astro";
+import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { getTotalSteps } from "@utils/layout";
 import { appendQueryParams } from "@utils/queryParams";
 
@@ -186,26 +187,13 @@ const stepHeader = getStepHeader();
       totalSteps={totalSteps}
       estimateType={pageState.estimateType}
     >
-      <div class="flex flex-col gap-4 text-center rounded-lg container">
-        <div class="grid grid-cols-2 gap-4">
-          {
-            pageState.homeTypes.map((homeType, index) => (
-              <label class="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="homeType"
-                  checked={pageState.currentSelection === homeType}
-                  value={homeType}
-                  class="hidden peer"
-                />
-                <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
-                  {homeType}
-                </span>
-              </label>
-            ))
-          }
-        </div>
-      </div>
+      <LargeRadioButtonGroup
+        options={pageState.homeTypes}
+        name="homeType"
+        currentSelection={pageState.currentSelection}
+        layout="grid2"
+        capitalize={true}
+      />
     </StepLayout>
   </form>
 

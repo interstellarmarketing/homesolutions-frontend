@@ -24,6 +24,7 @@ import {
   getTotalSteps as getStoreSteps,
 } from "@stores/estimateStepsStore";
 import StepLayout from "@components/step-layout/index.astro";
+import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { appendQueryParams } from "@utils/queryParams";
 
 // Schema definitions
@@ -192,6 +193,10 @@ const existingStore = estimateStore.get();
 if (existingStore.projectDetails) {
   pageState.currentSelection = existingStore.projectDetails;
 }
+
+// Filter out null values from projectTypes
+const validProjectTypes =
+  pageState.projectTypes?.filter((type): type is string => type !== null) ?? [];
 ---
 
 <!-- Template section -->
@@ -213,26 +218,13 @@ if (existingStore.projectDetails) {
       hasPrevStep={stepNumber > 1}
       estimateType={pageState.estimateType}
     >
-      <div class="flex flex-col gap-4 text-center rounded-lg container">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {
-            pageState.projectTypes?.map((actionOption) => (
-              <label class="inline-flex items-center w-full">
-                <input
-                  type="radio"
-                  name="action"
-                  checked={pageState.currentSelection === actionOption}
-                  value={actionOption}
-                  class="hidden peer"
-                />
-                <span class="w-full h-full px-5 py-2.5 rounded-lg bg-[#F9FAFB] border border-[#E5E7EB] text-[#2D3748] text-sm font-medium leading-[21px] cursor-pointer peer-checked:bg-[#2D3748] peer-checked:text-white peer-checked:border-[#E5E7EB] transition-colors flex justify-center items-center gap-2 capitalize">
-                  {actionOption}
-                </span>
-              </label>
-            ))
-          }
-        </div>
-      </div>
+      <LargeRadioButtonGroup
+        options={validProjectTypes}
+        name="action"
+        currentSelection={pageState.currentSelection}
+        layout="grid4"
+        capitalize={true}
+      />
     </StepLayout>
   </form>
 </EstimateWrapper>

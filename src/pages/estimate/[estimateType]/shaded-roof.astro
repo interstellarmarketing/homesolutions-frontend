@@ -18,7 +18,7 @@ import { appendQueryParams } from "@utils/queryParams";
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
 
-const creditScoreOptions = ["Credit score above 640", "Credit score below 640"];
+const shadedRoofOptions = ["Yes, willing to trim", "No"];
 
 interface PageState {
   estimateType: string;
@@ -36,34 +36,34 @@ function initializePage(
 
   // Update the estimate steps store with current page
   estimateStepsStore.set({
-    currentStep: "credit-score",
+    currentStep: "shaded-roof",
     estimateType: parsedEstimateType.data,
   });
 
   return {
     estimateType: parsedEstimateType.data,
-    currentSelection: estimateStore.get().creditScoreAboveOrEqual640,
+    currentSelection: estimateStore.get().shadedRoof,
   };
 }
 
 async function handleFormSubmission(request: Request, estimateType: string) {
   const formData = await request.formData();
-  const creditScore = formData.get("creditScore");
+  const shadedRoof = formData.get("shadedRoof");
 
   // Convert the string value to boolean
-  const creditScoreAboveOrEqual640 = creditScore === "Credit score above 640";
+  const isRoofShaded = shadedRoof === "Yes, willing to trim";
 
   const existingStore = estimateStore.get();
   estimateStore.set({
     ...existingStore,
-    creditScoreAboveOrEqual640: !!creditScoreAboveOrEqual640,
+    shadedRoof: !!isRoofShaded,
   });
-  Astro.url.searchParams.append("csh", creditScoreAboveOrEqual640 ? "1" : "0");
+  Astro.url.searchParams.append("sr", isRoofShaded ? "1" : "0");
 
   // Get the next step from the store
   const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
   if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "credit-score");
+    const nextStep = getNextStep(validatedEstimateType.data, "shaded-roof");
 
     if (nextStep) {
       const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
@@ -100,7 +100,7 @@ const validatedEstimateType = estimateTypeSchema.safeParse(
   pageState.estimateType
 );
 const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "credit-score")
+  ? getPreviousStep(validatedEstimateType.data, "shaded-roof")
   : null;
 const prevUrl = prevStep
   ? `/estimate/${pageState.estimateType}/${prevStep}`
@@ -108,21 +108,21 @@ const prevUrl = prevStep
 
 // Get step number and total from store
 const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "credit-score")
+  ? getCurrentStepNumber(validatedEstimateType.data, "shaded-roof")
   : 1;
 const totalSteps = validatedEstimateType.success
   ? getStoreSteps(validatedEstimateType.data)
   : 5;
 
-const stepHeader = "What is your credit score?";
+const stepHeader = "Is your roof shaded by trees?";
 
 // Transform boolean value to string for the radio component
 const currentSelection =
   pageState.currentSelection === undefined
     ? undefined
     : pageState.currentSelection
-      ? "Credit score above 640"
-      : "Credit score below 640";
+      ? "Yes, willing to trim"
+      : "No";
 ---
 
 <EstimateWrapper
@@ -134,8 +134,8 @@ const currentSelection =
       type="hidden"
       id="hasInitialSelection"
       value={pageState.currentSelection !== undefined
-        ? "Credit score above 640"
-        : "Credit score below 640"}
+        ? "Yes, willing to trim"
+        : "No"}
     />
 
     <StepLayout
@@ -147,8 +147,8 @@ const currentSelection =
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
-        options={creditScoreOptions}
-        name="creditScore"
+        options={shadedRoofOptions}
+        name="shadedRoof"
         currentSelection={currentSelection}
         layout="grid2"
       />
@@ -162,7 +162,7 @@ const currentSelection =
 
       constructor() {
         this.radioButtons = document.querySelectorAll(
-          'input[name="creditScore"]'
+          'input[name="shadedRoof"]'
         );
         this.submitButton = document.getElementById(
           "nextStepButton"
@@ -198,3 +198,4 @@ const currentSelection =
     new FormController();
   </script>
 </EstimateWrapper>
+

@@ -69,6 +69,13 @@ const TradeSchemas = {
 			homeType: z.enum(homeTypesConst).optional(),
 		}),
 	}),
+	solar: z.object({
+		shortTrade: z.literal<ShortTradeEnum>("solar"),
+		data: extendEstimateOptionSchema({
+			type: z.enum(["solar"]),
+			homeType: z.enum(homeTypesConst).optional(),
+		}),
+	}),
 } as const;
 
 /**
@@ -78,7 +85,8 @@ export const shortTradeDiscriminatedUnion = z.discriminatedUnion("shortTrade", [
 	TradeSchemas.bathroom,
 	TradeSchemas.roofing,
 	TradeSchemas.siding,
-	TradeSchemas.windows
+	TradeSchemas.windows,
+	TradeSchemas.solar
 ]);
 
 export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>;
@@ -140,6 +148,11 @@ export const shortTradeObjects = [
 		type: ["10+", "3-5", "6-9"],
 		homeType: [...homeTypesConst]
 	}),
+	createShortTradeObject("solar", {
+		estimateAction: ["replace"],
+		type: ["solar"],
+		homeType: [...homeTypesConst]
+	}),
 ] as const;
 
 /**
@@ -181,6 +194,12 @@ export const tradeOptionDescriptions: readonly TradeOptionDescriptions[] = [
 		actionDescription: "Service Needed",
 		typeDescription: "Project Details",
 		shortTradeNoun: ""
+	},
+	{
+		shortTrade: "solar",
+		actionDescription: "Do you need to replace or repair existing solar panels?",
+		typeDescription: "What type of solar panels are you looking for?",
+		shortTradeNoun: "solar panels"
 	}
 ] as const;
 
