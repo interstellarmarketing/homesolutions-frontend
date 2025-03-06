@@ -35,6 +35,9 @@ async function formatStoreForSubmission(
     // Optional property information
     homeType: store.homeType || null,
 
+    // PostHog person ID
+    posthogPersonId: store.posthogPersonId || null,
+
     // Marketing attribution from trackingParams
     utmSource: store.trackingParams?.utm_source || null,
     utmMedium: store.trackingParams?.utm_medium || null,
