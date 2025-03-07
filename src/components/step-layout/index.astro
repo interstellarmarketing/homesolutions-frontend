@@ -1,6 +1,7 @@
 ---
 import Spinner from "@components/spinner/index.astro";
 import Rating from "@components/ratings/index.astro";
+
 interface Props {
   stepHeader: string;
   stepNumber: number;
@@ -137,6 +138,9 @@ const estimateHeader = getEstimateHeader(estimateType);
 </div>
 
 <script>
+  import { appendQueryParams } from "@utils/queryParams";
+  import { navigate } from "astro:transitions/client";
+
   class ButtonLoadingHandler {
     private button: HTMLButtonElement;
     private textSpan!: HTMLSpanElement;
@@ -182,10 +186,36 @@ const estimateHeader = getEstimateHeader(estimateType);
     private async handleDelayedSubmit(e: SubmitEvent) {
       e.preventDefault();
       const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
+      const url = form.action || window.location.href;
 
       this.setLoadingState(true);
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      form.submit();
+
+      try {
+        // Wait a bit to show the loading state
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        // Use fetch to submit the form to support client-side navigation
+        const response = await fetch(url, {
+          method: "POST",
+          body: formData,
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+          },
+        });
+
+        const currentUrl = new URL(window.location.href);
+        navigate(
+          appendQueryParams(
+            response.url,
+            new URLSearchParams(currentUrl.search)
+          )
+        );
+      } catch (error) {
+        console.error("Form submission error:", error);
+        // Fall back to regular form submission if fetch fails
+        form.submit();
+      }
     }
 
     private handleLoadingSubmit(e: SubmitEvent) {
@@ -207,7 +237,11 @@ const estimateHeader = getEstimateHeader(estimateType);
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  // Listen for both DOMContentLoaded (initial page load) and astro:page-load (client-side navigation)
+  document.addEventListener("DOMContentLoaded", initButtonHandler);
+  document.addEventListener("astro:page-load", initButtonHandler);
+
+  function initButtonHandler() {
     new ButtonLoadingHandler("nextStepButton");
-  });
+  }
 </script>

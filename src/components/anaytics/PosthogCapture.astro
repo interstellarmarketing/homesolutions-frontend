@@ -2,8 +2,8 @@
   import posthog from "posthog-js";
   import { estimateStore } from "@stores/estimateProgress";
 
-  // Wait for PostHog to initialize
-  document.addEventListener("DOMContentLoaded", () => {
+  // Function to update PostHog person ID in the store
+  function updatePosthogPersonId() {
     // Get the current PostHog person ID
     const personId = posthog.get_distinct_id();
 
@@ -13,6 +13,10 @@
       ...currentStore,
       posthogPersonId: personId,
     });
-  });
+  }
+
+  // Listen for both initial page load and client-side navigation
+  document.addEventListener("DOMContentLoaded", updatePosthogPersonId);
+  document.addEventListener("astro:page-load", updatePosthogPersonId);
 </script>
 

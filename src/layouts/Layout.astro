@@ -3,6 +3,7 @@ import NavMain from "@components/nav/NavMain.astro";
 import Posthog from "@components/anaytics/Posthog.astro";
 import PosthogCapture from "@components/anaytics/PosthogCapture.astro";
 import TrustedForm from "@components/TrustedForm.astro";
+import { ClientRouter } from "astro:transitions";
 
 import Footer from "@components/footer/index.astro";
 
@@ -70,7 +71,7 @@ const formattedTitle = formatTitle(title);
     {!isLocal && <PosthogCapture />}
 
     <title>{formattedTitle}</title>
-    <TrustedForm />
+    <ClientRouter />
   </head>
   <body class="min-h-dvh flex flex-col">
     <NavMain />
@@ -84,5 +85,6 @@ const formattedTitle = formatTitle(title);
         <Footer />
       </div>
     </main>
+    <TrustedForm />
   </body>
 </html>
