@@ -176,7 +176,7 @@ const currentSelection =
         const hasInitialSelection = document.getElementById(
           "hasInitialSelection"
         ) as HTMLInputElement;
-        if (hasInitialSelection?.value === "true") {
+        if (hasInitialSelection?.value) {
           this.submitButton.disabled = false;
         }
 
@@ -195,6 +195,8 @@ const currentSelection =
       }
     }
 
-    new FormController();
+    // Initialize the form validator on both initial page load and client-side navigation
+    document.addEventListener("DOMContentLoaded", () => new FormController());
+    document.addEventListener("astro:page-load", () => new FormController());
   </script>
 </EstimateWrapper>

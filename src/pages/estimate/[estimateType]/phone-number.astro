@@ -259,6 +259,10 @@ const stepHeader = getStepHeader();
     }
   }
 
-  // Initialize form controller when DOM is ready
-  new PhoneFormController();
+  // Initialize the form validator on both initial page load and client-side navigation
+  document.addEventListener(
+    "DOMContentLoaded",
+    () => new PhoneFormController()
+  );
+  document.addEventListener("astro:page-load", () => new PhoneFormController());
 </script>

@@ -230,6 +230,10 @@ const stepHeader = getStepHeader();
     }
   }
 
-  // Initialize form controller when DOM is ready
-  new EmailFormController();
+  // Initialize the form validator on both initial page load and client-side navigation
+  document.addEventListener(
+    "DOMContentLoaded",
+    () => new EmailFormController()
+  );
+  document.addEventListener("astro:page-load", () => new EmailFormController());
 </script>

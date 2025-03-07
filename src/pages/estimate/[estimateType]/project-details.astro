@@ -249,6 +249,7 @@ const validProjectTypes =
      * Sets up event listeners for radio buttons and checks initial state
      */
     private initialize() {
+      console.log("Initializing form controller");
       if (!this.submitButton || !this.radioButtons.length) return;
 
       // Check hidden field for initial state
@@ -266,6 +267,7 @@ const validProjectTypes =
     }
 
     private handleRadioChange() {
+      console.log("Radio change detected");
       if (!this.submitButton) return;
 
       const isSelected = Array.from(this.radioButtons).some(
@@ -275,5 +277,7 @@ const validProjectTypes =
     }
   }
 
-  new FormController();
+  // Initialize the form validator on both initial page load and client-side navigation
+  document.addEventListener("DOMContentLoaded", () => new FormController());
+  document.addEventListener("astro:page-load", () => new FormController());
 </script>

@@ -259,5 +259,7 @@ if (existingStore.solarReason) {
     }
   }
 
-  new FormController();
+  // Initialize the form validator on both initial page load and client-side navigation
+  document.addEventListener("DOMContentLoaded", () => new FormController());
+  document.addEventListener("astro:page-load", () => new FormController());
 </script>
