@@ -171,6 +171,7 @@ const stepHeader = getStepHeader();
 
 <script>
   import { estimateParser } from "@stores/estimateProgress";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
 
   /**
    * Controller class for email form functionality
@@ -230,6 +231,5 @@ const stepHeader = getStepHeader();
     }
   }
 
-  // Initialize form controller when DOM is ready
-  new EmailFormController();
+  crossPlatformLoader(() => new EmailFormController());
 </script>

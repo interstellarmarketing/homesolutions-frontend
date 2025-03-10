@@ -1,9 +1,16 @@
 ---
-import NavMain from "@components/nav/NavMain.astro";
 import Posthog from "@components/anaytics/Posthog.astro";
-import TrustedForm from "@components/TrustedForm.astro";
-
+import PosthogCapture from "@components/anaytics/PosthogCapture.astro";
 import Footer from "@components/footer/index.astro";
+import NavMain from "@components/nav/NavMain.astro";
+import TrustedForm from "@components/TrustedForm.astro";
+import {
+  estimateSteps,
+  estimateStepsStore,
+  getCurrentStepIndex,
+  getTotalSteps,
+} from "@stores/estimateStepsStore";
+import { ClientRouter } from "astro:transitions";
 
 /**
  * Props interface for the Layout component
@@ -40,9 +47,44 @@ const { title, description = DEFAULT_SEO.description } = Astro.props;
 // Environment-based configuration
 const isLocal = Astro?.url?.host?.startsWith("localhost");
 const formattedTitle = formatTitle(title);
+
+// Track form step views with PostHog
+let previousStep: string | null = null;
+estimateStepsStore.subscribe((state) => {
+  const { currentStep, estimateType } = state;
+  console.log("Estimate steps state:", state);
+
+  // Only send events when currentStep changes, is not null, and estimateType is available
+  if (currentStep !== null && currentStep !== previousStep && estimateType) {
+    previousStep = currentStep;
+
+    // Get step information
+    const currentStepIndex = getCurrentStepIndex(estimateType, currentStep);
+    const totalSteps = getTotalSteps(estimateType);
+    const allStepsString = estimateSteps[estimateType].join(", ");
+
+    // Send PostHog event
+    // posthog.capture("form_step_viewed", {
+    //   estimate_type: estimateType,
+    //   timestamp: new Date().toISOString(),
+    //   step_name: currentStep,
+    //   step_number: currentStepIndex + 1,
+    //   total_step_count: totalSteps,
+    //   all_steps: allStepsString,
+    // });
+
+    console.log("Form step viewed:", {
+      estimate_type: estimateType,
+      timestamp: new Date().toISOString(),
+      step_name: currentStep,
+      step_number: currentStepIndex + 1,
+      total_step_count: totalSteps,
+      all_steps: allStepsString,
+    });
+  }
+});
 ---
 
-<!doctype html>
 <html lang="en" class="h-full">
   <head>
     <meta charset="UTF-8" />
@@ -65,10 +107,14 @@ const formattedTitle = formatTitle(title);
     <meta property="og:description" content={description} />
     <meta property="og:url" content={Astro.url.href} />
 
-    {!isLocal && <Posthog />}
+    <!-- {!isLocal && <Posthog />}
+    {!isLocal && <PosthogCapture />} -->
+
+    <Posthog />
+    <PosthogCapture />
 
     <title>{formattedTitle}</title>
-    <TrustedForm />
+    <ClientRouter />
   </head>
   <body class="min-h-dvh flex flex-col">
     <NavMain />
@@ -82,5 +128,6 @@ const formattedTitle = formatTitle(title);
         <Footer />
       </div>
     </main>
+    <TrustedForm />
   </body>
 </html>

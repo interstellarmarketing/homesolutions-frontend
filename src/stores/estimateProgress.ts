@@ -20,6 +20,7 @@ export const estimateParser = z.object({
   creditScoreAboveOrEqual640: z.boolean().optional(),
   electricBillOver100: z.boolean().optional(),
   shadedRoof: z.boolean().optional(),
+  posthogPersonId: z.string().optional(),
   trackingParams: z
     .object({
       utm_source: z.string().optional(),

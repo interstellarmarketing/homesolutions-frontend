@@ -176,6 +176,7 @@ const stepHeader = getStepHeader();
 
 <script>
   import { estimateParser } from "@stores/estimateProgress";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
 
   /**
    * Controller class for phone form functionality
@@ -259,6 +260,5 @@ const stepHeader = getStepHeader();
     }
   }
 
-  // Initialize form controller when DOM is ready
-  new PhoneFormController();
+  crossPlatformLoader(() => new PhoneFormController());
 </script>

@@ -27,7 +27,10 @@ const parsedEstimateType = estimateTypeSchema.safeParse(estimateType);
 
 if (!estimateType || !parsedEstimateType.success) {
   console.error("Invalid estimate type");
-  return Astro.redirect("/");
+  return new Response(null, {
+    status: 302,
+    headers: { Location: "/" },
+  });
 }
 
 const validatedEstimateType = parsedEstimateType.data;
@@ -89,20 +92,34 @@ if (Astro.request.method === "POST") {
 
       if (nextStep) {
         const redirectUrl = `/estimate/${validatedEstimateType}/${nextStep}`;
-        return Astro.redirect(
-          appendQueryParams(redirectUrl, Astro.url.searchParams)
-        );
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+          },
+        });
       }
 
       // Fallback to original logic if next step not found
       if (estimateType === "roofing") {
         const redirectUrl = `/estimate/${validatedEstimateType}/project-details`;
-        return Astro.redirect(
-          appendQueryParams(redirectUrl, Astro.url.searchParams)
-        );
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
+          },
+        });
       }
 
-      return Astro.redirect(`/estimate/${validatedEstimateType}/action`);
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: appendQueryParams(
+            `/estimate/${validatedEstimateType}/action`,
+            Astro.url.searchParams
+          ),
+        },
+      });
     } catch (error) {
       console.error("ZIP validation error:", error);
       return new Response("Invalid ZIP code", {
@@ -174,6 +191,7 @@ const formatEstimateTypeNoun = (type: string) =>
 </EstimateWrapper>
 
 <script>
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { z } from "zod";
 
   const ZIP_LENGTH = 5;
@@ -232,7 +250,9 @@ const formatEstimateTypeNoun = (type: string) =>
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function initZipValidator() {
     new ZipFormValidator("zipInput", "nextStepButton");
-  });
+  }
+
+  crossPlatformLoader(() => initZipValidator());
 </script>

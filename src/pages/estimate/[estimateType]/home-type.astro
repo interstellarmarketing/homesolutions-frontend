@@ -53,8 +53,6 @@ function initializePage(
 
   const activeEstimateOptions = computedEstimateOptions.get();
 
-  console.log({ activeEstimateOptions, page: "home-type" });
-
   if (!activeEstimateOptions) {
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
@@ -89,8 +87,6 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
   if (validatedEstimateType.success) {
     const nextStep = getNextStep(validatedEstimateType.data, "home-type");
-
-    console.log({ nextStep, page: "home-type" });
 
     if (nextStep) {
       const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
@@ -198,6 +194,8 @@ const stepHeader = getStepHeader();
   </form>
 
   <script>
+    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
     class FormController {
       private radioButtons: NodeListOf<HTMLInputElement>;
       private submitButton: HTMLButtonElement | null;
@@ -235,6 +233,6 @@ const stepHeader = getStepHeader();
       }
     }
 
-    new FormController();
+    crossPlatformLoader(() => new FormController());
   </script>
 </EstimateWrapper>

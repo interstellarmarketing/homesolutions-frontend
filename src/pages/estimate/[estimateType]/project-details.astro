@@ -230,6 +230,8 @@ const validProjectTypes =
 </EstimateWrapper>
 
 <script>
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
   /**
    * Controls the form behavior and button states
    */
@@ -249,6 +251,7 @@ const validProjectTypes =
      * Sets up event listeners for radio buttons and checks initial state
      */
     private initialize() {
+      console.log("Initializing form controller");
       if (!this.submitButton || !this.radioButtons.length) return;
 
       // Check hidden field for initial state
@@ -266,6 +269,7 @@ const validProjectTypes =
     }
 
     private handleRadioChange() {
+      console.log("Radio change detected");
       if (!this.submitButton) return;
 
       const isSelected = Array.from(this.radioButtons).some(
@@ -275,5 +279,5 @@ const validProjectTypes =
     }
   }
 
-  new FormController();
+  crossPlatformLoader(() => new FormController());
 </script>

@@ -156,6 +156,8 @@ const currentSelection =
   </form>
 
   <script>
+    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
     class FormController {
       private radioButtons: NodeListOf<HTMLInputElement>;
       private submitButton: HTMLButtonElement | null;
@@ -176,7 +178,7 @@ const currentSelection =
         const hasInitialSelection = document.getElementById(
           "hasInitialSelection"
         ) as HTMLInputElement;
-        if (hasInitialSelection?.value === "true") {
+        if (hasInitialSelection?.value) {
           this.submitButton.disabled = false;
         }
 
@@ -195,6 +197,6 @@ const currentSelection =
       }
     }
 
-    new FormController();
+    crossPlatformLoader(() => new FormController());
   </script>
 </EstimateWrapper>

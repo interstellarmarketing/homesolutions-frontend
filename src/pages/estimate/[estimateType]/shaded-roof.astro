@@ -156,6 +156,8 @@ const currentSelection =
   </form>
 
   <script>
+    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
     class FormController {
       private radioButtons: NodeListOf<HTMLInputElement>;
       private submitButton: HTMLButtonElement | null;
@@ -195,7 +197,6 @@ const currentSelection =
       }
     }
 
-    new FormController();
+    crossPlatformLoader(() => new FormController());
   </script>
 </EstimateWrapper>
-

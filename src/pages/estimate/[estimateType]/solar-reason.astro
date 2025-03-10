@@ -214,6 +214,8 @@ if (existingStore.solarReason) {
 </EstimateWrapper>
 
 <script>
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
   /**
    * Controls the form behavior and button states
    */
@@ -259,5 +261,5 @@ if (existingStore.solarReason) {
     }
   }
 
-  new FormController();
+  crossPlatformLoader(() => new FormController());
 </script>

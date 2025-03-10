@@ -200,11 +200,29 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script
-  src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`}
-  defer></script>
+  src={`https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&&loading=async&callback=initializeGoogleMaps`}
+  defer
+  async
+  data-astro-rerun></script>
 
 <script>
   import { estimateParser } from "@stores/estimateProgress";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
+  // TypeScript declaration to extend Window interface
+  declare global {
+    interface Window {
+      initializeGoogleMaps: () => void;
+    }
+  }
+
+  // Define global callback function for Google Maps script
+  window.initializeGoogleMaps = function () {
+    // Initialize controller when maps API is ready
+    if (document.getElementById("streetAddressInput")) {
+      new AddressFormController();
+    }
+  };
 
   class AddressFormController {
     private addressInput: HTMLInputElement | null;
@@ -220,7 +238,11 @@ const stepHeader = getStepHeader();
         "nextStepButton"
       ) as HTMLButtonElement;
       this.initialize();
-      this.initializeAutocomplete();
+
+      // Only initialize autocomplete if Google Maps API is loaded
+      if (window.google && window.google.maps && window.google.maps.places) {
+        this.initializeAutocomplete();
+      }
     }
 
     private initialize(): void {
@@ -243,14 +265,19 @@ const stepHeader = getStepHeader();
     private initializeAutocomplete(): void {
       if (!this.addressInput) return;
 
-      this.autocomplete = new google.maps.places.Autocomplete(
-        this.addressInput,
-        {
-          componentRestrictions: { country: "US" },
-          fields: ["address_components", "formatted_address"],
-          types: ["address"],
-        }
-      );
+      try {
+        this.autocomplete = new google.maps.places.Autocomplete(
+          this.addressInput,
+          {
+            componentRestrictions: { country: "US" },
+            fields: ["address_components", "formatted_address"],
+            types: ["address"],
+          }
+        );
+      } catch (error) {
+        console.error("Error initializing Google Maps Autocomplete:", error);
+        return;
+      }
 
       this.autocomplete.addListener("place_changed", () => {
         const place = this.autocomplete?.getPlace();
@@ -349,5 +376,13 @@ const stepHeader = getStepHeader();
     };
   }
 
-  new AddressFormController();
+  function initAddressController() {
+    // Only create a new controller if the address input exists
+    // The Google Maps callback may also initialize it, so we avoid duplicating
+    if (document.getElementById("streetAddressInput")) {
+      new AddressFormController();
+    }
+  }
+
+  crossPlatformLoader(() => initAddressController());
 </script>

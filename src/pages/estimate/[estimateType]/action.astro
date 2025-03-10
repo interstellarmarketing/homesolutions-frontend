@@ -124,8 +124,6 @@ const getStepHeader = () => {
 };
 
 const stepHeader = getStepHeader();
-
-console.log(existingStore.estimateAction);
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
@@ -156,6 +154,8 @@ console.log(existingStore.estimateAction);
   </form>
 
   <script>
+    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
     /**
      * Client-side form validation and button state management
      */
@@ -197,6 +197,6 @@ console.log(existingStore.estimateAction);
       }
     }
 
-    new FormController();
+    crossPlatformLoader(() => new FormController());
   </script>
 </EstimateWrapper>
