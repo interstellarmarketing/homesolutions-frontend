@@ -154,6 +154,8 @@ const stepHeader = getStepHeader();
   </form>
 
   <script>
+    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
     /**
      * Client-side form validation and button state management
      */
@@ -195,8 +197,6 @@ const stepHeader = getStepHeader();
       }
     }
 
-    // Initialize the form validator on both initial page load and client-side navigation
-    document.addEventListener("DOMContentLoaded", () => new FormController());
-    document.addEventListener("astro:page-load", () => new FormController());
+    crossPlatformLoader(() => new FormController());
   </script>
 </EstimateWrapper>

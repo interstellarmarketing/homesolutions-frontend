@@ -209,6 +209,7 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script>
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { z } from "zod";
 
   /**
@@ -277,13 +278,5 @@ const stepHeader = getStepHeader();
     }
   }
 
-  // Initialize the form validator on both initial page load and client-side navigation
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => new ContactFormController()
-  );
-  document.addEventListener(
-    "astro:page-load",
-    () => new ContactFormController()
-  );
+  crossPlatformLoader(() => new ContactFormController());
 </script>

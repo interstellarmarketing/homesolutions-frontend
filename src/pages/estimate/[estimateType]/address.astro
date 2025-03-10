@@ -207,6 +207,7 @@ const stepHeader = getStepHeader();
 
 <script>
   import { estimateParser } from "@stores/estimateProgress";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
 
   // TypeScript declaration to extend Window interface
   declare global {
@@ -375,10 +376,6 @@ const stepHeader = getStepHeader();
     };
   }
 
-  // Initialize the address form controller on both initial page load and client-side navigation
-  document.addEventListener("DOMContentLoaded", initAddressController);
-  document.addEventListener("astro:page-load", initAddressController);
-
   function initAddressController() {
     // Only create a new controller if the address input exists
     // The Google Maps callback may also initialize it, so we avoid duplicating
@@ -386,4 +383,6 @@ const stepHeader = getStepHeader();
       new AddressFormController();
     }
   }
+
+  crossPlatformLoader(() => initAddressController());
 </script>

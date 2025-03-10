@@ -191,6 +191,7 @@ const formatEstimateTypeNoun = (type: string) =>
 </EstimateWrapper>
 
 <script>
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { z } from "zod";
 
   const ZIP_LENGTH = 5;
@@ -249,11 +250,9 @@ const formatEstimateTypeNoun = (type: string) =>
     }
   }
 
-  // Initialize the form validator on both initial page load and client-side navigation
-  document.addEventListener("DOMContentLoaded", initZipValidator);
-  document.addEventListener("astro:page-load", initZipValidator);
-
   function initZipValidator() {
     new ZipFormValidator("zipInput", "nextStepButton");
   }
+
+  crossPlatformLoader(() => initZipValidator());
 </script>

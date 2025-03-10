@@ -176,6 +176,7 @@ const stepHeader = getStepHeader();
 
 <script>
   import { estimateParser } from "@stores/estimateProgress";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
 
   /**
    * Controller class for phone form functionality
@@ -259,10 +260,5 @@ const stepHeader = getStepHeader();
     }
   }
 
-  // Initialize the form validator on both initial page load and client-side navigation
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => new PhoneFormController()
-  );
-  document.addEventListener("astro:page-load", () => new PhoneFormController());
+  crossPlatformLoader(() => new PhoneFormController());
 </script>

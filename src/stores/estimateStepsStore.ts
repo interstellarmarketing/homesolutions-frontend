@@ -1,5 +1,6 @@
 import { atom } from "nanostores";
 import type { ShortTradeEnum } from "@assets/info/estimateOptions";
+import posthog from "posthog-js";
 
 const defaultSteps = [
     "zip",
@@ -44,13 +45,13 @@ export const estimateSteps = {
 
 // Interface for the estimate steps store
 export interface EstimateStepsState {
-    currentStep: string;
+    currentStep: string | null;
     estimateType: ShortTradeEnum | null;
 }
 
 // Create the estimate steps store
 export const estimateStepsStore = atom<EstimateStepsState>({
-    currentStep: "zip",
+    currentStep: null,
     estimateType: null,
 });
 

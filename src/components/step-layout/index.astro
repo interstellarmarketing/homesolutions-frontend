@@ -181,6 +181,15 @@ const estimateHeader = getEstimateHeader(estimateType);
       } else if (showLoadingOnSubmit) {
         form.addEventListener("submit", this.handleLoadingSubmit.bind(this));
       }
+      form.addEventListener(
+        "invalid",
+        this.handleInvalidSubmit.bind(this),
+        true
+      ); // Use capture phase to catch all invalid events from form fields
+    }
+
+    private handleInvalidSubmit(e: Event) {
+      console.log("Invalid form submission:", e);
     }
 
     private async handleDelayedSubmit(e: SubmitEvent) {
@@ -220,6 +229,10 @@ const estimateHeader = getEstimateHeader(estimateType);
 
     private handleLoadingSubmit(e: SubmitEvent) {
       this.setLoadingState(true);
+
+      if (e.defaultPrevented) {
+        this.handleInvalidSubmit.bind(this)(e);
+      }
     }
 
     private setLoadingState(isLoading: boolean) {

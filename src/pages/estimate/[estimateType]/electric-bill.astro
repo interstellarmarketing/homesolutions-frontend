@@ -159,6 +159,8 @@ const currentSelection =
   </form>
 
   <script>
+    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
     class FormController {
       private radioButtons: NodeListOf<HTMLInputElement>;
       private submitButton: HTMLButtonElement | null;
@@ -198,8 +200,6 @@ const currentSelection =
       }
     }
 
-    // Initialize the form validator on both initial page load and client-side navigation
-    document.addEventListener("DOMContentLoaded", () => new FormController());
-    document.addEventListener("astro:page-load", () => new FormController());
+    crossPlatformLoader(() => new FormController());
   </script>
 </EstimateWrapper>

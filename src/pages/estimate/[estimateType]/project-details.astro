@@ -230,6 +230,8 @@ const validProjectTypes =
 </EstimateWrapper>
 
 <script>
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+
   /**
    * Controls the form behavior and button states
    */
@@ -277,7 +279,5 @@ const validProjectTypes =
     }
   }
 
-  // Initialize the form validator on both initial page load and client-side navigation
-  document.addEventListener("DOMContentLoaded", () => new FormController());
-  document.addEventListener("astro:page-load", () => new FormController());
+  crossPlatformLoader(() => new FormController());
 </script>
