@@ -1,17 +1,14 @@
 <script>
   import posthog from "posthog-js";
-  import { estimateStore } from "@stores/estimateProgress";
+  import { actions } from "astro:actions";
 
   // Wait for PostHog to initialize
   document.addEventListener("DOMContentLoaded", () => {
     // Get the current PostHog person ID
     const personId = posthog.get_distinct_id();
+    console.log("personId", personId);
 
-    // Update the estimate store with the PostHog person ID
-    const currentStore = estimateStore.get();
-    estimateStore.set({
-      ...currentStore,
-      posthogPersonId: personId,
-    });
+    // Update the estimate store with the PostHog person ID using the action
+    actions.updatePosthogPersonId({ personId });
   });
 </script>
