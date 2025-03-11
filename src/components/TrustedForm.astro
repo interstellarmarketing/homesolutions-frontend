@@ -8,7 +8,7 @@ console.log(certUrl, pingUrl);
 ---
 
 <script>
-  import { actions } from "astro:actions";
+  import { updateTrustedFormParams } from "@actions/estimateStore";
 
   // starts a loop with interval of 500ms
   var interval = setInterval(getCertUrl, 500);
@@ -35,7 +35,7 @@ console.log(certUrl, pingUrl);
       formData.append("certUrl", certUrl);
       formData.append("pingUrl", pingUrl);
 
-      const { data, error } = await actions.updateTrustedFormParams({
+      const { data, error } = await updateTrustedFormParams({
         certUrl,
         pingUrl,
       });

@@ -1,5 +1,5 @@
 import { atom } from "nanostores";
-import { z } from "zod";
+import { z } from "astro/zod";
 
 export const estimateParser = z.object({
   streetAddress: z.string().min(5).trim(),
@@ -20,7 +20,6 @@ export const estimateParser = z.object({
   creditScoreAboveOrEqual640: z.boolean().optional(),
   electricBillOver100: z.boolean().optional(),
   shadedRoof: z.boolean().optional(),
-  posthogPersonId: z.string().optional(),
   trackingParams: z
     .object({
       utm_source: z.string().optional(),
@@ -35,6 +34,7 @@ export const estimateParser = z.object({
       ssn: z.string().optional(),
       trustedFormCertUrl: z.string().optional(),
       trustedFormPingUrl: z.string().optional(),
+      posthogPersonId: z.string().optional(),
     })
     .optional(),
 });

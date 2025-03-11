@@ -1,7 +1,8 @@
 import { estimateOptions } from './estimateOptions';
-import { updateTrustedFormParams } from './trustedForm';
+import { updateTrustedFormParams, updatePosthogPersonId } from './estimateStore';
 
 export const server = {
 	estimateOptions,
-	updateTrustedFormParams
+	updateTrustedFormParams,
+	updatePosthogPersonId,
 }

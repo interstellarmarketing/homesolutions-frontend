@@ -22,4 +22,24 @@ export const updateTrustedFormParams = defineAction({
 
         return { success: true };
     },
+});
+
+export const updatePosthogPersonId = defineAction({
+    input: z.object({
+        personId: z.string(),
+    }),
+    handler: async (input) => {
+        const { personId } = input;
+        const existingStore = estimateStore.get();
+
+        estimateStore.set({
+            ...existingStore,
+            trackingParams: {
+                ...existingStore.trackingParams,
+                posthogPersonId: personId,
+            },
+        });
+
+        return { success: true };
+    },
 }); 
