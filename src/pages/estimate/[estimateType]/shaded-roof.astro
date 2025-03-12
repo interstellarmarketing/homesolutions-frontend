@@ -179,7 +179,7 @@ const currentSelection =
           "hasInitialSelection"
         ) as HTMLInputElement;
         if (hasInitialSelection?.value === "true") {
-          this.submitButton.disabled = false;
+          this.submitButton.setAttribute("aria-disabled", "false");
         }
 
         this.radioButtons.forEach((radio) => {
@@ -193,7 +193,10 @@ const currentSelection =
         const isSelected = Array.from(this.radioButtons).some(
           (radio) => radio.checked
         );
-        this.submitButton.disabled = !isSelected;
+        this.submitButton.setAttribute(
+          "aria-disabled",
+          !isSelected ? "true" : "false"
+        );
       }
     }
 

@@ -243,7 +243,7 @@ if (existingStore.solarReason) {
           .getElementById("hasInitialSelection")
           ?.getAttribute("value") === "true";
       if (hasInitialSelection) {
-        this.submitButton.disabled = false;
+        this.submitButton.setAttribute("aria-disabled", "false");
       }
 
       this.radioButtons.forEach((radio) => {
@@ -257,7 +257,10 @@ if (existingStore.solarReason) {
       const isSelected = Array.from(this.radioButtons).some(
         (radio) => radio.checked
       );
-      this.submitButton.disabled = !isSelected;
+      this.submitButton.setAttribute(
+        "aria-disabled",
+        !isSelected ? "true" : "false"
+      );
     }
   }
 

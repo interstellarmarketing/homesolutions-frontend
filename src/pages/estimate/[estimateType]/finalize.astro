@@ -256,9 +256,9 @@ const totalSteps = validatedEstimateType.success
     const updateButtonState = () => {
       console.log({ resultHolder });
       if (resultHolder.phone && resultHolder.email) {
-        finalizeSubmitButton.removeAttribute("disabled");
+        finalizeSubmitButton.setAttribute("aria-disabled", "false");
       } else {
-        finalizeSubmitButton.setAttribute("disabled", "");
+        finalizeSubmitButton.setAttribute("aria-disabled", "true");
       }
     };
 

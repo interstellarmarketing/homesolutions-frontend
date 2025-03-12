@@ -205,7 +205,10 @@ const stepHeader = getStepHeader();
       }).success;
 
       if (this.submitButton) {
-        this.submitButton.disabled = !isValid;
+        this.submitButton.setAttribute(
+          "aria-disabled",
+          !isValid ? "true" : "false"
+        );
       }
     };
 
@@ -222,7 +225,7 @@ const stepHeader = getStepHeader();
           }).success;
 
           if (this.submitButton && isValid) {
-            this.submitButton.disabled = false;
+            this.submitButton.setAttribute("aria-disabled", "false");
           }
         }
 

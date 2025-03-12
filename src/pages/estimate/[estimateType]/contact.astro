@@ -252,7 +252,7 @@ const stepHeader = getStepHeader();
       ).success;
 
       if (isFirstNameValid && isLastNameValid) {
-        this.submitButton.disabled = false;
+        this.submitButton.setAttribute("aria-disabled", "false");
       }
 
       [this.firstNameInput, this.lastNameInput].forEach((input) => {
@@ -274,7 +274,10 @@ const stepHeader = getStepHeader();
         this.lastNameInput.value
       ).success;
 
-      this.submitButton.disabled = !(isFirstNameValid && isLastNameValid);
+      this.submitButton.setAttribute(
+        "aria-disabled",
+        !(isFirstNameValid && isLastNameValid) ? "true" : "false"
+      );
     }
   }
 

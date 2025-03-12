@@ -99,9 +99,9 @@ const estimateHeader = getEstimateHeader(estimateType);
           {hasNextStep && (
             <button
               id="nextStepButton"
-              disabled
               type="submit"
-              class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg flex justify-center items-center gap-2 w-full text-white disabled:opacity-75 disabled:cursor-not-allowed hover:bg-[#ff9800] transition-colors"
+              aria-disabled="true"
+              class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg flex justify-center items-center gap-2 w-full text-white aria-disabled:opacity-75 aria-disabled:cursor-not-allowed hover:bg-[#ff9800] transition-colors"
               data-delay-submit={delaySubmit}
               data-show-loading={showLoadingOnSubmit}
               data-loading-text={loadingButtonText}
@@ -176,6 +176,14 @@ const estimateHeader = getEstimateHeader(estimateType);
       const shouldDelay = this.button.dataset.delaySubmit === "true";
       const showLoadingOnSubmit = this.button.dataset.showLoading === "true";
 
+      // Add click handler to the button
+      this.button.addEventListener("click", (e: MouseEvent) => {
+        if (this.button.getAttribute("aria-disabled") === "true") {
+          e.preventDefault();
+          this.handleInvalidSubmit(e);
+        }
+      });
+
       if (shouldDelay) {
         form.addEventListener("submit", this.handleDelayedSubmit.bind(this));
       } else if (showLoadingOnSubmit) {
@@ -185,7 +193,7 @@ const estimateHeader = getEstimateHeader(estimateType);
         "invalid",
         this.handleInvalidSubmit.bind(this),
         true
-      ); // Use capture phase to catch all invalid events from form fields
+      );
     }
 
     private handleInvalidSubmit(e: Event) {
@@ -240,12 +248,12 @@ const estimateHeader = getEstimateHeader(estimateType);
         this.textSpan.textContent = this.loadingText;
         this.arrow.classList.add("hidden");
         this.spinner.classList.remove("hidden");
-        this.button.disabled = true;
+        this.button.setAttribute("aria-disabled", "true");
       } else {
         this.textSpan.textContent = this.originalText;
         this.arrow.classList.remove("hidden");
         this.spinner.classList.add("hidden");
-        this.button.disabled = false;
+        this.button.setAttribute("aria-disabled", "false");
       }
     }
   }

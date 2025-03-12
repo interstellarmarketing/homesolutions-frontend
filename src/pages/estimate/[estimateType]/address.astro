@@ -362,7 +362,10 @@ const stepHeader = getStepHeader();
      */
     private updateButtonState(isValid: boolean): void {
       if (this.submitButton) {
-        this.submitButton.disabled = !isValid;
+        this.submitButton.setAttribute(
+          "aria-disabled",
+          !isValid ? "true" : "false"
+        );
       }
     }
 
