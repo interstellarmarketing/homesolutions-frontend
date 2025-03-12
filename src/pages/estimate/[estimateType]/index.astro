@@ -29,6 +29,8 @@ const trackingParams = {
   wbraid: searchParams.get("wbraid") || undefined,
   gbraid: searchParams.get("gbraid") || undefined,
   ssn: searchParams.get("ssn") || undefined,
+  fbc: Astro.cookies.get("fbc")?.value || undefined,
+  fbp: Astro.cookies.get("fbp")?.value || undefined,
 };
 
 // Update store with tracking params

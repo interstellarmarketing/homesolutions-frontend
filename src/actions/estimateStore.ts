@@ -42,4 +42,24 @@ export const updatePosthogPersonId = defineAction({
 
         return { success: true };
     },
+});
+
+export const updateUserAgent = defineAction({
+    input: z.object({
+        userAgent: z.string(),
+    }),
+    handler: async (input) => {
+        const { userAgent } = input;
+        const existingStore = estimateStore.get();
+
+        estimateStore.set({
+            ...existingStore,
+            trackingParams: {
+                ...existingStore.trackingParams,
+                userAgent: userAgent,
+            },
+        });
+
+        return { success: true };
+    },
 }); 
