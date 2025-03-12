@@ -90,7 +90,7 @@ if (validationResult instanceof Response) {
 
         // Get step information
         const currentStepIndex = getCurrentStepIndex(estimateType, currentStep);
-        const totalSteps = getTotalSteps(estimateType);
+        const totalSteps = getTotalSteps(estimateType) + 1;
         const allStepsString = estimateSteps[estimateType].join(", ");
 
         const posthogStepViewedEvent = {

@@ -1,6 +1,7 @@
 ---
 import Spinner from "@components/spinner/index.astro";
 import Rating from "@components/ratings/index.astro";
+import { estimateStepsStore } from "@stores/estimateStepsStore";
 
 interface Props {
   stepHeader: string;
@@ -105,6 +106,9 @@ const estimateHeader = getEstimateHeader(estimateType);
               data-delay-submit={delaySubmit}
               data-show-loading={showLoadingOnSubmit}
               data-loading-text={loadingButtonText}
+              data-estimate-steps-store={JSON.stringify(
+                estimateStepsStore.get()
+              )}
             >
               <div class="hidden button-spinner">
                 <Spinner size="sm" />
@@ -141,15 +145,27 @@ const estimateHeader = getEstimateHeader(estimateType);
   import { appendQueryParams } from "@utils/queryParams";
   import { navigate } from "astro:transitions/client";
 
+  import {
+    estimateSteps,
+    getCurrentStepIndex,
+    getTotalSteps,
+    type EstimateStepsState,
+  } from "@stores/estimateStepsStore";
+  import posthog from "posthog-js";
+
+  class StepLayoutWrapper extends HTMLElement {}
+
+  customElements.define("step-layout-wrapper", StepLayoutWrapper);
+
   class ButtonLoadingHandler {
-    private button: HTMLButtonElement;
+    private button!: HTMLButtonElement;
     private textSpan!: HTMLSpanElement;
     private arrow!: HTMLImageElement;
     private spinner!: HTMLDivElement;
     private originalText!: string;
     private loadingText!: string;
 
-    constructor(buttonId: string) {
+    initialize(buttonId: string) {
       this.button = document.getElementById(buttonId) as HTMLButtonElement;
       if (!this.button) return;
 
@@ -166,10 +182,6 @@ const estimateHeader = getEstimateHeader(estimateType);
       this.originalText = this.textSpan.textContent || "Next Step";
       this.loadingText = this.button.dataset.loadingText || "Processing...";
 
-      this.initialize();
-    }
-
-    private initialize() {
       const form = this.button.closest("form");
       if (!form) return;
 
@@ -197,7 +209,41 @@ const estimateHeader = getEstimateHeader(estimateType);
     }
 
     private handleInvalidSubmit(e: Event) {
-      console.log("Invalid form submission:", e);
+      // Read the message from the data attribute.
+      this.estimateStepsStore = JSON.parse(
+        this.button.dataset.estimateStepsStore || " {}"
+      );
+
+      if (!this.estimateStepsStore) return;
+
+      // estimateStepsStore.subscribe((state) => {
+      const { currentStep, estimateType } = this.estimateStepsStore;
+
+      // Only send events when currentStep changes, is not null, and estimateType is available
+      if (
+        currentStep !== null &&
+        currentStep !== this.previousStep &&
+        estimateType
+      ) {
+        this.previousStep = currentStep;
+
+        // Get step information
+        const currentStepIndex = getCurrentStepIndex(estimateType, currentStep);
+        const totalSteps = getTotalSteps(estimateType) + 1;
+        const allStepsString = estimateSteps[estimateType].join(", ");
+
+        const posthogNextStepErrorEvent = {
+          estimate_type: estimateType,
+          timestamp: new Date().toISOString(),
+          step_name: currentStep,
+          step_number: currentStepIndex + 1,
+          total_step_count: totalSteps,
+          all_steps: allStepsString,
+        };
+
+        // Send PostHog event
+        posthog.capture("form_next_step_error", posthogNextStepErrorEvent);
+      }
     }
 
     private async handleDelayedSubmit(e: SubmitEvent) {
@@ -256,6 +302,8 @@ const estimateHeader = getEstimateHeader(estimateType);
         this.button.setAttribute("aria-disabled", "false");
       }
     }
+    private previousStep: string | null = null;
+    private estimateStepsStore: EstimateStepsState | null = null;
   }
 
   // Listen for both DOMContentLoaded (initial page load) and astro:page-load (client-side navigation)
@@ -263,6 +311,6 @@ const estimateHeader = getEstimateHeader(estimateType);
   document.addEventListener("astro:page-load", initButtonHandler);
 
   function initButtonHandler() {
-    new ButtonLoadingHandler("nextStepButton");
+    new ButtonLoadingHandler().initialize("nextStepButton");
   }
 </script>
