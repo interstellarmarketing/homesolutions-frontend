@@ -13,7 +13,7 @@ async function formatStoreForSubmission(
   const submission: any = {
     // Required contact information
     streetAddress: store.streetAddress,
-    creditScoreAboveOrEqual640: store.creditScoreAboveOrEqual640,
+    creditScore: store.creditScoreAboveOrEqual640,
     city: store.city,
     state: store.state,
     zipCode: store.zipCode,
@@ -36,7 +36,7 @@ async function formatStoreForSubmission(
     homeType: store.homeType || null,
 
     // PostHog person ID
-    posthogPersonId: store.posthogPersonId || null,
+    posthogPersonId: store.trackingParams?.posthogPersonId || null,
 
     // Marketing attribution from trackingParams
     utmSource: store.trackingParams?.utm_source || null,
@@ -46,6 +46,9 @@ async function formatStoreForSubmission(
     utmContent: store.trackingParams?.utm_content || null,
     utmId: null, // Add if you have this in your store
     fbclid: store.trackingParams?.fbclid || null,
+    fbc: store.trackingParams?.fbc || null,
+    fbp: store.trackingParams?.fbp || null,
+    userAgent: store.trackingParams?.userAgent || null,
     gclid: store.trackingParams?.gclid || null,
     wbraid: store.trackingParams?.wbraid || null,
     gbraid: store.trackingParams?.gbraid || null,
@@ -178,8 +181,37 @@ await processFinalSubmission(existingStore);
       </div>
     </div>
 
-    <script define:vars={{ email: existingStore.email }}>
-      if (email) {
+    <script
+      define:vars={{
+        existingStore: existingStore,
+      }}
+    >
+      if (existingStore.creditScoreAboveOrEqual640) {
+        const req = {
+          event_name: "Lead",
+          event_id: crypto.randomUUID(),
+          event_time: new Date().toISOString(),
+          action_source: "website",
+          event_source_url: window.location.href,
+          user_data: {
+            fbc: existingStore.trackingParams?.fbc,
+            fbp: existingStore.trackingParams?.fbp,
+            client_user_agent: window.navigator.userAgent,
+            fn: existingStore.firstName,
+            ln: existingStore.lastName,
+            em: existingStore.email,
+            ph: existingStore.phone,
+            external_id: existingStore.trackingParams?.posthogPersonId,
+          },
+        };
+
+        zaraz?.track(
+          `completed_${existingStore.estimateShortTrade}_estimate`,
+          req
+        );
+      }
+
+      if (existingStore.email) {
         fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
           method: "POST",
           headers: {
@@ -190,7 +222,7 @@ await processFinalSubmission(existingStore);
               timestamp: new Date().toISOString(),
             },
             client: {
-              email: email,
+              email: existingStore.email,
             },
           }),
         })

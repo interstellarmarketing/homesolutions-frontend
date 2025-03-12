@@ -1,6 +1,7 @@
 ---
 import Layout from "./Layout.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { estimateStepsStore } from "@stores/estimateStepsStore";
 import type { z } from "zod";
 
 /**
@@ -9,8 +10,8 @@ import type { z } from "zod";
  * @property {string} estimateType - The type of estimate being processed
  */
 interface Props {
-	title: string;
-	estimateType: string;
+  title: string;
+  estimateType: string;
 }
 
 /**
@@ -18,38 +19,98 @@ interface Props {
  * @param {string} estimateType - The estimate type to validate
  * @returns {z.infer<typeof shortTradeEnum> | Response} Parsed estimate type or redirect response
  */
-function validateEstimateType(estimateType: string): z.infer<typeof shortTradeEnum> | Response {
-	const parseResult = shortTradeEnum.safeParse(estimateType);
+function validateEstimateType(
+  estimateType: string
+): z.infer<typeof shortTradeEnum> | Response {
+  const parseResult = shortTradeEnum.safeParse(estimateType);
 
-	if (!parseResult.success) {
-		// Log validation error for debugging (optional)
-		console.error('Invalid estimate type:', parseResult.error);
-		
-		return new Response(null, {
-			status: 302,
-			headers: { Location: '/' }
-		});
-	}
+  if (!parseResult.success) {
+    // Log validation error for debugging (optional)
+    console.error("Invalid estimate type:", parseResult.error);
 
-	return parseResult.data;
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/" },
+    });
+  }
+
+  return parseResult.data;
 }
 
 // Destructure props with default values if needed
-const { 
-	title, 
-	estimateType: rawEstimateType 
-} = Astro.props;
+const { title, estimateType: rawEstimateType } = Astro.props;
 
 // Validate the estimate type
 const validationResult = validateEstimateType(rawEstimateType);
 
 // Handle redirect if validation failed
 if (validationResult instanceof Response) {
-	return validationResult;
+  return validationResult;
 }
-
 ---
 
-<Layout title={title}>
-	<slot />
-</Layout>
+<estimate-wrapper
+  data-estimate-steps-store={JSON.stringify(estimateStepsStore.get())}
+>
+  <Layout title={title}>
+    <slot />
+  </Layout>
+</estimate-wrapper>
+
+<script>
+  import {
+    estimateSteps,
+    getCurrentStepIndex,
+    getTotalSteps,
+    type EstimateStepsState,
+  } from "@stores/estimateStepsStore";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { actions } from "astro:actions";
+  import posthog from "posthog-js";
+
+  class EstimateWrapper extends HTMLElement {
+    private previousStep: string | null = null;
+
+    connectedCallback() {
+      // Read the message from the data attribute.
+      const state: EstimateStepsState = JSON.parse(
+        this.dataset.estimateStepsStore || " {}"
+      );
+
+      // estimateStepsStore.subscribe((state) => {
+      const { currentStep, estimateType } = state;
+
+      // Only send events when currentStep changes, is not null, and estimateType is available
+      if (
+        currentStep !== null &&
+        currentStep !== this.previousStep &&
+        estimateType
+      ) {
+        this.previousStep = currentStep;
+
+        // Get step information
+        const currentStepIndex = getCurrentStepIndex(estimateType, currentStep);
+        const totalSteps = getTotalSteps(estimateType) + 1;
+        const allStepsString = estimateSteps[estimateType].join(", ");
+
+        const posthogStepViewedEvent = {
+          estimate_type: estimateType,
+          timestamp: new Date().toISOString(),
+          step_name: currentStep,
+          step_number: currentStepIndex + 1,
+          total_step_count: totalSteps,
+          all_steps: allStepsString,
+        };
+
+        // Send PostHog event
+        posthog.capture("form_step_viewed", posthogStepViewedEvent);
+      }
+    }
+  }
+
+  customElements.define("estimate-wrapper", EstimateWrapper);
+
+  crossPlatformLoader(() => {
+    actions.updateUserAgent({ userAgent: window.navigator.userAgent });
+  });
+</script>

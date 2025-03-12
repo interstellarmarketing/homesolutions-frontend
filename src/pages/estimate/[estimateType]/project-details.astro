@@ -251,7 +251,6 @@ const validProjectTypes =
      * Sets up event listeners for radio buttons and checks initial state
      */
     private initialize() {
-      console.log("Initializing form controller");
       if (!this.submitButton || !this.radioButtons.length) return;
 
       // Check hidden field for initial state
@@ -260,7 +259,7 @@ const validProjectTypes =
           .getElementById("hasInitialSelection")
           ?.getAttribute("value") === "true";
       if (hasInitialSelection) {
-        this.submitButton.disabled = false;
+        this.submitButton.setAttribute("aria-disabled", "false");
       }
 
       this.radioButtons.forEach((radio) => {
@@ -269,13 +268,15 @@ const validProjectTypes =
     }
 
     private handleRadioChange() {
-      console.log("Radio change detected");
       if (!this.submitButton) return;
 
       const isSelected = Array.from(this.radioButtons).some(
         (radio) => radio.checked
       );
-      this.submitButton.disabled = !isSelected;
+      this.submitButton.setAttribute(
+        "aria-disabled",
+        !isSelected ? "true" : "false"
+      );
     }
   }
 

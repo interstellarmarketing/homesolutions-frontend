@@ -243,9 +243,9 @@ const formatEstimateTypeNoun = (type: string) =>
 
     private toggleSubmitButton(isValid: boolean) {
       if (isValid) {
-        this.submitButton.removeAttribute("disabled");
+        this.submitButton.setAttribute("aria-disabled", "false");
       } else {
-        this.submitButton.setAttribute("disabled", "");
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
     }
   }
