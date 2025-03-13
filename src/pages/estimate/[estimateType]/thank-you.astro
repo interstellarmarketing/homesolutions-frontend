@@ -186,32 +186,7 @@ await processFinalSubmission(existingStore);
         existingStore: existingStore,
       }}
     >
-      if (existingStore.creditScoreAboveOrEqual640) {
-        const req = {
-          event_name: "Lead",
-          event_id: crypto.randomUUID(),
-          event_time: new Date().toISOString(),
-          action_source: "website",
-          event_source_url: window.location.href,
-          user_data: {
-            fbc: existingStore.trackingParams?.fbc,
-            fbp: existingStore.trackingParams?.fbp,
-            client_user_agent: window.navigator.userAgent,
-            fn: existingStore.firstName,
-            ln: existingStore.lastName,
-            em: existingStore.email,
-            ph: existingStore.phone,
-            external_id: existingStore.trackingParams?.posthogPersonId,
-          },
-        };
-
-        zaraz?.track(
-          `completed_${existingStore.estimateShortTrade}_estimate`,
-          req
-        );
-      }
-
-      if (existingStore.email) {
+      if (existingStore.creditScoreAboveOrEqual640 && existingStore.email) {
         fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
           method: "POST",
           headers: {
@@ -228,8 +203,30 @@ await processFinalSubmission(existingStore);
         })
           .then((response) => response.text())
           .then((hashedEmail) => {
-            console.log("Hashed email for Google:", hashedEmail);
-            // Send to Google here
+            const req = {
+              event_name: "Lead",
+              event_id: crypto.randomUUID(),
+              event_time: new Date().toISOString(),
+              action_source: "website",
+              event_source_url: window.location.href,
+              user_data: {
+                sha256_email_address: hashedEmail,
+                fbc: existingStore.trackingParams?.fbc,
+                fbp: existingStore.trackingParams?.fbp,
+                client_user_agent: window.navigator.userAgent,
+                fn: existingStore.firstName,
+                ln: existingStore.lastName,
+                em: existingStore.email,
+                ph: existingStore.phone,
+                external_id: existingStore.trackingParams?.posthogPersonId,
+              },
+            };
+
+            zaraz?.track(
+              `completed_${existingStore.estimateShortTrade}_estimate`,
+              req
+            );
+            console.log("Zaraz event sent:", req);
           })
           .catch((error) => console.error("Error:", error));
       }
