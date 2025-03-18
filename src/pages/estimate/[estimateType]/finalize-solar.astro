@@ -102,83 +102,35 @@ if (validatedEstimateType.success) {
 }
 
 // Get and validate store data
-const existingStore = estimateParser.parse(estimateStore.get());
+const existingStore = {
+  ...estimateParser.parse(estimateStore.get()),
+  ipAddress:
+    Astro?.request?.headers?.get("cf-connecting-ip") ||
+    Astro?.request?.headers?.get("x-real-ip") ||
+    Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
+    null,
+};
 await processFinalSubmission(existingStore);
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
   <div
-    class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
+    class="w-full h-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
   >
-    <div class="flex flex-col items-center gap-8 max-w-2xl mx-auto">
-      <div class="] flex-col justify-start items-center gap-8 inline-flex">
-        <div
-          class="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center bg-[#d0fadf] rounded-full border-[12px] md:border-[16px] border-[#ebfdf2]"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="h-10 w-10 text-green-700 md:w-12 md:h-12 md:stroke-[2]"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4.5 12.75l6 6 9-13.5"></path>
-          </svg>
-        </div>
-        <div
-          class="self-stretch flex-col justify-start items-center gap-6 flex"
-        >
-          <div
-            class="self-stretch text-center text-[#1d3557] text-3xl font-bold font-['Inter'] leading-9 max-w-lg"
-          >
-            Thank you for your submission!
-          </div>
-          <div
-            class="w-full text-center text-[#2d3748] text-sm font-medium font-['Inter'] leading-[21px] max-w-md"
-          >
-            {
-              estimateType === "roofing" ? (
-                <div class="mb-8">
-                  <p class="mb-4">
-                    Please be on the lookout for a phone call and text message
-                    in the next few minutes. Our roof repair and installation
-                    team will be calling you to:
-                  </p>
-                  <ul class="text-left list-disc pl-6 space-y-2 my-4">
-                    <li>Qualify your home</li>
-                    <li>Get more background on your desired roofing project</li>
-                    <li>
-                      Schedule you for a free in-home consultation with one of
-                      our experts
-                    </li>
-                  </ul>
-                </div>
-              ) : (
-                <p class="mb-4">
-                  We'll be in touch with matching pros in {existingStore.city},{" "}
-                  {existingStore.state} shortly.
-                </p>
-              )
-            }
-            <!-- <div class="w-full">
-              <a
-                href={`/estimate/${estimateType}`}
-                class="h-12 px-5 py-3 bg-[#ffa726] w-full rounded-lg justify-center items-center gap-2 inline-flex hover:bg-[#ff9800] transition-colors"
-              >
-                <span
-                  class="text-white text-base font-medium font-['Inter'] leading-normal"
-                >
-                  Return Home
-                </span>
-              </a>
-            </div> -->
-          </div>
-        </div>
-      </div>
+    <div class="portal-container w-full h-full" id="freedomportal">
+      <iframe
+        allow="autoplay"
+        allowfullscreen=""
+        class="w-full h-full"
+        frameborder="1"
+        height="400px"
+        marginheight="0px"
+        marginwidth="0px"
+        name="myiFrame"
+        sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
+        scrolling="no"
+        src=`https://bp-portal.freedomforever.com/open/affiliate/self-book?lead_id=${existingStore.freedomLeadId}&token=xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ&authorization_token=JiUIX1ZB1RlJcKRBqGjN&affiliate_id=Mjc1&campaign_id=MjM0NA%3D%3D&self_book_campaign_id=MjQwNQ%3D%3D&first_name=${existingStore.firstName}&zip_code=${existingStore.zipCode}&last_name=${existingStore.lastName}&phone=${existingStore.phone}&email=${existingStore.email}&address=${existingStore.streetAddress}&credit_score=&electric_bill=&utility_company=Other&Facebook_Ad_ID=&Trusted_Form=${existingStore.trackingParams?.trustedFormCertUrl}&home_ownership=${existingStore.isHomeowner ? 1 : 0}&Language=english&Roof_Shading=${existingStore.shadedRoof ? 1 : 0}&Bill_Discounts=No&Self_Set_Apt_Notes=&Facebook_Click_ID=${existingStore.trackingParams?.fbclid}&Facebook_Browser_ID=&Ip_Address=${existingStore.ipAddress}&User_Agent=${existingStore.trackingParams?.userAgent}`
+        style="border:0px #ffffff none;"></iframe>
     </div>
 
     <script
