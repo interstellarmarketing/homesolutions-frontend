@@ -12,14 +12,15 @@ export const estimateParser = z.object({
   phone: z.string().regex(/^\(\d{3}\)\s\d{3}-\d{4}$/),
   isHomeowner: z.boolean(),
   estimateShortTrade: z.string(),
-  estimateAction: z.string(),
-  homeType: z.string(),
+  estimateAction: z.string().optional(),
+  homeType: z.string().optional(),
   estimateType: z.string().nullable(),
-  projectDetails: z.string().nullable(),
+  projectDetails: z.string().nullable().optional(),
   solarReason: z.string().nullable().optional(),
   creditScoreAboveOrEqual640: z.boolean().optional(),
   electricBillOver100: z.boolean().optional(),
   shadedRoof: z.boolean().optional(),
+  freedomLeadId: z.number().optional(),
   trackingParams: z
     .object({
       utm_source: z.string().optional(),
