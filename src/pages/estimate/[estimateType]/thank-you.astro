@@ -4,66 +4,138 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
 import { appendQueryParams } from "@utils/queryParams";
+
+// Utility function to convert null to undefined
+function nullToUndefined<T>(value: T | null): T | undefined {
+  return value === null ? undefined : value;
+}
+
+// Utility function to get header value
+function getHeaderValue(
+  headers: Headers | undefined,
+  name: string,
+): string | undefined {
+  if (!headers) return undefined;
+  const value = headers.get(name);
+  return value === null ? undefined : value;
+}
+
+interface FormSubmissionData {
+  street_address: string;
+  credit_score: boolean | undefined;
+  city: string;
+  state: string;
+  zip_code: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  ip_address: string | undefined;
+  is_homeowner: boolean;
+  short_trade: string;
+  action: string;
+  estimate_type: string;
+  home_type: string | undefined;
+  posthog_person_id: string | undefined;
+  utm_source: string | undefined;
+  utm_medium: string | undefined;
+  utm_campaign: string | undefined;
+  utm_term: string | undefined;
+  utm_content: string | undefined;
+  fbclid: string | undefined;
+  fbc: string | undefined;
+  fbp: string | undefined;
+  user_agent: string | undefined;
+  gclid: string | undefined;
+  wbraid: string | undefined;
+  gbraid: string | undefined;
+  ssn: string | undefined;
+  trusted_form_cert_url: string | undefined;
+  trusted_form_ping_url: string | undefined;
+  roof_type?: string;
+  solar_type?: string;
+}
+
+interface SupabaseApiResponse {
+  success: boolean;
+  data?: {
+    id: string;
+    [key: string]: any;
+  };
+  apiResponse?: {
+    status: number;
+    body: string;
+  };
+  error?: string;
+}
+
 /**
  * Formats store data to match the backend submission schema
  */
 async function formatStoreForSubmission(
-  store: ReturnType<typeof estimateParser.parse>
-) {
-  const submission: any = {
+  store: ReturnType<typeof estimateParser.parse>,
+): Promise<FormSubmissionData> {
+  const headers = Astro?.request?.headers;
+
+  // Get IP address from headers
+  const cfIp = getHeaderValue(headers, "cf-connecting-ip");
+  const realIp = getHeaderValue(headers, "x-real-ip");
+  const forwardedFor = getHeaderValue(headers, "x-forwarded-for");
+  const forwardedIp = forwardedFor?.split(",")?.[0];
+  const ipAddress = cfIp || realIp || forwardedIp;
+
+  // Ensure required string fields are not null
+  const estimateType = store.estimateType || "unknown";
+  const projectDetails = store.projectDetails || undefined;
+
+  const submission: FormSubmissionData = {
     // Required contact information
-    streetAddress: store.streetAddress,
-    creditScoreAboveOrEqual640: store.creditScoreAboveOrEqual640,
+    street_address: store.streetAddress,
+    credit_score: store.creditScoreAboveOrEqual640,
     city: store.city,
     state: store.state,
-    zipCode: store.zipCode,
-    firstName: store.firstName,
-    lastName: store.lastName,
+    zip_code: store.zipCode,
+    first_name: store.firstName,
+    last_name: store.lastName,
     email: store.email,
     phone: store.phone,
-    ipAddress:
-      Astro?.request?.headers?.get("cf-connecting-ip") ||
-      Astro?.request?.headers?.get("x-real-ip") ||
-      Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
-      null,
+    ip_address: ipAddress,
 
     // Required qualification fields
-    isHomeowner: store.isHomeowner,
-    shortTrade: store.estimateShortTrade,
+    is_homeowner: store.isHomeowner,
+    short_trade: store.estimateShortTrade,
     action: store.estimateAction || "unknown",
+    estimate_type: estimateType,
 
     // Optional property information
-    homeType: store.homeType || null,
-
-    // PostHog person ID
-    posthogPersonId: store.trackingParams?.posthogPersonId || null,
-
-    // Marketing attribution from trackingParams
-    utmSource: store.trackingParams?.utm_source || null,
-    utmMedium: store.trackingParams?.utm_medium || null,
-    utmCampaign: store.trackingParams?.utm_campaign || null,
-    utmTerm: store.trackingParams?.utm_term || null,
-    utmContent: store.trackingParams?.utm_content || null,
-    utmId: null, // Add if you have this in your store
-    fbclid: store.trackingParams?.fbclid || null,
-    fbc: store.trackingParams?.fbc || null,
-    fbp: store.trackingParams?.fbp || null,
-    userAgent: store.trackingParams?.userAgent || null,
-    gclid: store.trackingParams?.gclid || null,
-    wbraid: store.trackingParams?.wbraid || null,
-    gbraid: store.trackingParams?.gbraid || null,
-    ssn: store.trackingParams?.ssn || null,
-    trustedFormCertUrl: store.trackingParams?.trustedFormCertUrl || null,
-    trustedFormPingUrl: store.trackingParams?.trustedFormPingUrl || null,
+    home_type: store.homeType,
+    posthog_person_id: store.trackingParams?.posthogPersonId,
+    utm_source: store.trackingParams?.utm_source,
+    utm_medium: store.trackingParams?.utm_medium,
+    utm_campaign: store.trackingParams?.utm_campaign,
+    utm_term: store.trackingParams?.utm_term,
+    utm_content: store.trackingParams?.utm_content,
+    fbclid: store.trackingParams?.fbclid,
+    fbc: store.trackingParams?.fbc,
+    fbp: store.trackingParams?.fbp,
+    user_agent: store.trackingParams?.userAgent,
+    gclid: store.trackingParams?.gclid,
+    wbraid: store.trackingParams?.wbraid,
+    gbraid: store.trackingParams?.gbraid,
+    ssn: store.trackingParams?.ssn,
+    trusted_form_cert_url: store.trackingParams?.trustedFormCertUrl,
+    trusted_form_ping_url: store.trackingParams?.trustedFormPingUrl,
   };
 
-  if (store.estimateShortTrade === "roofing") {
-    submission.roofType = store.projectDetails;
+  if (store.estimateShortTrade === "roofing" && projectDetails) {
+    submission.roof_type = projectDetails;
   }
 
   switch (store.estimateType) {
     case "solar":
-      submission.solarType = store.projectDetails;
+      if (projectDetails) {
+        submission.solar_type = projectDetails;
+      }
       break;
   }
 
@@ -71,18 +143,82 @@ async function formatStoreForSubmission(
 }
 
 /**
- * Processes the final submission and resets the store
+ * Processes the final submission using Supabase Edge Function
  */
 async function processFinalSubmission(
-  existingStore: ReturnType<typeof estimateParser.parse>
-) {
+  existingStore: ReturnType<typeof estimateParser.parse>,
+): Promise<SupabaseApiResponse | null> {
   try {
     const formattedSubmission = await formatStoreForSubmission(existingStore);
-    const zDb = Astro.locals.runtime.env.DB;
-    const db = await zDb.D1Methods();
-    await db.insertSubmission(formattedSubmission as any);
+    const supabaseUrl = import.meta.env.SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing Supabase configuration");
+      return {
+        success: false,
+        error: "Missing Supabase configuration",
+      };
+    }
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/handle-form-submission`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify(formattedSubmission),
+      },
+    );
+
+    const responseText = await response.text();
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse response:", responseText);
+      return {
+        success: false,
+        error: `Invalid response format: ${responseText}`,
+        apiResponse: {
+          status: response.status,
+          body: responseText,
+        },
+      };
+    }
+
+    if (!response.ok) {
+      console.error(
+        `Failed to submit form: ${response.status} ${response.statusText}`,
+        responseData,
+      );
+      return {
+        success: false,
+        error: `Server error: ${response.status} ${response.statusText}`,
+        apiResponse: {
+          status: response.status,
+          body: responseText,
+        },
+      };
+    }
+
+    if (!responseData.success) {
+      console.error(
+        "API reported error:",
+        responseData.error || "Unknown error",
+      );
+      return responseData;
+    }
+
+    return responseData;
   } catch (error) {
     console.error("Error processing submission:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
   }
 }
 
@@ -102,8 +238,20 @@ if (validatedEstimateType.success) {
 }
 
 // Get and validate store data
+let submissionError = null;
 const existingStore = estimateParser.parse(estimateStore.get());
-await processFinalSubmission(existingStore);
+
+try {
+  const result = await processFinalSubmission(existingStore);
+  if (!result || !result.success) {
+    submissionError = result?.error || "Failed to process submission";
+    console.error("Submission error details:", result);
+  }
+} catch (error) {
+  submissionError =
+    error instanceof Error ? error.message : "An unexpected error occurred";
+  console.error("Error in submission process:", error);
+}
 ---
 
 <EstimateWrapper title={estimateType} estimateType={estimateType}>
@@ -111,37 +259,34 @@ await processFinalSubmission(existingStore);
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
   >
     <div class="flex flex-col items-center gap-8 max-w-2xl mx-auto">
-      <div class="] flex-col justify-start items-center gap-8 inline-flex">
-        <div
-          class="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center bg-[#d0fadf] rounded-full border-[12px] md:border-[16px] border-[#ebfdf2]"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-            stroke="currentColor"
-            class="h-10 w-10 text-green-700 md:w-12 md:h-12 md:stroke-[2]"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4.5 12.75l6 6 9-13.5"></path>
-          </svg>
-        </div>
-        <div
-          class="self-stretch flex-col justify-start items-center gap-6 flex"
-        >
-          <div
-            class="self-stretch text-center text-[#1d3557] text-3xl font-bold font-['Inter'] leading-9 max-w-lg"
-          >
-            Thank you for your submission!
+      {
+        submissionError ? (
+          <div class="text-red-600 bg-red-50 p-4 rounded-lg">
+            {submissionError}
           </div>
-          <div
-            class="w-full text-center text-[#2d3748] text-sm font-medium font-['Inter'] leading-[21px] max-w-md"
-          >
-            {
-              estimateType === "roofing" ? (
+        ) : (
+          <div class="] flex-col justify-start items-center gap-8 inline-flex">
+            <div class="w-24 h-24 md:w-28 md:h-28 flex items-center justify-center bg-[#d0fadf] rounded-full border-[12px] md:border-[16px] border-[#ebfdf2]">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                class="h-10 w-10 text-green-700 md:w-12 md:h-12 md:stroke-[2]"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M4.5 12.75l6 6 9-13.5"
+                />
+              </svg>
+            </div>
+            <div class="self-stretch text-center text-[#1d3557] text-3xl font-bold font-['Inter'] leading-9 max-w-lg">
+              Thank you for your submission!
+            </div>
+            <div class="w-full text-center text-[#2d3748] text-sm font-medium font-['Inter'] leading-[21px] max-w-md">
+              {estimateType === "roofing" ? (
                 <div class="mb-8">
                   <p class="mb-4">
                     Please be on the lookout for a phone call and text message
@@ -162,23 +307,21 @@ await processFinalSubmission(existingStore);
                   We'll be in touch with matching pros in {existingStore.city},{" "}
                   {existingStore.state} shortly.
                 </p>
-              )
-            }
-            <!-- <div class="w-full">
-              <a
-                href={`/estimate/${estimateType}`}
-                class="h-12 px-5 py-3 bg-[#ffa726] w-full rounded-lg justify-center items-center gap-2 inline-flex hover:bg-[#ff9800] transition-colors"
-              >
-                <span
-                  class="text-white text-base font-medium font-['Inter'] leading-normal"
+              )}
+              <div class="w-full">
+                <a
+                  href={`/estimate/${estimateType}`}
+                  class="h-12 px-5 py-3 bg-[#ffa726] w-full rounded-lg justify-center items-center gap-2 inline-flex hover:bg-[#ff9800] transition-colors"
                 >
-                  Return Home
-                </span>
-              </a>
-            </div> -->
+                  <span class="text-white text-base font-medium font-['Inter'] leading-normal">
+                    Return Home
+                  </span>
+                </a>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        )
+      }
     </div>
 
     <script
@@ -186,7 +329,32 @@ await processFinalSubmission(existingStore);
         existingStore: existingStore,
       }}
     >
-      if (existingStore.creditScoreAboveOrEqual640 && existingStore.email) {
+      if (existingStore.creditScoreAboveOrEqual640) {
+        const req = {
+          event_name: "Lead",
+          event_id: crypto.randomUUID(),
+          event_time: new Date().toISOString(),
+          action_source: "website",
+          event_source_url: window.location.href,
+          user_data: {
+            fbc: existingStore.trackingParams?.fbc,
+            fbp: existingStore.trackingParams?.fbp,
+            client_user_agent: window.navigator.userAgent,
+            fn: existingStore.firstName,
+            ln: existingStore.lastName,
+            em: existingStore.email,
+            ph: existingStore.phone,
+            external_id: existingStore.trackingParams?.posthogPersonId,
+          },
+        };
+
+        zaraz?.track(
+          `completed_${existingStore.estimateShortTrade}_estimate`,
+          req,
+        );
+      }
+
+      if (existingStore.email) {
         fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
           method: "POST",
           headers: {
@@ -203,30 +371,8 @@ await processFinalSubmission(existingStore);
         })
           .then((response) => response.text())
           .then((hashedEmail) => {
-            const req = {
-              event_name: "Lead",
-              event_id: crypto.randomUUID(),
-              event_time: new Date().toISOString(),
-              action_source: "website",
-              event_source_url: window.location.href,
-              user_data: {
-                sha256_email_address: hashedEmail,
-                fbc: existingStore.trackingParams?.fbc,
-                fbp: existingStore.trackingParams?.fbp,
-                client_user_agent: window.navigator.userAgent,
-                fn: existingStore.firstName,
-                ln: existingStore.lastName,
-                em: existingStore.email,
-                ph: existingStore.phone,
-                external_id: existingStore.trackingParams?.posthogPersonId,
-              },
-            };
-
-            zaraz?.track(
-              `completed_${existingStore.estimateShortTrade}_estimate`,
-              req
-            );
-            console.log("Zaraz event sent:", req);
+            console.log("Hashed email for Google:", hashedEmail);
+            // Send to Google here
           })
           .catch((error) => console.error("Error:", error));
       }
