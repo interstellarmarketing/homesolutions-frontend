@@ -36,7 +36,7 @@ export const estimateSteps = {
         "credit-score",
         "shaded-roof",
         "address",
-        "thank-you",
+        "finalize-solar",
     ],
     bathroom: defaultSteps,
     siding: defaultSteps,
