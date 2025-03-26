@@ -50,3 +50,5 @@ export const estimateParserLoose = estimateParser.partial();
 export type EstimateStoreTypeLoose = z.infer<typeof estimateParserLoose>;
 
 export const estimateStore = atom<EstimateStoreTypeLoose>({});
+
+export type TrackingParams = EstimateStoreType["trackingParams"];

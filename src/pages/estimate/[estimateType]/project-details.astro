@@ -162,12 +162,6 @@ if (pageState.projectTypes?.includes(null)) {
 const validatedEstimateType = estimateTypeSchema.safeParse(
   pageState.estimateType
 );
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "project-details")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/zip`;
 
 // Get step number and total from store
 const stepNumber = validatedEstimateType.success

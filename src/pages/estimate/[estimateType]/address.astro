@@ -90,10 +90,10 @@ if (validatedEstimateType.success) {
 }
 
 const existingStore = estimateStore.get();
-if (!existingStore.zipCode) {
-  const redirectUrl = `/estimate/${estimateType}/zip`;
-  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
-}
+// if (!existingStore.zipCode) {
+//   const redirectUrl = `/estimate/${estimateType}/zip`;
+//   return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
+// }
 
 // Extract existing data
 const { streetAddress, isHomeowner } = existingStore;

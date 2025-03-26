@@ -62,9 +62,9 @@ if (!activeEstimateOptions) {
   return Astro.redirect("/");
 }
 
-if (!existingStore?.zipCode?.length) {
-  return Astro.redirect(`/estimate/${estimateType}/zip`);
-}
+// if (!existingStore?.zipCode?.length) {
+//   return Astro.redirect(`/estimate/${estimateType}/zip`);
+// }
 
 // Get trade-specific options
 const tradeOptions = tradeOptionDescriptions.find(

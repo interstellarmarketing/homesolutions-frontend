@@ -218,18 +218,36 @@ const stepHeader = getStepHeader();
               autocomplete="tel"
             />
           </div>
-          <p class="text-[8px] text-gray-500">
-            By clicking Submit I am providing my <a
-              href="/phone-number/esign"
-              class="text-blue-600 hover:text-blue-800 underline"
-              target="_blank">E-SIGN</a
-            > signature and consent for Erie Construction Mid-West, LLC dba Erie
-            Home to contact me at the number I entered regarding this request and
-            for marketing purposes, including through phone calls or text by means
-            of automated technology, SMS/MMS, and prerecorded messages. I acknowledge
-            my consent is not required for purchase. Message and data rates may apply.
-            I also agree to be bound by the Privacy Policy."
-          </p>
+          {
+            estimateType === "solar" ? (
+              <p class="text-[8px] text-gray-500">
+                By submitting my contact information including my telephone
+                number above, I authorize Bright Solar Marketing, and/or its
+                affiliates to contact me via telephone calls and/or text
+                messages (SMS), using automated dialing technology for
+                marketing/advertising purposes. No purchase required. Message
+                and data rates may apply.
+              </p>
+            ) : (
+              <p class="text-[8px] text-gray-500">
+                By clicking Submit I am providing my{" "}
+                <a
+                  href="/phone-number/esign"
+                  class="text-blue-600 hover:text-blue-800 underline"
+                  target="_blank"
+                >
+                  E-SIGN
+                </a>{" "}
+                signature and consent for Erie Construction Mid-West, LLC dba
+                Erie Home to contact me at the number I entered regarding this
+                request and for marketing purposes, including through phone
+                calls or text by means of automated technology, SMS/MMS, and
+                prerecorded messages. I acknowledge my consent is not required
+                for purchase. Message and data rates may apply. I also agree to
+                be bound by the Privacy Policy."
+              </p>
+            )
+          }
         </div>
       </div>
     </StepLayout>

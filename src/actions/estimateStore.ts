@@ -1,6 +1,6 @@
 import { defineAction } from 'astro:actions';
 import { z } from 'astro/zod';
-import { estimateStore } from '@stores/estimateProgress';
+import { estimateStore, estimateParser, type TrackingParams } from '@stores/estimateProgress';
 
 export const updateTrustedFormParams = defineAction({
     input: z.object({
@@ -62,4 +62,21 @@ export const updateUserAgent = defineAction({
 
         return { success: true };
     },
-}); 
+});
+
+export const updateTrackingParams = defineAction({
+    input: estimateParser.shape.trackingParams,
+    handler: async (input) => {
+        const existingStore = estimateStore.get();
+
+        estimateStore.set({
+            ...existingStore,
+            trackingParams: {
+                ...existingStore.trackingParams,
+                ...input,
+            },
+        });
+
+        return { success: true };
+    },
+});
