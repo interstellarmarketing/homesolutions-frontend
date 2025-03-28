@@ -216,17 +216,17 @@ await processFinalSubmission(existingStore);
                 client_user_agent: window.navigator.userAgent,
                 fn: existingStore.firstName,
                 ln: existingStore.lastName,
-                em: existingStore.email,
+                em: hashedEmail,
                 ph: existingStore.phone,
                 external_id: existingStore.trackingParams?.posthogPersonId,
               },
             };
 
-            zaraz?.track(
-              `completed_${existingStore.estimateShortTrade}_estimate`,
-              req
-            );
-            console.log("Zaraz event sent:", req);
+            const eventName = `completed_${existingStore.estimateShortTrade}_estimate`;
+
+            zaraz?.track(eventName, req);
+
+            console.log(`Zaraz event sent (${eventName}):`, req);
           })
           .catch((error) => console.error("Error:", error));
       }

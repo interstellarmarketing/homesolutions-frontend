@@ -9,26 +9,12 @@ import { appendQueryParams } from "@utils/queryParams";
 
 // Get estimate type from URL
 const { estimateType } = Astro.params;
+
 if (
   !estimateType ||
   !shortTradesConst.includes(estimateType as ShortTradeEnum)
 ) {
   return Astro.redirect("/");
-}
-
-let cfz_facebook_pixel:
-  | {
-      "BDTt_fb-pixel": { v: string; e: number };
-      "BDTt_fb-click": { v: string; e: number };
-    }
-  | undefined;
-
-try {
-  cfz_facebook_pixel = JSON.parse(
-    Astro.cookies.get("cfz_facebook-pixel")?.value || ""
-  );
-} catch (e) {
-  console.error(e);
 }
 
 // Get all URL search params
@@ -44,8 +30,6 @@ const trackingParams = {
   wbraid: searchParams.get("wbraid") || undefined,
   gbraid: searchParams.get("gbraid") || undefined,
   ssn: searchParams.get("ssn") || undefined,
-  fbc: cfz_facebook_pixel?.["BDTt_fb-click"]?.v || undefined,
-  fbp: cfz_facebook_pixel?.["BDTt_fb-pixel"]?.v || undefined,
 };
 
 // Update store with tracking params

@@ -8,10 +8,7 @@
 import { z } from "zod";
 import { estimateStore } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import {
-  activeEstimateTypeStore,
-  computedEstimateOptions,
-} from "@stores/activeEstimateType";
+import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
@@ -66,18 +63,12 @@ function initializePage(
   }
 
   const estimateType = parsedEstimateType.data;
-  const activeEstimateOptions = computedEstimateOptions.get();
 
   // Update the estimate steps store with current page
   estimateStepsStore.set({
     currentStep: "solar-reason",
     estimateType: estimateType,
   });
-
-  // Ensure estimate options are available
-  if (!activeEstimateOptions) {
-    return new Response(null, { status: 302, headers: { Location: "/" } });
-  }
 
   // Find the trade options for the current estimate type
   const tradeOptions = tradeOptionDescriptions.find(

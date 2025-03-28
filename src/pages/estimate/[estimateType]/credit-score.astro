@@ -1,7 +1,7 @@
 ---
 import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { estimateStore } from "@stores/estimateProgress";
+import { estimateParser, estimateStore } from "@stores/estimateProgress";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
@@ -123,6 +123,8 @@ const currentSelection =
     : pageState.currentSelection
       ? "Credit score above 640"
       : "Credit score below 640";
+
+const existingStore = estimateStore.get();
 ---
 
 <EstimateWrapper
@@ -201,5 +203,56 @@ const currentSelection =
     }
 
     crossPlatformLoader(() => new FormController());
+  </script>
+
+  <script
+    define:vars={{
+      existingStore: existingStore,
+    }}
+  >
+    if (existingStore.email) {
+      fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          system: {
+            timestamp: new Date().toISOString(),
+          },
+          client: {
+            email: existingStore.email,
+          },
+        }),
+      })
+        .then((response) => response.text())
+        .then((hashedEmail) => {
+          const req = {
+            event_name: "solar_phone_submit",
+            event_id: crypto.randomUUID(),
+            event_time: new Date().toISOString(),
+            action_source: "website",
+            event_source_url: window.location.href,
+            user_data: {
+              sha256_email_address: hashedEmail,
+              fbc: existingStore.trackingParams?.fbc,
+              fbp: existingStore.trackingParams?.fbp,
+              client_user_agent: window.navigator.userAgent,
+              fn: existingStore.firstName,
+              ln: existingStore.lastName,
+              em: hashedEmail,
+              ph: existingStore.phone,
+              external_id: existingStore.trackingParams?.posthogPersonId,
+            },
+          };
+
+          const eventName = `solar_phone_submit`;
+
+          zaraz?.track(eventName, req);
+
+          console.log(`Zaraz event sent (${eventName}):`, req);
+        })
+        .catch((error) => console.error("Error:", error));
+    }
   </script>
 </EstimateWrapper>

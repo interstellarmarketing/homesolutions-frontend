@@ -7,10 +7,7 @@ import {
   tradeOptionDescriptions,
   homeTypesConst,
 } from "@assets/info/estimateOptions";
-import {
-  activeEstimateTypeStore,
-  computedEstimateOptions,
-} from "@stores/activeEstimateType";
+import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import {
   estimateStepsStore,
   getNextStep,
@@ -50,12 +47,6 @@ function initializePage(
     currentStep: "home-type",
     estimateType: estimateType,
   });
-
-  const activeEstimateOptions = computedEstimateOptions.get();
-
-  if (!activeEstimateOptions) {
-    return new Response(null, { status: 302, headers: { Location: "/" } });
-  }
 
   const tradeOptions = tradeOptionDescriptions.find(
     (option) => option.shortTrade === activeEstimateTypeStore.get()
