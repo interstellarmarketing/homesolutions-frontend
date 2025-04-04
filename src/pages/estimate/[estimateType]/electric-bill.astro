@@ -4,7 +4,7 @@ import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGrou
 import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
-import { getNextStep, getCurrentStepNumber } from "src/consts/estimateSteps";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -31,11 +31,16 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
+  // Get step information
+  const estimateType = parsedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "electric-bill");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
-    estimateType: parsedEstimateType.data,
+    estimateType,
     electricBillOver100: searchParams.get("ebh") === "1",
-    stepNumber: 1, // Will be updated client-side
-    totalSteps: 5, // Will be updated client-side
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -102,10 +107,10 @@ const currentSelection =
 
     <StepLayout
       stepHeader={stepHeader}
-      hasNextStep
-      hasPrevStep={false}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
@@ -120,12 +125,14 @@ const currentSelection =
 
 <script>
   import { shortTradeEnum } from "@assets/info/estimateOptions";
-  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { appendQueryParams } from "@utils/queryParams";
-  import { getTotalSteps } from "@utils/layout";
+  import {
+    getCurrentStepNumber,
+    getNextStep,
+    getTotalSteps,
+  } from "@consts/estimateSteps";
   import { estimateStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
-  import { getNextStep, getCurrentStepNumber } from "src/consts/estimateSteps";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
 
   class FormController {
     private radioButtons: NodeListOf<HTMLInputElement>;

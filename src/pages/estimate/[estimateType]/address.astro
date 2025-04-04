@@ -1,11 +1,10 @@
 ---
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
-import { getNextStep } from "src/consts/estimateSteps";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
 // Create page-specific parser
 const addressSchema = z.object({
@@ -39,6 +38,11 @@ function initializePage(
     });
   }
 
+  // Get step information
+  const estimateType = validatedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "address");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
     estimateType: validatedEstimateType.data,
     streetAddress: searchParams.get("streetAddress") || undefined,
@@ -46,8 +50,8 @@ function initializePage(
     city: searchParams.get("city") || undefined,
     state: searchParams.get("state") || undefined,
     isHomeowner: searchParams.get("isHomeowner") === "true",
-    stepNumber: 1, // Will be updated client-side
-    totalSteps: 5, // Will be updated client-side
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -121,11 +125,9 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
-      hasNextStep
-      hasPrevStep={false}
-      showLoadingOnSubmit={pageState.estimateType === "roofing"}
-      loadingButtonText="Processing...."
     >
       <div
         class="flex flex-col gap-4 text-center rounded-lg container w-full max-w-md mx-auto"

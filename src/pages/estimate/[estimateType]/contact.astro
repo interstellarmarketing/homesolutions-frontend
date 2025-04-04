@@ -1,15 +1,10 @@
 ---
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
-import StepLayout from "@components/step-layout/index.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import {
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@consts/estimateSteps";
+import StepLayout from "@components/step-layout/index.astro";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
-import { getNextStep } from "src/consts/estimateSteps";
 
 /**
  * Interface representing the page state
@@ -47,7 +42,7 @@ function initializePage(
 
   // Get step information
   const stepNumber = getCurrentStepNumber(estimateType, "contact");
-  const totalSteps = getStoreSteps(estimateType);
+  const totalSteps = getTotalSteps(estimateType);
 
   return {
     estimateType,
@@ -133,9 +128,9 @@ const stepHeader = getStepHeader();
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      estimateType={pageState.estimateType}
-      hasNextStep
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
+      estimateType={pageState.estimateType}
     >
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
         <div class="flex flex-col gap-2">

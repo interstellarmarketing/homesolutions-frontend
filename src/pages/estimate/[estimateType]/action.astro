@@ -19,7 +19,7 @@ import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
-import { getNextStep } from "src/consts/estimateSteps";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
 // Schema definitions
 const actionSchema = z.string();
@@ -58,11 +58,15 @@ function initializePage(
     options = ["install", "repair", "replace"];
   }
 
+  // Get step information
+  const stepNumber = getCurrentStepNumber(estimateType, "action");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
     estimateType,
     estimateAction: searchParams.get("action") || undefined,
-    stepNumber: 1, // Will be updated client-side
-    totalSteps: 5, // Will be updated client-side
+    stepNumber,
+    totalSteps,
     options,
   };
 }
@@ -144,9 +148,9 @@ const stepHeader = getStepHeader();
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
-      hasNextStep
-      hasPrevStep={false}
     >
       <LargeRadioButtonGroup
         options={pageState.options}

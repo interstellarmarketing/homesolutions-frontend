@@ -5,7 +5,7 @@ import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
-
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 // Schema definitions
 const homeTypeSchema = z.enum(homeTypesConst);
 const estimateTypeSchema = shortTradeEnum;
@@ -15,6 +15,8 @@ interface PageState {
   tradeDescription: string | undefined;
   homeTypes: typeof homeTypesConst;
   currentSelection: string | undefined;
+  stepNumber: number;
+  totalSteps: number;
 }
 
 function initializePage(
@@ -30,11 +32,17 @@ function initializePage(
   const estimateType = parsedEstimateType.data;
   const currentSelection = searchParams.get("homeType") || undefined;
 
+  // Get step information
+  const stepNumber = getCurrentStepNumber(estimateType, "home-type");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
     estimateType,
     tradeDescription: undefined, // Will be set client-side
     homeTypes: homeTypesConst,
     currentSelection,
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -101,10 +109,10 @@ const stepHeader = "What type of home do you have?";
 
     <StepLayout
       stepHeader={stepHeader}
-      hasNextStep
-      hasPrevStep={false}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup

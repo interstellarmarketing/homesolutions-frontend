@@ -1,10 +1,10 @@
 ---
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
-
 // Create email-specific parser
 const emailSchema = z.object({
   email: z.string().email(),
@@ -26,11 +26,16 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
+  // Get step information
+  const estimateType = validatedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "email");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
-    estimateType: validatedEstimateType.data,
+    estimateType,
     email: searchParams.get("email") || undefined,
-    stepNumber: 1, // Will be updated client-side
-    totalSteps: 5, // Will be updated client-side
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -93,9 +98,9 @@ const stepHeader = "What's the best email to reach you?";
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
-      hasNextStep
-      hasPrevStep={false}
     >
       <div class="flex flex-col gap-4 text-center rounded-lg container">
         <div class="w-full mx-auto flex flex-col gap-2">

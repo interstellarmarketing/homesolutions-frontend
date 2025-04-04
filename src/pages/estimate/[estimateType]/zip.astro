@@ -1,12 +1,12 @@
 ---
-import { z } from "zod";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
-import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
 import StepLayout from "@components/step-layout/index.astro";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
 import { appendQueryParams } from "@utils/queryParams";
-
+import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
+import { z } from "zod";
 // Validation schemas
 const zipSchema = formSubmissionParser.pick({ zipCode: true });
 const estimateTypeSchema = shortTradeEnum;
@@ -51,13 +51,18 @@ async function initializePage(
   const city = searchParams.get("city") || null;
   const state = searchParams.get("state") || null;
 
+  // Get step information
+  const estimateType = parsedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "zip");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
     estimateType: validatedEstimateType,
     zipCode,
     city,
     state,
-    stepNumber: 1, // Will be updated client-side
-    totalSteps: 5, // Will be updated client-side
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -166,8 +171,8 @@ const formatEstimateTypeNoun = (type: string) =>
       stepHeader={`Let's find your local ${formatEstimateTypeNoun(pageState.estimateType)} pros`}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep
-      hasPrevStep={false}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
       delaySubmit={true}
       loadingButtonText="Validating your zip code..."

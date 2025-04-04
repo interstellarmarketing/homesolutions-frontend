@@ -11,10 +11,7 @@ import {
   shortTradeEnum,
   tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
-import {
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@consts/estimateSteps";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { appendQueryParams } from "@utils/queryParams";
@@ -71,7 +68,7 @@ function initializePage(
 
   // Get step information
   const stepNumber = getCurrentStepNumber(estimateType, "project-details");
-  const totalSteps = getStoreSteps(estimateType);
+  const totalSteps = getTotalSteps(estimateType);
 
   return {
     estimateType,
@@ -163,7 +160,7 @@ const hasInitialSelection = !!pageState.currentSelection;
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >

@@ -2,11 +2,10 @@
 import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { appendQueryParams } from "@utils/queryParams";
-import { getNextStep } from "src/consts/estimateSteps";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -30,11 +29,16 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
+  // Get step information
+  const estimateType = parsedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "is-homeowner");
+  const totalSteps = getTotalSteps(estimateType);
+
   return {
-    estimateType: parsedEstimateType.data,
+    estimateType,
     isHomeowner: searchParams.get("ho") === "1",
-    stepNumber: 1, // Will be updated client-side
-    totalSteps: 5, // Will be updated client-side
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -105,10 +109,10 @@ const currentSelection =
 
     <StepLayout
       stepHeader={stepHeader}
-      hasNextStep
-      hasPrevStep={false}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup

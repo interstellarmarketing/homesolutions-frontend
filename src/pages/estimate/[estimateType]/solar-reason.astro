@@ -152,7 +152,7 @@ const hasInitialSelection = !!pageState.currentSelection;
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep
+      hasNextStep={pageState.stepNumber < pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
