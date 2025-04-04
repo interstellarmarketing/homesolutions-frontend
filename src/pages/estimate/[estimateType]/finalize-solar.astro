@@ -1,121 +1,102 @@
 ---
-import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { estimateStepsStore } from "@stores/estimateStepsStore";
 import { appendQueryParams } from "@utils/queryParams";
-/**
- * Formats store data to match the backend submission schema
- */
-async function formatStoreForSubmission(
-  store: ReturnType<typeof estimateParser.parse>
-) {
-  const submission: any = {
-    // Required contact information
-    streetAddress: store.streetAddress,
-    creditScoreAboveOrEqual640: store.creditScoreAboveOrEqual640,
-    city: store.city,
-    state: store.state,
-    zipCode: store.zipCode,
-    firstName: store.firstName,
-    lastName: store.lastName,
-    email: store.email,
-    phone: store.phone,
-    ipAddress:
-      Astro?.request?.headers?.get("cf-connecting-ip") ||
-      Astro?.request?.headers?.get("x-real-ip") ||
-      Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
-      null,
+import { z } from "zod";
 
-    // Required qualification fields
-    isHomeowner: store.isHomeowner,
-    shortTrade: store.estimateShortTrade,
-    action: store.estimateAction || "unknown",
+// Create page-specific parser
+const pageSchema = z.object({
+  estimateType: shortTradeEnum,
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  zipCode: z.string().optional(),
+  streetAddress: z.string().optional(),
+  freedomLeadId: z.string().optional(),
+  isHomeowner: z.boolean().optional(),
+  shadedRoof: z.boolean().optional(),
+});
 
-    // Optional property information
-    homeType: store.homeType || null,
-
-    // PostHog person ID
-    posthogPersonId: store.trackingParams?.posthogPersonId || null,
-
-    // Marketing attribution from trackingParams
-    utmSource: store.trackingParams?.utm_source || null,
-    utmMedium: store.trackingParams?.utm_medium || null,
-    utmCampaign: store.trackingParams?.utm_campaign || null,
-    utmTerm: store.trackingParams?.utm_term || null,
-    utmContent: store.trackingParams?.utm_content || null,
-    utmId: null, // Add if you have this in your store
-    fbclid: store.trackingParams?.fbclid || null,
-    fbc: store.trackingParams?.fbc || null,
-    fbp: store.trackingParams?.fbp || null,
-    userAgent: store.trackingParams?.userAgent || null,
-    gclid: store.trackingParams?.gclid || null,
-    wbraid: store.trackingParams?.wbraid || null,
-    gbraid: store.trackingParams?.gbraid || null,
-    ssn: store.trackingParams?.ssn || null,
-    trustedFormCertUrl: store.trackingParams?.trustedFormCertUrl || null,
-    trustedFormPingUrl: store.trackingParams?.trustedFormPingUrl || null,
+interface PageState {
+  estimateType: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  zipCode: string;
+  streetAddress: string;
+  freedomLeadId: string;
+  isHomeowner: boolean;
+  shadedRoof: boolean;
+  ipAddress: string | null;
+  trackingParams: {
+    trustedFormCertUrl: string;
+    fbclid: string;
+    fbc: string;
+    fbp: string;
+    userAgent: string;
   };
-
-  if (store.estimateShortTrade === "roofing") {
-    submission.roofType = store.projectDetails;
-  }
-
-  switch (store.estimateType) {
-    case "solar":
-      submission.solarType = store.projectDetails;
-      break;
-  }
-
-  return submission;
 }
 
-/**
- * Processes the final submission and resets the store
- */
-async function processFinalSubmission(
-  existingStore: ReturnType<typeof estimateParser.parse>
-) {
-  try {
-    const formattedSubmission = await formatStoreForSubmission(existingStore);
-    const zDb = Astro.locals.runtime.env.DB;
-    const db = await zDb.D1Methods();
-    await db.insertSubmission(formattedSubmission as any);
-  } catch (error) {
-    console.error("Error processing submission:", error);
+function initializePage(
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams,
+  request: Request
+): PageState | Response {
+  const validatedEstimateType = shortTradeEnum.safeParse(params.estimateType);
+  if (!validatedEstimateType.success) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: appendQueryParams("/", searchParams) },
+    });
   }
-}
 
-// Validate route parameters
-const { estimateType } = Astro.params;
-if (!estimateType) {
-  return Astro.redirect(appendQueryParams("/", Astro.url.searchParams));
-}
-
-const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
-if (validatedEstimateType.success) {
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "thank-you",
+  return {
     estimateType: validatedEstimateType.data,
-  });
+    firstName: searchParams.get("firstName") || "",
+    lastName: searchParams.get("lastName") || "",
+    email: searchParams.get("email") || "",
+    phone: searchParams.get("phone") || "",
+    zipCode: searchParams.get("zipCode") || "",
+    streetAddress: searchParams.get("streetAddress") || "",
+    freedomLeadId: searchParams.get("freedomLeadId") || "",
+    isHomeowner: searchParams.get("isHomeowner") === "true",
+    shadedRoof: searchParams.get("shadedRoof") === "true",
+    ipAddress:
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-real-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0] ||
+      null,
+    trackingParams: {
+      trustedFormCertUrl: searchParams.get("trustedFormCertUrl") || "",
+      fbclid: searchParams.get("fbclid") || "",
+      fbc: searchParams.get("fbc") || "",
+      fbp: searchParams.get("fbp") || "",
+      userAgent: searchParams.get("userAgent") || "",
+    },
+  };
 }
 
-// Get and validate store data
-const existingStore = {
-  ...estimateParser.parse(estimateStore.get()),
-  ipAddress:
-    Astro?.request?.headers?.get("cf-connecting-ip") ||
-    Astro?.request?.headers?.get("x-real-ip") ||
-    Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
-    null,
-};
-await processFinalSubmission(existingStore);
+const pageState = initializePage(
+  Astro.params,
+  Astro.url.searchParams,
+  Astro.request
+);
+
+if (pageState instanceof Response) {
+  return pageState;
+}
 ---
 
-<EstimateWrapper title={estimateType} estimateType={estimateType}>
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
+  data-ip-address={pageState.ipAddress}
+>
   <div
     class="w-full h-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
+    data-estimate-type={pageState.estimateType}
   >
     <div class="portal-container w-full h-full" id="freedomportal">
       <iframe
@@ -129,59 +110,111 @@ await processFinalSubmission(existingStore);
         name="myiFrame"
         sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
         scrolling="no"
-        src=`https://bp-portal.freedomforever.com/open/affiliate/self-book?lead_id=${existingStore.freedomLeadId}&token=xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ&authorization_token=JiUIX1ZB1RlJcKRBqGjN&affiliate_id=Mjc1&campaign_id=MjM0NA%3D%3D&self_book_campaign_id=MjQwNQ%3D%3D&first_name=${existingStore.firstName}&zip_code=${existingStore.zipCode}&last_name=${existingStore.lastName}&phone=${existingStore.phone}&email=${existingStore.email}&address=${existingStore.streetAddress}&credit_score=&electric_bill=&utility_company=Other&Facebook_Ad_ID=&Trusted_Form=${existingStore.trackingParams?.trustedFormCertUrl}&home_ownership=${existingStore.isHomeowner ? 1 : 0}&Language=english&Roof_Shading=${existingStore.shadedRoof ? 1 : 0}&Bill_Discounts=No&Self_Set_Apt_Notes=&Facebook_Click_ID=${existingStore.trackingParams?.fbclid}&Facebook_Browser_ID=&Ip_Address=${existingStore.ipAddress}&User_Agent=${existingStore.trackingParams?.userAgent}`
+        src=`https://bp-portal.freedomforever.com/open/affiliate/self-book?lead_id=${pageState.freedomLeadId}&token=xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ&authorization_token=JiUIX1ZB1RlJcKRBqGjN&affiliate_id=Mjc1&campaign_id=MjM0NA%3D%3D&self_book_campaign_id=MjQwNQ%3D%3D&first_name=${pageState.firstName}&zip_code=${pageState.zipCode}&last_name=${pageState.lastName}&phone=${pageState.phone}&email=${pageState.email}&address=${pageState.streetAddress}&credit_score=&electric_bill=&utility_company=Other&Facebook_Ad_ID=&Trusted_Form=${pageState.trackingParams.trustedFormCertUrl}&home_ownership=${pageState.isHomeowner ? 1 : 0}&Language=english&Roof_Shading=${pageState.shadedRoof ? 1 : 0}&Bill_Discounts=No&Self_Set_Apt_Notes=&Facebook_Click_ID=${pageState.trackingParams.fbclid}&Facebook_Browser_ID=&Ip_Address=${pageState.ipAddress}&User_Agent=${pageState.trackingParams.userAgent}`
         style="border:0px #ffffff none;"></iframe>
     </div>
-
-    <script
-      define:vars={{
-        existingStore: existingStore,
-      }}
-    >
-      if (existingStore.creditScoreAboveOrEqual640 && existingStore.email) {
-        fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            system: {
-              timestamp: new Date().toISOString(),
-            },
-            client: {
-              email: existingStore.email,
-            },
-          }),
-        })
-          .then((response) => response.text())
-          .then((hashedEmail) => {
-            const req = {
-              event_name: "Lead",
-              event_id: crypto.randomUUID(),
-              event_time: new Date().toISOString(),
-              action_source: "website",
-              event_source_url: window.location.href,
-              user_data: {
-                sha256_email_address: hashedEmail,
-                fbc: existingStore.trackingParams?.fbc,
-                fbp: existingStore.trackingParams?.fbp,
-                client_user_agent: window.navigator.userAgent,
-                fn: existingStore.firstName,
-                ln: existingStore.lastName,
-                em: existingStore.email,
-                ph: existingStore.phone,
-                external_id: existingStore.trackingParams?.posthogPersonId,
-              },
-            };
-
-            const eventName = `completed_${existingStore.estimateShortTrade}_estimate`;
-
-            zaraz?.track(eventName, req);
-
-            console.log(`Zaraz event sent (${eventName}):`, req);
-          })
-          .catch((error) => console.error("Error:", error));
-      }
-    </script>
   </div>
 </EstimateWrapper>
+
+<script>
+  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { actions } from "astro:actions";
+
+  // Declare zaraz for TypeScript
+  declare const zaraz:
+    | {
+        track: (eventName: string, data: any) => void;
+      }
+    | undefined;
+
+  interface StoreWithIpAddress extends ReturnType<typeof estimateParser.parse> {
+    ipAddress?: string | null;
+  }
+
+  class FinalizeSolarController {
+    private estimateType: string;
+
+    constructor() {
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
+      this.initialize();
+    }
+
+    private async trackConversion(store: StoreWithIpAddress) {
+      try {
+        const response = await fetch(
+          "https://google-advanced-conversions.zsmithbiz1.workers.dev/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              system: {
+                timestamp: new Date().toISOString(),
+              },
+              client: {
+                email: store.email,
+              },
+            }),
+          }
+        );
+
+        const hashedEmail = await response.text();
+        const req = {
+          event_name: "Lead",
+          event_id: crypto.randomUUID(),
+          event_time: new Date().toISOString(),
+          action_source: "website",
+          event_source_url: window.location.href,
+          user_data: {
+            sha256_email_address: hashedEmail,
+            fbc: store.trackingParams?.fbc,
+            fbp: store.trackingParams?.fbp,
+            client_user_agent: window.navigator.userAgent,
+            fn: store.firstName,
+            ln: store.lastName,
+            em: store.email,
+            ph: store.phone,
+            external_id: store.trackingParams?.posthogPersonId,
+          },
+        };
+
+        const eventName = `completed_${store.estimateShortTrade}_estimate`;
+        zaraz?.track(eventName, req);
+        console.log(`Zaraz event sent (${eventName}):`, req);
+      } catch (error) {
+        console.error("Error tracking conversion:", error);
+      }
+    }
+
+    private initialize() {
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "finalize-solar",
+        estimateType: validatedEstimateType.data,
+      });
+
+      // Process submission
+      const store = estimateParser.parse(estimateStore.get());
+      const ipAddress =
+        document
+          .querySelector("[data-ip-address]")
+          ?.getAttribute("data-ip-address") || null;
+      actions.processSubmission({ ...store, ipAddress });
+      this.trackConversion({ ...store, ipAddress });
+    }
+  }
+
+  new FinalizeSolarController();
+</script>

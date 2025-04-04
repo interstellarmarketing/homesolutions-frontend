@@ -1,137 +1,101 @@
 ---
-import { estimateStore, estimateParser } from "@stores/estimateProgress";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
-import StepLayout from "@components/step-layout/index.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
+import StepLayout from "@components/step-layout/index.astro";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
+import { z } from "zod";
 
-/**
- * Processes the email form submission and handles final submission logic
- */
-async function processEmailForm(
-  formData: FormData,
-  existingStore: Record<string, any>,
-  estimateType: string
-): Promise<Response | null> {
+// Create email-specific parser
+const emailSchema = z.object({
+  email: z.string().email(),
+});
+
+interface PageState {
+  estimateType: string;
+  email: string | undefined;
+  stepNumber: number;
+  totalSteps: number;
+}
+
+function initializePage(
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams
+): PageState | Response {
+  const validatedEstimateType = shortTradeEnum.safeParse(params.estimateType);
+  if (!validatedEstimateType.success) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
+  }
+
+  return {
+    estimateType: validatedEstimateType.data,
+    email: searchParams.get("email") || undefined,
+    stepNumber: 1, // Will be updated client-side
+    totalSteps: 5, // Will be updated client-side
+  };
+}
+
+async function handleFormSubmission(request: Request, estimateType: string) {
+  const formData = await request.formData();
   const emailData = {
     email: formData.get("emailInput"),
   };
 
-  const emailParsed = emailParser.safeParse(emailData);
-
+  const emailParsed = emailSchema.safeParse(emailData);
   if (!emailParsed.success) {
     return null;
   }
 
-  // Update store with new email
-  const updatedStore = {
-    ...existingStore,
-    ...emailParsed.data,
-  };
+  // Pass email as URL parameter
+  const url = new URL(request.url);
+  url.searchParams.set("email", emailParsed.data.email);
 
-  estimateStore.set(updatedStore);
-
-  // Get the next step from the store
-  const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "email");
-
-    if (nextStep) {
-      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-        },
-      });
-    }
-  }
-
-  // Fallback to original logic
-  const redirectUrl = `/estimate/${estimateType}/phone-number`;
-  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
-}
-
-// Route parameter validation
-const { estimateType } = Astro.params;
-if (!estimateType) {
-  return Astro.redirect("/");
-}
-
-const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
-if (validatedEstimateType.success) {
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "email",
-    estimateType: validatedEstimateType.data,
+  // The next step will be determined client-side
+  const redirectUrl = `/estimate/${estimateType}/`;
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: appendQueryParams(redirectUrl, url.searchParams),
+    },
   });
 }
 
-// Initialize store and form state
-const existingStore = estimateStore.get();
-const { email } = existingStore;
-
-// Create email-specific parser
-const emailParser = estimateParser.pick({
-  email: true,
-});
-
-// Validate existing email data
-const existingEmailParsed = emailParser.safeParse({ email });
-
-// Handle form submission
+// Process the page based on the request method
+let pageState: PageState | Response;
 if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const response = await processEmailForm(
-    formData,
-    existingStore,
-    estimateType
+  const result = await handleFormSubmission(
+    Astro.request,
+    Astro.params.estimateType || ""
   );
-  if (response) return response;
+  if (result) {
+    return result;
+  }
 }
 
-// Get previous page URL for back button
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "email")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${estimateType}/${prevStep}`
-  : `/estimate/${estimateType}/address`;
+pageState = initializePage(Astro.params, Astro.url.searchParams);
 
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "email")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
+if (pageState instanceof Response) {
+  return pageState;
+}
 
-const getStepHeader = () => {
-  switch (estimateType) {
-    default:
-      return "What's the best email to reach you?";
-  }
-};
-const stepHeader = getStepHeader();
+const stepHeader = "What's the best email to reach you?";
 ---
 
-<EstimateWrapper title={estimateType} estimateType={estimateType}>
-  <form method="post">
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
+>
+  <form
+    method="post"
+    id="emailForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <StepLayout
       stepHeader={stepHeader}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
-      estimateType={estimateType}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      estimateType={pageState.estimateType}
       hasNextStep
-      hasPrevStep={stepNumber > 1}
+      hasPrevStep={false}
     >
       <div class="flex flex-col gap-4 text-center rounded-lg container">
         <div class="w-full mx-auto flex flex-col gap-2">
@@ -158,7 +122,7 @@ const stepHeader = getStepHeader();
               placeholder="Enter email address"
               id="emailInput"
               name="emailInput"
-              value={email ?? ""}
+              value={pageState.email ?? ""}
               autocomplete="email"
               aria-label="Email address"
             />
@@ -170,8 +134,15 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script>
-  import { estimateParser } from "@stores/estimateProgress";
+  import { estimateParser, estimateStore } from "@stores/estimateProgress";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import {
+    getNextStep,
+    getCurrentStepNumber,
+    getTotalSteps,
+  } from "@consts/estimateSteps";
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
 
   /**
    * Controller class for email form functionality
@@ -180,7 +151,9 @@ const stepHeader = getStepHeader();
   class EmailFormController {
     private emailInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
     private emailParser = estimateParser.pick({ email: true });
+    private estimateType: string;
 
     constructor() {
       // Initialize DOM elements
@@ -190,6 +163,11 @@ const stepHeader = getStepHeader();
       this.submitButton = document.getElementById(
         "nextStepButton"
       ) as HTMLButtonElement;
+      this.form = document.getElementById("emailForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
       this.initialize();
     }
 
@@ -213,25 +191,88 @@ const stepHeader = getStepHeader();
     };
 
     /**
-     * Initializes event listeners
-     * Sets up email input handling and checks initial state
+     * Initializes event listeners and store state
      */
     private initialize() {
-      if (this.emailInput) {
-        // Check initial value
-        if (this.emailInput.value) {
-          const isValid = this.emailParser.safeParse({
-            email: this.emailInput.value,
-          }).success;
+      if (!this.emailInput || !this.form || !this.estimateType) return;
 
-          if (this.submitButton && isValid) {
-            this.submitButton.setAttribute("aria-disabled", "false");
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "email",
+        estimateType: validatedEstimateType.data,
+      });
+
+      // Update step info
+      const stepNumber = getCurrentStepNumber(
+        validatedEstimateType.data,
+        "email"
+      );
+      const totalSteps = getTotalSteps(validatedEstimateType.data);
+      document
+        .querySelector("[data-step-number]")
+        ?.setAttribute("data-step-number", String(stepNumber));
+      document
+        .querySelector("[data-total-steps]")
+        ?.setAttribute("data-total-steps", String(totalSteps));
+
+      // Check initial value
+      if (this.emailInput.value) {
+        const isValid = this.emailParser.safeParse({
+          email: this.emailInput.value,
+        }).success;
+
+        if (this.submitButton && isValid) {
+          this.submitButton.setAttribute("aria-disabled", "false");
+        }
+      }
+
+      // Set up event listeners
+      this.emailInput.addEventListener("input", this.handleEmailInput);
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+    }
+
+    private handleSubmit = (e: Event) => {
+      e.preventDefault();
+
+      if (!this.form || !this.emailInput) return;
+
+      const emailValue = this.emailInput.value;
+      const emailParsed = this.emailParser.safeParse({ email: emailValue });
+
+      if (emailParsed.success) {
+        // Update store
+        const existingStore = estimateStore.get();
+        estimateStore.set({
+          ...existingStore,
+          email: emailValue,
+        });
+
+        // Get next step
+        const validatedEstimateType = shortTradeEnum.safeParse(
+          this.estimateType
+        );
+        if (validatedEstimateType.success) {
+          const nextStep = getNextStep(validatedEstimateType.data, "email");
+          if (nextStep) {
+            const url = new URL(window.location.href);
+            url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
+            window.location.href = url.toString();
+            return;
           }
         }
 
-        this.emailInput.addEventListener("input", this.handleEmailInput);
+        // Fallback to phone number
+        const url = new URL(window.location.href);
+        url.pathname = `/estimate/${this.estimateType}/phone-number`;
+        window.location.href = url.toString();
       }
-    }
+    };
   }
 
   crossPlatformLoader(() => new EmailFormController());

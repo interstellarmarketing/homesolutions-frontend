@@ -6,20 +6,20 @@ const pingUrl = estimateStore.get().trackingParams?.trustedFormPingUrl;
 ---
 
 <script>
-  import { actions } from "astro:actions";
+  import { estimateStore } from "@stores/estimateProgress";
 
   // starts a loop with interval of 500ms
   var interval = setInterval(getCertUrl, 500);
   async function getCertUrl() {
     var certUrl =
-      document.getElementsByName("xxTrustedFormCertUrl") &&
+      document.getElementsByName("xxTrustedFormCertUrl")[0] &&
       (
         document.getElementsByName(
           "xxTrustedFormCertUrl"
         )[0] as HTMLInputElement
       ).value;
     var pingUrl =
-      document.getElementsByName("xxTrustedFormPingUrl") &&
+      document.getElementsByName("xxTrustedFormPingUrl")[0] &&
       (
         document.getElementsByName(
           "xxTrustedFormPingUrl"
@@ -27,14 +27,17 @@ const pingUrl = estimateStore.get().trackingParams?.trustedFormPingUrl;
       ).value;
     // check if the certificate has been generated
     if (certUrl && pingUrl) {
-      // Update the store with the new values
-      const formData = new FormData();
-      formData.append("certUrl", certUrl);
-      formData.append("pingUrl", pingUrl);
+      // Update the store with the new values directly
+      const existingStore = estimateStore.get();
+      const existingTrackingParams = existingStore.trackingParams || {};
 
-      const { data, error } = await actions.updateTrustedFormParams({
-        certUrl,
-        pingUrl,
+      estimateStore.set({
+        ...existingStore,
+        trackingParams: {
+          ...existingTrackingParams,
+          trustedFormCertUrl: certUrl,
+          trustedFormPingUrl: pingUrl,
+        },
       });
 
       // stops the loop

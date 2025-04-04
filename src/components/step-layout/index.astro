@@ -151,8 +151,8 @@ const estimateHeader = getEstimateHeader(estimateType);
     estimateSteps,
     getCurrentStepIndex,
     getTotalSteps,
-    type EstimateStepsState,
-  } from "@stores/estimateStepsStore";
+  } from "src/consts/estimateSteps";
+  import { type EstimateStepsState } from "@stores/estimateStepsStore";
   import posthog from "posthog-js";
 
   class StepLayoutWrapper extends HTMLElement {}

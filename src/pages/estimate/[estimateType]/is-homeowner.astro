@@ -1,19 +1,12 @@
 ---
 import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { estimateStore } from "@stores/estimateProgress";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
 import { appendQueryParams } from "@utils/queryParams";
+import { getNextStep } from "src/consts/estimateSteps";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -22,11 +15,14 @@ const homeownerOptions = ["I Own My Home", "I Rent My Home"];
 
 interface PageState {
   estimateType: string;
-  currentSelection: boolean | undefined;
+  isHomeowner: boolean | undefined;
+  stepNumber: number;
+  totalSteps: number;
 }
 
 function initializePage(
-  params: Record<string, string | undefined>
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -34,15 +30,11 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "is-homeowner",
-    estimateType: parsedEstimateType.data,
-  });
-
   return {
     estimateType: parsedEstimateType.data,
-    currentSelection: estimateStore.get().isHomeowner,
+    isHomeowner: searchParams.get("ho") === "1",
+    stepNumber: 1, // Will be updated client-side
+    totalSteps: 5, // Will be updated client-side
   };
 }
 
@@ -53,74 +45,45 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   // Convert the string value to boolean
   const isHomeowner = homeowner === "I Own My Home";
 
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    isHomeowner: !!isHomeowner,
+  // Pass homeowner data as URL parameter
+  const url = new URL(request.url);
+  url.searchParams.set("ho", isHomeowner ? "1" : "0");
+
+  // The next step will be determined client-side
+  const redirectUrl = `/estimate/${estimateType}/`;
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: appendQueryParams(redirectUrl, url.searchParams),
+    },
   });
-  Astro.url.searchParams.append("ho", isHomeowner ? "1" : "0");
-
-  // Get the next step from the store
-  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "is-homeowner");
-
-    if (nextStep) {
-      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-        },
-      });
-    }
-  }
-
-  // Fallback to original logic
-  const redirectUrl = `/estimate/${estimateType}/contact`;
-  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
 }
 
-const pageState = initializePage(Astro.params);
+// Process the page based on the request method
+let pageState: PageState | Response;
+if (Astro.request.method === "POST") {
+  const result = await handleFormSubmission(
+    Astro.request,
+    Astro.params.estimateType || ""
+  );
+  if (result) {
+    return result;
+  }
+}
+
+pageState = initializePage(Astro.params, Astro.url.searchParams);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
-if (Astro.request.method === "POST") {
-  const response = await handleFormSubmission(
-    Astro.request,
-    pageState.estimateType
-  );
-  if (response) return response;
-}
-
-// Get previous page URL for back button
-const validatedEstimateType = estimateTypeSchema.safeParse(
-  pageState.estimateType
-);
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "is-homeowner")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/home-type`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "is-homeowner")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
 const stepHeader = "Do you own your home?";
 
 // Transform boolean value to string for the radio component
 const currentSelection =
-  pageState.currentSelection === undefined
+  pageState.isHomeowner === undefined
     ? undefined
-    : pageState.currentSelection
+    : pageState.isHomeowner
       ? "I Own My Home"
       : "I Rent My Home";
 ---
@@ -129,21 +92,23 @@ const currentSelection =
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
 >
-  <form method="post">
+  <form
+    method="post"
+    id="homeownerForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <input
       type="hidden"
       id="hasInitialSelection"
-      value={pageState.currentSelection !== undefined
-        ? "I Own My Home"
-        : "I Rent My Home"}
+      value={pageState.isHomeowner !== undefined ? "true" : "false"}
     />
 
     <StepLayout
       stepHeader={stepHeader}
       hasNextStep
-      hasPrevStep={stepNumber > 1}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
+      hasPrevStep={false}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
@@ -154,52 +119,123 @@ const currentSelection =
       />
     </StepLayout>
   </form>
+</EstimateWrapper>
 
-  <script>
-    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+<script>
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { getNextStep } from "src/consts/estimateSteps";
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
 
-    class FormController {
-      private radioButtons: NodeListOf<HTMLInputElement>;
-      private submitButton: HTMLButtonElement | null;
+  class FormController {
+    private radioButtons: NodeListOf<HTMLInputElement>;
+    private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
+    private estimateType: string;
 
-      constructor() {
-        this.radioButtons = document.querySelectorAll(
-          'input[name="homeowner"]'
-        );
-        this.submitButton = document.getElementById(
-          "nextStepButton"
-        ) as HTMLButtonElement;
-        this.initialize();
-      }
-
-      private initialize() {
-        if (!this.submitButton || !this.radioButtons.length) return;
-
-        const hasInitialSelection = document.getElementById(
-          "hasInitialSelection"
-        ) as HTMLInputElement;
-        if (hasInitialSelection?.value === "true") {
-          this.submitButton.setAttribute("aria-disabled", "false");
-        }
-
-        this.radioButtons.forEach((radio) => {
-          radio.addEventListener("change", () => this.handleRadioChange());
-        });
-      }
-
-      private handleRadioChange() {
-        if (!this.submitButton) return;
-
-        const isSelected = Array.from(this.radioButtons).some(
-          (radio) => radio.checked
-        );
-        this.submitButton.setAttribute(
-          "aria-disabled",
-          !isSelected ? "true" : "false"
-        );
-      }
+    constructor() {
+      this.radioButtons = document.querySelectorAll('input[name="homeowner"]');
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.form = document.getElementById("homeownerForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
+      this.initialize();
     }
 
-    crossPlatformLoader(() => new FormController());
-  </script>
-</EstimateWrapper>
+    private initialize() {
+      if (
+        !this.submitButton ||
+        !this.radioButtons.length ||
+        !this.form ||
+        !this.estimateType
+      )
+        return;
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "is-homeowner",
+        estimateType: validatedEstimateType.data,
+      });
+
+      const hasInitialSelection = document.getElementById(
+        "hasInitialSelection"
+      ) as HTMLInputElement;
+      if (hasInitialSelection?.value === "true") {
+        this.submitButton.setAttribute("aria-disabled", "false");
+      }
+
+      this.radioButtons.forEach((radio) => {
+        radio.addEventListener("change", () => this.handleRadioChange());
+      });
+
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+    }
+
+    private handleRadioChange() {
+      if (!this.submitButton) return;
+
+      const isSelected = Array.from(this.radioButtons).some(
+        (radio) => radio.checked
+      );
+      this.submitButton.setAttribute(
+        "aria-disabled",
+        !isSelected ? "true" : "false"
+      );
+    }
+
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
+
+      if (!this.form) return;
+
+      const homeowner = Array.from(this.radioButtons).find(
+        (radio) => radio.checked
+      )?.value;
+
+      if (!homeowner) return;
+
+      // Convert the string value to boolean
+      const isHomeowner = homeowner === "I Own My Home";
+
+      // Update store
+      const existingStore = estimateStore.get();
+      estimateStore.set({
+        ...existingStore,
+        isHomeowner,
+      });
+
+      // Get next step
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(
+          validatedEstimateType.data,
+          "is-homeowner"
+        );
+        if (nextStep) {
+          const url = new URL(window.location.href);
+          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
+          window.location.href = url.toString();
+          return;
+        }
+      }
+
+      // Fallback to contact
+      const url = new URL(window.location.href);
+      url.pathname = `/estimate/${this.estimateType}/contact`;
+      window.location.href = url.toString();
+    }
+  }
+
+  crossPlatformLoader(() => new FormController());
+</script>

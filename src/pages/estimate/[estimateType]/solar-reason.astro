@@ -6,20 +6,15 @@
  */
 
 import { z } from "zod";
-import { estimateStore } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
 } from "@assets/info/estimateOptions";
 import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
+} from "src/consts/estimateSteps";
 import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { appendQueryParams } from "@utils/queryParams";
@@ -45,6 +40,8 @@ interface PageState {
   estimateType: string;
   tradeDescription: string | undefined;
   currentSelection: string | undefined;
+  stepNumber: number;
+  totalSteps: number;
 }
 
 /**
@@ -53,7 +50,8 @@ interface PageState {
  * @returns {PageState | Response} Either the page state or a redirect response
  */
 function initializePage(
-  params: Record<string, string | undefined>
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams
 ): PageState | Response {
   // Validate the estimate type from URL parameters
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
@@ -64,21 +62,21 @@ function initializePage(
 
   const estimateType = parsedEstimateType.data;
 
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "solar-reason",
-    estimateType: estimateType,
-  });
-
   // Find the trade options for the current estimate type
   const tradeOptions = tradeOptionDescriptions.find(
-    (option) => option.shortTrade === activeEstimateTypeStore.get()
+    (option) => option.shortTrade === estimateType
   );
+
+  // Get step information
+  const stepNumber = getCurrentStepNumber(estimateType, "solar-reason");
+  const totalSteps = getStoreSteps(estimateType);
 
   return {
     estimateType,
     tradeDescription: tradeOptions?.typeDescription,
-    currentSelection: estimateStore.get().solarReason || undefined,
+    currentSelection: searchParams.get("solarReason") || undefined,
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -96,34 +94,17 @@ async function handleFormSubmission(request: Request, estimateType: string) {
     return null;
   }
 
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    solarReason: actionParsed.data,
-  });
+  // Pass solarReason as URL parameter
+  const url = new URL(request.url);
+  url.searchParams.set("solarReason", actionParsed.data);
 
-  // Get the next step from the store
-  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "solar-reason");
-
-    if (nextStep) {
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(
-            `/estimate/${estimateType}/${nextStep}`,
-            Astro.url.searchParams
-          ),
-        },
-      });
-    }
-  }
-
-  // Fallback to original logic if next step not found
+  // The next step will be determined client-side
+  const redirectUrl = `/estimate/${estimateType}/`;
   return new Response(null, {
     status: 302,
-    headers: { Location: `/estimate/${estimateType}/address` },
+    headers: {
+      Location: appendQueryParams(redirectUrl, url.searchParams),
+    },
   });
 }
 
@@ -139,39 +120,17 @@ if (Astro.request.method === "POST") {
   }
 }
 
-pageState = initializePage(Astro.params);
+pageState = initializePage(Astro.params, Astro.url.searchParams);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
-// Get previous page URL for back button
-const validatedEstimateType = estimateTypeSchema.safeParse(
-  pageState.estimateType
-);
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "solar-reason")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/project-details`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "solar-reason")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
 // Always set the specific solar question
 const stepHeader = "What's the main reason you're interested in going solar?";
 
-const existingStore = estimateStore.get();
-
-if (existingStore.solarReason) {
-  pageState.currentSelection = existingStore.solarReason;
-}
+// Check if we have a current selection from URL parameters
+const hasInitialSelection = !!pageState.currentSelection;
 ---
 
 <!-- Template section -->
@@ -179,18 +138,22 @@ if (existingStore.solarReason) {
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
 >
-  <form method="post">
+  <form
+    method="post"
+    id="solarReasonForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <input
       type="hidden"
       id="hasInitialSelection"
-      value={existingStore.solarReason ? "true" : "false"}
+      value={hasInitialSelection ? "true" : "false"}
     />
     <StepLayout
       stepHeader={stepHeader}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
       hasNextStep
-      hasPrevStep={stepNumber > 1}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
@@ -198,7 +161,6 @@ if (existingStore.solarReason) {
         name="action"
         currentSelection={pageState.currentSelection}
         layout="flex"
-        capitalize={true}
       />
     </StepLayout>
   </form>
@@ -206,6 +168,10 @@ if (existingStore.solarReason) {
 
 <script>
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { getNextStep } from "src/consts/estimateSteps";
 
   /**
    * Controls the form behavior and button states
@@ -213,12 +179,20 @@ if (existingStore.solarReason) {
   class FormController {
     private radioButtons: NodeListOf<HTMLInputElement>;
     private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
+    private estimateType: string;
 
     constructor() {
       this.radioButtons = document.querySelectorAll('input[name="action"]');
+      console.log("radio buttons", this.radioButtons);
       this.submitButton = document.getElementById(
         "nextStepButton"
       ) as HTMLButtonElement;
+      this.form = document.getElementById("solarReasonForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
       this.initialize();
     }
 
@@ -226,7 +200,26 @@ if (existingStore.solarReason) {
      * Sets up event listeners for radio buttons and checks initial state
      */
     private initialize() {
-      if (!this.submitButton || !this.radioButtons.length) return;
+      console.log("estimate type", this.estimateType);
+      if (
+        !this.submitButton ||
+        !this.radioButtons.length ||
+        !this.form ||
+        !this.estimateType
+      )
+        return;
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "solar-reason",
+        estimateType: validatedEstimateType.data,
+      });
 
       // Check hidden field for initial state
       const hasInitialSelection =
@@ -240,10 +233,14 @@ if (existingStore.solarReason) {
       this.radioButtons.forEach((radio) => {
         radio.addEventListener("change", () => this.handleRadioChange());
       });
+
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
     }
 
     private handleRadioChange() {
       if (!this.submitButton) return;
+
+      console.log("radio changed", this.radioButtons);
 
       const isSelected = Array.from(this.radioButtons).some(
         (radio) => radio.checked
@@ -252,6 +249,53 @@ if (existingStore.solarReason) {
         "aria-disabled",
         !isSelected ? "true" : "false"
       );
+    }
+
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
+
+      if (!this.form) return;
+
+      const selectedReason = Array.from(this.radioButtons).find(
+        (radio) => radio.checked
+      )?.value;
+
+      if (!selectedReason) return;
+
+      // Update store
+      const existingStore = estimateStore.get();
+      estimateStore.set({
+        ...existingStore,
+        solarReason: selectedReason,
+      });
+
+      // Get next step
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(
+          validatedEstimateType.data,
+          "solar-reason"
+        );
+        if (nextStep) {
+          const url = new URL(window.location.href);
+          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
+
+          // Add solar reason as URL parameter
+          url.searchParams.set("solarReason", selectedReason);
+
+          window.location.href = url.toString();
+          return;
+        }
+      }
+
+      // Fallback to electric bill
+      const url = new URL(window.location.href);
+      url.pathname = `/estimate/${this.estimateType}/electric-bill`;
+
+      // Add solar reason as URL parameter
+      url.searchParams.set("solarReason", selectedReason);
+
+      window.location.href = url.toString();
     }
   }
 

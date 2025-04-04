@@ -1,4 +1,4 @@
-import { atom } from "nanostores";
+import { persistentAtom } from '@nanostores/persistent'
 import { z } from "astro/zod";
 
 export const estimateParser = z.object({
@@ -49,6 +49,25 @@ export const estimateParserLoose = estimateParser.partial();
 
 export type EstimateStoreTypeLoose = z.infer<typeof estimateParserLoose>;
 
-export const estimateStore = atom<EstimateStoreTypeLoose>({});
+export const estimateStore = persistentAtom<EstimateStoreTypeLoose>(
+  'estimate-store',
+  {},
+  {
+    encode: JSON.stringify,
+    decode: JSON.parse
+  }
+);
 
 export type TrackingParams = EstimateStoreType["trackingParams"];
+
+
+export function resetEstimateFields() {
+  const {
+    estimateType,
+    estimateShortTrade,
+    estimateAction,
+    ...existingFields
+  } = estimateStore.get()
+
+  return estimateStore.set({ ...existingFields })
+}

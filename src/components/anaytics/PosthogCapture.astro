@@ -1,13 +1,22 @@
 <script>
   import posthog from "posthog-js";
-  import { actions } from "astro:actions";
+  import { estimateStore } from "@stores/estimateProgress";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   // Wait for PostHog to initialize
   crossPlatformLoader(() => {
     // Get the current PostHog person ID
     const personId = posthog.get_distinct_id();
 
-    // Update the estimate store with the PostHog person ID using the action
-    actions.updatePosthogPersonId({ personId });
+    // Update the estimate store directly
+    const existingStore = estimateStore.get();
+    const existingTrackingParams = existingStore.trackingParams || {};
+
+    estimateStore.set({
+      ...existingStore,
+      trackingParams: {
+        ...existingTrackingParams,
+        posthogPersonId: personId,
+      },
+    });
   });
 </script>

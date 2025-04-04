@@ -1,15 +1,21 @@
 ---
-import { estimateStore } from "@stores/estimateProgress";
-import { estimateStepsStore, getFirstStep } from "@stores/estimateStepsStore";
 import {
   shortTradesConst,
   type ShortTradeEnum,
 } from "@assets/info/estimateOptions";
+import { getFirstStep } from "@consts/index";
 import { appendQueryParams } from "@utils/queryParams";
+
+/**
+ * This is the entry point for estimate flows
+ * It redirects to the first step in the flow based on the estimate type
+ * URL parameters are passed along to the first step
+ */
 
 // Get estimate type from URL
 const { estimateType } = Astro.params;
 
+// Validate estimate type
 if (
   !estimateType ||
   !shortTradesConst.includes(estimateType as ShortTradeEnum)
@@ -17,39 +23,18 @@ if (
   return Astro.redirect("/");
 }
 
-// Get all URL search params
+// Determine first step based on estimate type
+let firstStep = getFirstStep(estimateType as ShortTradeEnum);
+
+// Get all URL search params to pass along
 const searchParams = Astro.url.searchParams;
-const trackingParams = {
-  utm_source: searchParams.get("utm_source") || undefined,
-  utm_medium: searchParams.get("utm_medium") || undefined,
-  utm_campaign: searchParams.get("utm_campaign") || undefined,
-  utm_content: searchParams.get("utm_content") || undefined,
-  utm_term: searchParams.get("utm_term") || undefined,
-  fbclid: searchParams.get("fbclid") || undefined,
-  gclid: searchParams.get("gclid") || undefined,
-  wbraid: searchParams.get("wbraid") || undefined,
-  gbraid: searchParams.get("gbraid") || undefined,
-  ssn: searchParams.get("ssn") || undefined,
-};
 
-// Update store with tracking params
-const existingStore = estimateStore.get();
-estimateStore.set({
-  ...existingStore,
-  trackingParams: Object.fromEntries(
-    Object.entries(trackingParams).filter(([_, v]) => v !== undefined)
-  ),
-});
-
-const firstStep = getFirstStep(estimateType as ShortTradeEnum);
-
-// Initialize the estimate steps store
-estimateStepsStore.set({
-  currentStep: firstStep,
-  estimateType: estimateType as ShortTradeEnum,
-});
-
-// Redirect to zip page with query params preserved
+// Redirect to first step with query params preserved
 const redirectUrl = `/estimate/${estimateType}/${firstStep}`;
 return Astro.redirect(appendQueryParams(redirectUrl, searchParams));
 ---
+
+<!-- 
+This page serves as a router only and will redirect to the appropriate first step
+No Astro component is rendered
+-->

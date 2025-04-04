@@ -1,20 +1,23 @@
 ---
-import { estimateStore, estimateParser } from "@stores/estimateProgress";
-import { resultIdStore } from "@stores/stashedResultId";
-import { storeSuccessResult } from "@utils/kv/storedResults";
-import { resetEstimateFields } from "@utils/stores/resetFields";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   shortTradeDiscriminatedUnion,
   shortTradeEnum,
 } from "@assets/info/estimateOptions";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
-  estimateStepsStore,
+  estimateParser,
+  estimateStore,
+  resetEstimateFields,
+} from "@stores/estimateProgress";
+import { estimateStepsStore } from "@stores/estimateStepsStore";
+import {
   getNextStep,
   getPreviousStep,
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
+} from "src/consts/estimateSteps";
+import { resultIdStore } from "@stores/stashedResultId";
+import { storeSuccessResult } from "@utils/kv/storedResults";
 import { appendQueryParams } from "@utils/queryParams";
 
 const { estimateType } = Astro.params;
@@ -170,6 +173,7 @@ const totalSteps = validatedEstimateType.success
     <form
       class="flex flex-col items-center text-center gap-4 my-4"
       method="post"
+      data-estimate-type={estimateType}
     >
       <input
         type="tel"

@@ -51,8 +51,9 @@ if (validationResult instanceof Response) {
 
 <estimate-wrapper
   data-estimate-steps-store={JSON.stringify(estimateStepsStore.get())}
+  estimateType={validationResult}
 >
-  <Layout title={title}>
+  <Layout title={title} data-estimate-type={validationResult}>
     <slot />
   </Layout>
 </estimate-wrapper>
@@ -62,10 +63,10 @@ if (validationResult instanceof Response) {
     estimateSteps,
     getCurrentStepIndex,
     getTotalSteps,
-    type EstimateStepsState,
-  } from "@stores/estimateStepsStore";
+  } from "src/consts/estimateSteps";
+  import { type EstimateStepsState } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { actions } from "astro:actions";
+  import { estimateStore } from "@stores/estimateProgress";
   import posthog from "posthog-js";
 
   class EstimateWrapper extends HTMLElement {
@@ -111,6 +112,26 @@ if (validationResult instanceof Response) {
   customElements.define("estimate-wrapper", EstimateWrapper);
 
   crossPlatformLoader(() => {
-    actions.updateUserAgent({ userAgent: window.navigator.userAgent });
+    // Update user agent directly in the store
+    const existingStore = estimateStore.get();
+    const existingTrackingParams = existingStore.trackingParams || {};
+
+    const estimateType =
+      document
+        .querySelector("[data-estimate-type]")
+        ?.getAttribute("data-estimate-type") || "";
+
+    estimateStore.set({
+      ...existingStore,
+      estimateType,
+      trackingParams: {
+        ...existingTrackingParams,
+        userAgent: window.navigator.userAgent,
+      },
+    });
+  });
+
+  estimateStore.subscribe((state) => {
+    console.log(state);
   });
 </script>
