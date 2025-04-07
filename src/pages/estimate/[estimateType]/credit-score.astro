@@ -1,19 +1,10 @@
 ---
-import { z } from "zod";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { estimateParser, estimateStore } from "@stores/estimateProgress";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { getTotalSteps } from "@utils/layout";
-import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
+import StepLayout from "@components/step-layout/index.astro";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -22,11 +13,13 @@ const creditScoreOptions = ["Credit score above 640", "Credit score below 640"];
 
 interface PageState {
   estimateType: string;
-  currentSelection: boolean | undefined;
+  stepNumber: number;
+  totalSteps: number;
 }
 
 function initializePage(
-  params: Record<string, string | undefined>
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -34,15 +27,15 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "credit-score",
-    estimateType: parsedEstimateType.data,
-  });
+  // Get step information
+  const estimateType = parsedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "credit-score");
+  const totalSteps = getTotalSteps(estimateType);
 
   return {
-    estimateType: parsedEstimateType.data,
-    currentSelection: estimateStore.get().creditScoreAboveOrEqual640,
+    estimateType,
+    stepNumber,
+    totalSteps,
   };
 }
 
@@ -53,180 +46,229 @@ async function handleFormSubmission(request: Request, estimateType: string) {
   // Convert the string value to boolean
   const creditScoreAboveOrEqual640 = creditScore === "Credit score above 640";
 
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    creditScoreAboveOrEqual640: !!creditScoreAboveOrEqual640,
+  // Pass creditScore data as URL parameter
+  const url = new URL(request.url);
+
+  // The next step will be determined client-side
+  const redirectUrl = `/estimate/${estimateType}/`;
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: appendQueryParams(redirectUrl, url.searchParams),
+    },
   });
-  Astro.url.searchParams.append("csh", creditScoreAboveOrEqual640 ? "1" : "0");
-
-  // Get the next step from the store
-  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "credit-score");
-
-    if (nextStep) {
-      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-        },
-      });
-    }
-  }
-
-  // Fallback to original logic
-  const redirectUrl = `/estimate/${estimateType}/contact`;
-  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
 }
 
-const pageState = initializePage(Astro.params);
+// Process the page based on the request method
+let pageState: PageState | Response;
+
+pageState = initializePage(Astro.params, Astro.url.searchParams);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
-if (Astro.request.method === "POST") {
-  const response = await handleFormSubmission(
-    Astro.request,
-    pageState.estimateType
-  );
-  if (response) return response;
-}
-
-// Get previous page URL for back button
-const validatedEstimateType = estimateTypeSchema.safeParse(
-  pageState.estimateType
-);
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "credit-score")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/home-type`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "credit-score")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
 const stepHeader = "What is your credit score?";
-
-// Transform boolean value to string for the radio component
-const currentSelection =
-  pageState.currentSelection === undefined
-    ? undefined
-    : pageState.currentSelection
-      ? "Credit score above 640"
-      : "Credit score below 640";
-
-const existingStore = estimateStore.get();
 ---
 
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
 >
-  <form method="post">
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.currentSelection !== undefined
-        ? "Credit score above 640"
-        : "Credit score below 640"}
-    />
-
+  <form
+    method="post"
+    id="creditScoreForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <StepLayout
       stepHeader={stepHeader}
-      hasNextStep
-      hasPrevStep={stepNumber > 1}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={creditScoreOptions}
         name="creditScore"
-        currentSelection={currentSelection}
+        currentSelection={undefined}
         layout="grid2"
       />
     </StepLayout>
   </form>
+</EstimateWrapper>
 
-  <script>
-    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+<script>
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { getNextStep } from "src/consts/estimateSteps";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
-    class FormController {
-      private radioButtons: NodeListOf<HTMLInputElement>;
-      private submitButton: HTMLButtonElement | null;
+  // Declare zaraz for TypeScript
+  declare const zaraz:
+    | {
+        track: (eventName: string, data: any) => void;
+      }
+    | undefined;
 
-      constructor() {
-        this.radioButtons = document.querySelectorAll(
-          'input[name="creditScore"]'
-        );
-        this.submitButton = document.getElementById(
-          "nextStepButton"
-        ) as HTMLButtonElement;
-        this.initialize();
+  class FormController {
+    private radioButtons: NodeListOf<HTMLInputElement>;
+    private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
+    private estimateType: string;
+
+    constructor() {
+      this.radioButtons = document.querySelectorAll(
+        'input[name="creditScore"]'
+      );
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.form = document.getElementById("creditScoreForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
+      this.initialize();
+    }
+
+    private initialize() {
+      if (
+        !this.submitButton ||
+        !this.radioButtons.length ||
+        !this.form ||
+        !this.estimateType
+      )
+        return;
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
       }
 
-      private initialize() {
-        if (!this.submitButton || !this.radioButtons.length) return;
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "credit-score",
+        estimateType: validatedEstimateType.data,
+      });
 
-        const hasInitialSelection = document.getElementById(
-          "hasInitialSelection"
-        ) as HTMLInputElement;
-        if (hasInitialSelection?.value) {
+      // Check store for initial selection and set the radio button accordingly
+      const storeData = estimateStore.get();
+      if (storeData.creditScoreAboveOrEqual640 !== undefined) {
+        // Find and check the matching radio button based on the boolean value
+        const valueToSelect = storeData.creditScoreAboveOrEqual640
+          ? "Credit score above 640"
+          : "Credit score below 640";
+
+        const radioToCheck = Array.from(this.radioButtons).find(
+          (radio) => radio.value === valueToSelect
+        );
+
+        if (radioToCheck) {
+          radioToCheck.checked = true;
           this.submitButton.setAttribute("aria-disabled", "false");
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
         }
-
-        this.radioButtons.forEach((radio) => {
-          radio.addEventListener("change", () => this.handleRadioChange());
-        });
+      } else {
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
 
-      private handleRadioChange() {
-        if (!this.submitButton) return;
+      this.radioButtons.forEach((radio) => {
+        radio.addEventListener("change", () => this.handleRadioChange());
+      });
 
-        const isSelected = Array.from(this.radioButtons).some(
-          (radio) => radio.checked
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+
+      // Track event if user has an email in store
+      this.trackPhoneSubmitEvent();
+    }
+
+    private handleRadioChange() {
+      if (!this.submitButton) return;
+
+      const isSelected = Array.from(this.radioButtons).some(
+        (radio) => radio.checked
+      );
+      this.submitButton.setAttribute(
+        "aria-disabled",
+        !isSelected ? "true" : "false"
+      );
+    }
+
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
+
+      if (!this.form) return;
+
+      const creditScore = Array.from(this.radioButtons).find(
+        (radio) => radio.checked
+      )?.value;
+
+      if (!creditScore) return;
+
+      // Convert the string value to boolean
+      const creditScoreAboveOrEqual640 =
+        creditScore === "Credit score above 640";
+
+      // Update store
+      const existingStore = estimateStore.get();
+      estimateStore.set({
+        ...existingStore,
+        creditScoreAboveOrEqual640,
+      });
+
+      // Get next step
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(
+          validatedEstimateType.data,
+          "credit-score"
         );
-        this.submitButton.setAttribute(
-          "aria-disabled",
-          !isSelected ? "true" : "false"
-        );
+        if (nextStep) {
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set(
+            "csh",
+            creditScoreAboveOrEqual640 ? "1" : "0"
+          );
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
+          return;
+        }
       }
     }
 
-    crossPlatformLoader(() => new FormController());
-  </script>
+    private async trackPhoneSubmitEvent() {
+      const existingStore = estimateStore.get();
+      if (existingStore.email) {
+        try {
+          const response = await fetch(
+            "https://google-advanced-conversions.zsmithbiz1.workers.dev/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                system: {
+                  timestamp: new Date().toISOString(),
+                },
+                client: {
+                  email: existingStore.email,
+                },
+              }),
+            }
+          );
 
-  <script
-    define:vars={{
-      existingStore: existingStore,
-    }}
-  >
-    if (existingStore.email) {
-      fetch("https://google-advanced-conversions.zsmithbiz1.workers.dev/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          system: {
-            timestamp: new Date().toISOString(),
-          },
-          client: {
-            email: existingStore.email,
-          },
-        }),
-      })
-        .then((response) => response.text())
-        .then((hashedEmail) => {
+          const hashedEmail = await response.text();
           const req = {
             event_name: "solar_phone_submit",
             event_id: crypto.randomUUID(),
@@ -247,12 +289,14 @@ const existingStore = estimateStore.get();
           };
 
           const eventName = `solar_phone_submit`;
-
           zaraz?.track(eventName, req);
-
           console.log(`Zaraz event sent (${eventName}):`, req);
-        })
-        .catch((error) => console.error("Error:", error));
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
     }
-  </script>
-</EstimateWrapper>
+  }
+
+  crossPlatformLoader(() => new FormController());
+</script>

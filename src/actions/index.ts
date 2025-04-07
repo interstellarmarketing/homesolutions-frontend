@@ -1,10 +1,11 @@
 import { estimateOptions } from './estimateOptions';
-import { updateTrustedFormParams, updatePosthogPersonId, updateUserAgent, updateTrackingParams } from './estimateStore';
+import { processSubmission } from './processSubmission';
+import { checkZip } from './checkZip';
+import { submitFreedomForever } from './submitFreedomForever';
 
 export const server = {
 	estimateOptions,
-	updateTrustedFormParams,
-	updatePosthogPersonId,
-	updateUserAgent,
-	updateTrackingParams,
+	processSubmission,
+	checkZip,
+	submitFreedomForever
 }

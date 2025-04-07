@@ -1,19 +1,10 @@
 ---
-import { z } from "zod";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { estimateStore } from "@stores/estimateProgress";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { getTotalSteps } from "@utils/layout";
-import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
+import StepLayout from "@components/step-layout/index.astro";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
@@ -25,11 +16,13 @@ const electricBillOptions = [
 
 interface PageState {
   estimateType: string;
-  currentSelection: boolean | undefined;
+  stepNumber: number;
+  totalSteps: number;
 }
 
 function initializePage(
-  params: Record<string, string | undefined>
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -37,172 +30,227 @@ function initializePage(
     return new Response(null, { status: 302, headers: { Location: "/" } });
   }
 
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "electric-bill",
-    estimateType: parsedEstimateType.data,
-  });
+  // Get step information
+  const estimateType = parsedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "electric-bill");
+  const totalSteps = getTotalSteps(estimateType);
 
   return {
-    estimateType: parsedEstimateType.data,
-    currentSelection: estimateStore.get().electricBillOver100,
+    estimateType,
+    stepNumber,
+    totalSteps,
   };
 }
 
-async function handleFormSubmission(request: Request, estimateType: string) {
-  const formData = await request.formData();
-  const electricBill = formData.get("electricBill");
-
-  // Convert the string value to boolean
-  const electricBillOver100 = electricBill === "Electric Bill Above $100";
-
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    electricBillOver100: !!electricBillOver100,
-  });
-  Astro.url.searchParams.append("ebh", electricBillOver100 ? "1" : "0");
-
-  // Get the next step from the store
-  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "electric-bill");
-
-    if (nextStep) {
-      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-        },
-      });
-    }
-  }
-
-  // Fallback to original logic
-  const redirectUrl = `/estimate/${estimateType}/contact`;
-  return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
-}
-
-const pageState = initializePage(Astro.params);
+const pageState = initializePage(Astro.params, Astro.url.searchParams);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
-if (Astro.request.method === "POST") {
-  const response = await handleFormSubmission(
-    Astro.request,
-    pageState.estimateType
-  );
-  if (response) return response;
-}
-
-// Get previous page URL for back button
-const validatedEstimateType = estimateTypeSchema.safeParse(
-  pageState.estimateType
-);
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "electric-bill")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/home-type`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "electric-bill")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
 const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
-
-// Transform boolean value to string for the radio component
-const currentSelection =
-  pageState.currentSelection === undefined
-    ? undefined
-    : pageState.currentSelection
-      ? "Electric Bill Above $100"
-      : "Electric Bill Below $100";
 ---
 
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
 >
-  <form method="post">
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.currentSelection !== undefined
-        ? "Electric Bill Above $100"
-        : "Electric Bill Below $100"}
-    />
-
+  <form
+    method="post"
+    id="electricBillForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <StepLayout
       stepHeader={stepHeader}
-      hasNextStep
-      hasPrevStep={stepNumber > 1}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={electricBillOptions}
         name="electricBill"
-        currentSelection={currentSelection}
+        currentSelection={undefined}
         layout="grid2"
       />
     </StepLayout>
   </form>
+</EstimateWrapper>
 
-  <script>
-    import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+<script>
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import {
+    getCurrentStepNumber,
+    getNextStep,
+    getTotalSteps,
+  } from "@consts/estimateSteps";
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { appendQueryParams } from "@utils/queryParams";
+  import { navigate } from "astro:transitions/client";
 
-    class FormController {
-      private radioButtons: NodeListOf<HTMLInputElement>;
-      private submitButton: HTMLButtonElement | null;
+  class FormController {
+    private radioButtons: NodeListOf<HTMLInputElement>;
+    private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
+    private estimateType: string;
+    private stepNumber: number = 0;
+    private totalSteps: number = 0;
 
-      constructor() {
-        this.radioButtons = document.querySelectorAll(
-          'input[name="electricBill"]'
-        );
-        this.submitButton = document.getElementById(
-          "nextStepButton"
-        ) as HTMLButtonElement;
-        this.initialize();
+    constructor() {
+      this.radioButtons = document.querySelectorAll(
+        'input[name="electricBill"]'
+      );
+      this.submitButton = document.getElementById(
+        "nextStepButton"
+      ) as HTMLButtonElement;
+      this.form = document.getElementById(
+        "electricBillForm"
+      ) as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
+      this.initialize();
+    }
+
+    private initialize() {
+      if (
+        !this.submitButton ||
+        !this.radioButtons.length ||
+        !this.form ||
+        !this.estimateType
+      )
+        return;
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
       }
 
-      private initialize() {
-        if (!this.submitButton || !this.radioButtons.length) return;
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "electric-bill",
+        estimateType: validatedEstimateType.data,
+      });
 
-        const hasInitialSelection = document.getElementById(
-          "hasInitialSelection"
-        ) as HTMLInputElement;
-        if (hasInitialSelection?.value === "true") {
+      // Update step number and total steps
+      this.calculateStepNumbers();
+
+      // Check store for initial selection and set the radio button accordingly
+      const storeData = estimateStore.get();
+      if (storeData.electricBillOver100 !== undefined) {
+        // Find and check the matching radio button based on the boolean value
+        const valueToSelect = storeData.electricBillOver100
+          ? "Electric Bill Above $100"
+          : "Electric Bill Below $100";
+
+        const radioToCheck = Array.from(this.radioButtons).find(
+          (radio) => radio.value === valueToSelect
+        );
+
+        if (radioToCheck) {
+          radioToCheck.checked = true;
           this.submitButton.setAttribute("aria-disabled", "false");
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
         }
-
-        this.radioButtons.forEach((radio) => {
-          radio.addEventListener("change", () => this.handleRadioChange());
-        });
+      } else {
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
 
-      private handleRadioChange() {
-        if (!this.submitButton) return;
+      this.radioButtons.forEach((radio) => {
+        radio.addEventListener("change", () => this.handleRadioChange());
+      });
 
-        const isSelected = Array.from(this.radioButtons).some(
-          (radio) => radio.checked
-        );
-        this.submitButton.setAttribute(
-          "aria-disabled",
-          !isSelected ? "true" : "false"
-        );
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+
+      // Update any UI elements that need the step numbers
+      this.updateStepUI();
+    }
+
+    private calculateStepNumbers() {
+      if (!this.estimateType) return;
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) return;
+
+      // Get step numbers using the utility functions
+      const estimateType = validatedEstimateType.data;
+      this.stepNumber = getCurrentStepNumber(estimateType, "electric-bill");
+      this.totalSteps = getTotalSteps(estimateType);
+    }
+
+    private updateStepUI() {
+      // Find and update step number elements if they exist
+      const stepNumberElement = document.querySelector("[data-step-number]");
+      const totalStepsElement = document.querySelector("[data-total-steps]");
+
+      if (stepNumberElement) {
+        stepNumberElement.textContent = this.stepNumber.toString();
+      }
+
+      if (totalStepsElement) {
+        totalStepsElement.textContent = this.totalSteps.toString();
       }
     }
 
-    crossPlatformLoader(() => new FormController());
-  </script>
-</EstimateWrapper>
+    private handleRadioChange() {
+      if (!this.submitButton) return;
+
+      const isSelected = Array.from(this.radioButtons).some(
+        (radio) => radio.checked
+      );
+      this.submitButton.setAttribute(
+        "aria-disabled",
+        !isSelected ? "true" : "false"
+      );
+    }
+
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
+
+      if (!this.form) return;
+
+      const electricBill = Array.from(this.radioButtons).find(
+        (radio) => radio.checked
+      )?.value;
+
+      if (!electricBill) return;
+
+      // Convert the string value to boolean
+      const electricBillOver100 = electricBill === "Electric Bill Above $100";
+
+      // Update store
+      const existingStore = estimateStore.get();
+      estimateStore.set({
+        ...existingStore,
+        electricBillOver100,
+      });
+
+      // Get next step
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(
+          validatedEstimateType.data,
+          "electric-bill"
+        );
+        if (nextStep) {
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
+          return;
+        }
+      }
+    }
+  }
+
+  crossPlatformLoader(() => new FormController());
+</script>

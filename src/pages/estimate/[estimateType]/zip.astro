@@ -1,133 +1,67 @@
 ---
-import { z } from "zod";
-import { estimateStore } from "@stores/estimateProgress";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
+import StepLayout from "@components/step-layout/index.astro";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
 import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
-import StepLayout from "@components/step-layout/index.astro";
-import { appendQueryParams } from "@utils/queryParams";
-
+import { z } from "zod";
 // Validation schemas
 const zipSchema = formSubmissionParser.pick({ zipCode: true });
 const estimateTypeSchema = shortTradeEnum;
 
-// Initialize ZIP service
-const zipService = await Astro.locals.runtime.env.ZIP_METHODS.newZipMethods();
-
-// Validate estimate type from URL params
-const { estimateType } = Astro.params;
-const parsedEstimateType = estimateTypeSchema.safeParse(estimateType);
-
-if (!estimateType || !parsedEstimateType.success) {
-  console.error("Invalid estimate type");
-  return new Response(null, {
-    status: 302,
-    headers: { Location: "/" },
-  });
+interface PageState {
+  estimateType: string;
+  zipCode: string | null;
+  stepNumber: number;
+  totalSteps: number;
 }
 
-const validatedEstimateType = parsedEstimateType.data;
-ProcessEstimateType(validatedEstimateType);
+// Initialize page state
+async function initializePage(
+  params: Record<string, string | undefined>,
+  runtime: any
+): Promise<PageState | Response> {
+  // Validate estimate type from URL params
+  const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
-// Get stored data
-const existingStore = estimateStore.get();
-
-// Update the estimate steps store with current page
-estimateStepsStore.set({
-  currentStep: "zip",
-  estimateType: validatedEstimateType,
-});
-
-// Get user location from Cloudflare
-const cfPostalCode = z.string().safeParse(Astro.locals.runtime.cf?.postalCode);
-// Initialize zip code from store or Cloudflare location
-const initialZipCode = existingStore.zipCode ?? cfPostalCode.data;
-
-// Get step number and total steps from the store
-const stepNumber = getCurrentStepNumber(validatedEstimateType, "zip");
-const totalSteps = getStoreSteps(validatedEstimateType);
-
-// Handle form submission
-if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const submission = {
-    zipCode: formData?.get("zipInput") as string,
-    trustedFormCertUrl: formData?.get("xxTrustedFormCertUrl") as string,
-    trustedFormPingUrl: formData?.get("xxTrustedFormPingUrl") as string,
-  };
-  const parsedZip = zipSchema.safeParse({ zipCode: submission.zipCode });
-
-  if (parsedZip.success) {
-    const zipCode = parsedZip.data.zipCode;
-
-    try {
-      const locationData = await zipService.uspsZipCheck(zipCode);
-
-      if (!locationData?.defaultState || !locationData?.defaultCity) {
-        throw new Error("Invalid ZIP code location data");
-      }
-
-      estimateStore.set({
-        ...existingStore,
-        zipCode,
-        state: locationData.defaultState,
-        city: locationData.defaultCity,
-        estimateShortTrade: validatedEstimateType,
-        trackingParams: {
-          ...existingStore.trackingParams,
-          trustedFormCertUrl: submission.trustedFormCertUrl || undefined,
-          trustedFormPingUrl: submission.trustedFormPingUrl || undefined,
-        },
-      });
-
-      // Get the next step from the store
-      const nextStep = getNextStep(validatedEstimateType, "zip");
-
-      if (nextStep) {
-        const redirectUrl = `/estimate/${validatedEstimateType}/${nextStep}`;
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-          },
-        });
-      }
-
-      // Fallback to original logic if next step not found
-      if (estimateType === "roofing") {
-        const redirectUrl = `/estimate/${validatedEstimateType}/project-details`;
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-          },
-        });
-      }
-
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(
-            `/estimate/${validatedEstimateType}/action`,
-            Astro.url.searchParams
-          ),
-        },
-      });
-    } catch (error) {
-      console.error("ZIP validation error:", error);
-      return new Response("Invalid ZIP code", {
-        status: 400,
-        statusText: "Invalid ZIP code or service unavailable",
-      });
-    }
+  if (!params.estimateType || !parsedEstimateType.success) {
+    console.error("Invalid estimate type");
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/" },
+    });
   }
+
+  const validatedEstimateType = parsedEstimateType.data;
+  ProcessEstimateType(validatedEstimateType);
+
+  // Get user location from Cloudflare
+  const cfPostalCode = z.string().safeParse(runtime.cf?.postalCode);
+
+  // Initialize zip code from URL param or Cloudflare location
+  const zipCode = cfPostalCode.success ? cfPostalCode.data : null;
+
+  // Get step information
+  const estimateType = parsedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "zip");
+  const totalSteps = getTotalSteps(estimateType);
+
+  return {
+    estimateType: validatedEstimateType,
+    zipCode,
+    stepNumber,
+    totalSteps,
+  };
+}
+
+// Process the page based on the request method
+let pageState: PageState | Response;
+
+pageState = await initializePage(Astro.params, Astro.locals.runtime);
+
+if (pageState instanceof Response) {
+  return pageState;
 }
 
 // Helper function to format estimate type display
@@ -136,18 +70,17 @@ const formatEstimateTypeNoun = (type: string) =>
 ---
 
 <EstimateWrapper
-  title={validatedEstimateType}
-  estimateType={validatedEstimateType}
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
 >
-  <form method="post">
+  <form id="zipForm" data-estimate-type={pageState.estimateType}>
     <StepLayout
-      stepHeader={`Let's find your local ${formatEstimateTypeNoun(validatedEstimateType)} pros`}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
-      hasNextStep
-      hasPrevStep={stepNumber > 1}
-      estimateType={validatedEstimateType}
-      delaySubmit={true}
+      stepHeader={`Let's find your local ${formatEstimateTypeNoun(pageState.estimateType)} pros`}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
+      estimateType={pageState.estimateType}
       loadingButtonText="Validating your zip code..."
     >
       <div class="flex flex-col gap-4 text-center rounded-lg container">
@@ -176,13 +109,15 @@ const formatEstimateTypeNoun = (type: string) =>
               id="zipInput"
               name="zipInput"
               placeholder="Enter your zip code"
-              value={initialZipCode ?? null}
+              value={pageState.zipCode ?? null}
               class="w-full h-[52px] pl-14 pr-4 py-3.5 bg-gray-50 rounded-lg border border-gray-300 text-gray-500 text-base font-normal leading-normal"
               minlength="5"
               maxlength="5"
               pattern="[0-9]{5}"
               inputmode="numeric"
             />
+          </div>
+          <div id="zipErrorMessage" class="text-red-500 text-sm mt-1 hidden">
           </div>
         </div>
       </div>
@@ -191,8 +126,15 @@ const formatEstimateTypeNoun = (type: string) =>
 </EstimateWrapper>
 
 <script>
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { getNextStep } from "@consts/index";
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { actions } from "astro:actions";
   import { z } from "zod";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   const ZIP_LENGTH = 5;
 
@@ -204,19 +146,43 @@ const formatEstimateTypeNoun = (type: string) =>
   class ZipFormValidator {
     private zipInput: HTMLInputElement;
     private submitButton: HTMLButtonElement;
+    private form: HTMLFormElement;
+    private estimateType: string;
 
-    constructor(zipInputId: string, submitButtonId: string) {
-      this.zipInput = document.getElementById(zipInputId) as HTMLInputElement;
+    constructor() {
+      this.zipInput = document.getElementById("zipInput") as HTMLInputElement;
       this.submitButton = document.getElementById(
-        submitButtonId
+        "nextStepButton"
       ) as HTMLButtonElement;
+      this.form = document.getElementById("zipForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
 
-      if (this.zipInput && this.submitButton) {
+      if (
+        this.zipInput &&
+        this.submitButton &&
+        this.form &&
+        this.estimateType
+      ) {
         this.initialize();
       }
     }
 
     private initialize() {
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "zip",
+        estimateType: validatedEstimateType.data,
+      });
+
       // Check initial value
       if (this.zipInput.value) {
         const isValid =
@@ -230,7 +196,17 @@ const formatEstimateTypeNoun = (type: string) =>
       this.zipInput.addEventListener("input", (event) => {
         const input = (event.target as HTMLInputElement).value;
         this.validateZipCode(input);
+
+        // Clear error message when user starts typing
+        const errorElement = document.getElementById("zipErrorMessage");
+        if (errorElement) {
+          errorElement.classList.add("hidden");
+        }
+        this.zipInput.setCustomValidity("");
       });
+
+      // Handle form submission
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
     }
 
     private validateZipCode(input: string) {
@@ -248,11 +224,75 @@ const formatEstimateTypeNoun = (type: string) =>
         this.submitButton.setAttribute("aria-disabled", "true");
       }
     }
+
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
+
+      const zipCheck = await actions.checkZip({ zipCode: this.zipInput.value });
+
+      if (!zipCheck.data) {
+        this.zipInput.setCustomValidity("Invalid ZIP code");
+        // Display the error message
+        const errorElement = document.getElementById("zipErrorMessage");
+        if (errorElement) {
+          errorElement.textContent = "Invalid ZIP code";
+          errorElement.classList.remove("hidden");
+          e.preventDefault(); // Prevent form submission
+        }
+        return;
+      }
+
+      // Clear any previous error
+      this.zipInput.setCustomValidity("");
+      const errorElement = document.getElementById("zipErrorMessage");
+      if (errorElement) {
+        errorElement.classList.add("hidden");
+      }
+
+      // We'll let the form submit to the server for ZIP validation
+      // but we'll update the store with current values
+      const existingStore = estimateStore.get();
+      const formData = new FormData(this.form);
+
+      // Get TrustedForm data
+      const trustedFormCertUrl =
+        document
+          .querySelector('[name="xxTrustedFormCertUrl"]')
+          ?.getAttribute("value") || "";
+      const trustedFormPingUrl =
+        document
+          .querySelector('[name="xxTrustedFormPingUrl"]')
+          ?.getAttribute("value") || "";
+
+      // Update store with zipCode and estimateShortTrade
+      estimateStore.set({
+        ...existingStore,
+        zipCode: this.zipInput.value,
+        estimateShortTrade: this.estimateType,
+        trackingParams: {
+          ...existingStore.trackingParams,
+          trustedFormCertUrl: trustedFormCertUrl || undefined,
+          trustedFormPingUrl: trustedFormPingUrl || undefined,
+        },
+      });
+
+      // Get next step
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(validatedEstimateType.data, "zip");
+        if (nextStep) {
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
+          return;
+        }
+      }
+    }
   }
 
-  function initZipValidator() {
-    new ZipFormValidator("zipInput", "nextStepButton");
-  }
-
-  crossPlatformLoader(() => initZipValidator());
+  crossPlatformLoader(() => new ZipFormValidator());
 </script>

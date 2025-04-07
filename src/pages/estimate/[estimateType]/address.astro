@@ -1,154 +1,72 @@
 ---
-import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
 import { appendQueryParams } from "@utils/queryParams";
+import { z } from "zod";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
-/**
- * Processes the address form submission
- * Validates and updates store with address data
- */
-async function processAddressForm(
-  formData: FormData,
-  existingStore: Record<string, any>,
-  estimateType: string,
+interface PageState {
+  estimateType: string;
+  stepNumber: number;
+  totalSteps: number;
+}
+
+function initializePage(
+  params: Record<string, string | undefined>,
   searchParams: URLSearchParams
-): Promise<Response | null> {
-  const addressData = {
-    streetAddress: formData.get("streetAddressInput"),
-    zipCode: formData.get("zipCodeInput"),
-    city: formData.get("cityInput"),
-    state: formData.get("stateInput"),
-    isHomeowner: formData.get("isHomeownerInput") === "on",
-  };
-
-  const addressParser = estimateParser.pick({
-    streetAddress: true,
-    zipCode: true,
-    city: true,
-    state: true,
-    isHomeowner: true,
-  });
-
-  const addressParsed = addressParser.safeParse(addressData);
-
-  if (!addressParsed.success) {
-    console.error("Address validation failed:", addressParsed.error);
-    return null;
+): PageState | Response {
+  const validatedEstimateType = shortTradeEnum.safeParse(params.estimateType);
+  if (!validatedEstimateType.success) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: appendQueryParams("/", searchParams) },
+    });
   }
 
-  // Update store with new address data
-  estimateStore.set({
-    ...existingStore,
-    ...addressParsed.data,
-  });
+  // Get step information
+  const estimateType = validatedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "address");
+  const totalSteps = getTotalSteps(estimateType);
 
-  // Get the next step from the store
-  const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "address");
-
-    if (nextStep) {
-      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-      return new Response(null, {
-        status: 302,
-        headers: { Location: appendQueryParams(redirectUrl, searchParams) },
-      });
-    }
-  }
-
-  // Fallback to original logic
-  const redirectUrl = `/estimate/${estimateType}/thank-you`;
-  return new Response(null, {
-    status: 302,
-    headers: { Location: appendQueryParams(redirectUrl, searchParams) },
-  });
-}
-
-// Validate route parameters and prerequisites
-const { estimateType } = Astro.params;
-if (!estimateType) {
-  return Astro.redirect("/");
-}
-
-const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
-if (validatedEstimateType.success) {
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "address",
+  return {
     estimateType: validatedEstimateType.data,
-  });
+    stepNumber,
+    totalSteps,
+  };
 }
 
-const existingStore = estimateStore.get();
-// if (!existingStore.zipCode) {
-//   const redirectUrl = `/estimate/${estimateType}/zip`;
-//   return Astro.redirect(appendQueryParams(redirectUrl, Astro.url.searchParams));
-// }
+// Process the page based on the request method
+let pageState: PageState | Response;
 
-// Extract existing data
-const { streetAddress, isHomeowner } = existingStore;
+pageState = initializePage(Astro.params, Astro.url.searchParams);
 
-// Handle form submission
-if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const response = await processAddressForm(
-    formData,
-    existingStore,
-    estimateType,
-    Astro.url.searchParams
-  );
-  if (response) return response;
+if (pageState instanceof Response) {
+  return pageState;
 }
+
+const stepHeader = "What is your street address?";
 
 // Add this near the top of your frontmatter
 const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
-
-// Get previous page URL for back button
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "address")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${estimateType}/${prevStep}`
-  : `/estimate/${estimateType}/project-details`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "address")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
-const getStepHeader = () => {
-  switch (estimateType) {
-    default:
-      return "What is your street address?";
-  }
-};
-const stepHeader = getStepHeader();
 ---
 
-<EstimateWrapper title={estimateType} estimateType={estimateType}>
-  <form method="post">
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
+>
+  <form
+    method="post"
+    id="addressForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <StepLayout
       stepHeader={stepHeader}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
-      estimateType={estimateType}
-      hasNextStep
-      hasPrevStep={stepNumber > 1}
-      showLoadingOnSubmit={estimateType === "roofing"}
-      loadingButtonText="Processing...."
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
+      estimateType={pageState.estimateType}
     >
       <div
         class="flex flex-col gap-4 text-center rounded-lg container w-full max-w-md mx-auto"
@@ -184,7 +102,6 @@ const stepHeader = getStepHeader();
         <label class="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={isHomeowner ?? true}
             class="w-5 h-5 rounded border-gray-300"
             id="isHomeownerInput"
             name="isHomeownerInput"
@@ -206,8 +123,13 @@ const stepHeader = getStepHeader();
   data-astro-rerun></script>
 
 <script>
-  import { estimateParser } from "@stores/estimateProgress";
+  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { getNextStep } from "src/consts/estimateSteps";
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   // TypeScript declaration to extend Window interface
   declare global {
@@ -227,8 +149,10 @@ const stepHeader = getStepHeader();
   class AddressFormController {
     private addressInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
     private addressParser = estimateParser.pick({ streetAddress: true });
     private autocomplete: google.maps.places.Autocomplete | null = null;
+    private estimateType: string;
 
     constructor() {
       this.addressInput = document.getElementById(
@@ -237,6 +161,11 @@ const stepHeader = getStepHeader();
       this.submitButton = document.getElementById(
         "nextStepButton"
       ) as HTMLButtonElement;
+      this.form = document.getElementById("addressForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
       this.initialize();
 
       // Only initialize autocomplete if Google Maps API is loaded
@@ -246,9 +175,53 @@ const stepHeader = getStepHeader();
     }
 
     private initialize(): void {
-      if (!this.addressInput || !this.submitButton) {
+      if (
+        !this.addressInput ||
+        !this.submitButton ||
+        !this.form ||
+        !this.estimateType
+      ) {
         console.error("Required form elements not found");
         return;
+      }
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "address",
+        estimateType: validatedEstimateType.data,
+      });
+
+      // Set form values from store data
+      const storeData = estimateStore.get();
+
+      // Set street address if available
+      if (storeData.streetAddress) {
+        this.addressInput.value = storeData.streetAddress;
+      }
+
+      // Set homeowner status if available
+      const isHomeownerInput = this.form.querySelector(
+        'input[name="isHomeownerInput"]'
+      ) as HTMLInputElement;
+      if (isHomeownerInput && storeData.isHomeowner !== undefined) {
+        isHomeownerInput.checked = storeData.isHomeowner;
+      }
+
+      // Create or update hidden inputs for additional address components if they exist in store
+      if (storeData.zipCode) {
+        this.createOrUpdateHiddenInput("zipCodeInput", storeData.zipCode);
+      }
+      if (storeData.city) {
+        this.createOrUpdateHiddenInput("cityInput", storeData.city);
+      }
+      if (storeData.state) {
+        this.createOrUpdateHiddenInput("stateInput", storeData.state);
       }
 
       if (this.addressInput.value.length >= 5) {
@@ -257,6 +230,25 @@ const stepHeader = getStepHeader();
       }
 
       this.addressInput.addEventListener("input", this.handleAddressInput);
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+    }
+
+    /**
+     * Creates or updates a hidden input field
+     */
+    private createOrUpdateHiddenInput(name: string, value: string): void {
+      let input = this.form?.querySelector(
+        `input[name="${name}"]`
+      ) as HTMLInputElement;
+
+      if (!input) {
+        input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        this.form?.appendChild(input);
+      }
+
+      input.value = value;
     }
 
     /**
@@ -377,6 +369,57 @@ const stepHeader = getStepHeader();
       const isValid = this.validateAddress(input.value);
       this.updateButtonState(isValid);
     };
+
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
+
+      if (!this.form || !this.addressInput) return;
+
+      const streetAddress = this.addressInput.value;
+      const zipInput = this.form.querySelector(
+        'input[name="zipCodeInput"]'
+      ) as HTMLInputElement;
+      const cityInput = this.form.querySelector(
+        'input[name="cityInput"]'
+      ) as HTMLInputElement;
+      const stateInput = this.form.querySelector(
+        'input[name="stateInput"]'
+      ) as HTMLInputElement;
+      const isHomeownerInput = this.form.querySelector(
+        'input[name="isHomeownerInput"]'
+      ) as HTMLInputElement;
+
+      const addressData = {
+        streetAddress,
+        zipCode: zipInput?.value,
+        city: cityInput?.value,
+        state: stateInput?.value,
+        isHomeowner: isHomeownerInput?.checked,
+      };
+
+      // Update store
+      const existingStore = estimateStore.get();
+      estimateStore.set({
+        ...existingStore,
+        ...addressData,
+      });
+
+      // Get next step
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (validatedEstimateType.success) {
+        const nextStep = getNextStep(validatedEstimateType.data, "address");
+        if (nextStep) {
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
+          return;
+        }
+      }
+    }
   }
 
   function initAddressController() {

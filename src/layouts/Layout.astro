@@ -4,12 +4,6 @@ import PosthogCapture from "@components/anaytics/PosthogCapture.astro";
 import Footer from "@components/footer/index.astro";
 import NavMain from "@components/nav/NavMain.astro";
 import TrustedForm from "@components/TrustedForm.astro";
-import {
-  estimateSteps,
-  estimateStepsStore,
-  getCurrentStepIndex,
-  getTotalSteps,
-} from "@stores/estimateStepsStore";
 import { ClientRouter } from "astro:transitions";
 
 /**
@@ -135,7 +129,7 @@ const formattedTitle = formatTitle(title);
 </html>
 
 <script>
-  import { actions } from "astro:actions";
+  import { estimateStore } from "@stores/estimateProgress";
 
   function getCookie(name: string) {
     const value = `; ${document.cookie}`;
@@ -155,9 +149,17 @@ const formattedTitle = formatTitle(title);
     const fbp = cfz_facebook_pixel?.["BDTt_fb-pixel"]?.v;
     const fbc = cfz_facebook_pixel?.["BDTt_fb-click"]?.v;
 
-    actions.updateTrackingParams({
-      fbp,
-      fbc,
+    // Update the store directly
+    const existingStore = estimateStore.get();
+    const existingTrackingParams = existingStore.trackingParams || {};
+
+    estimateStore.set({
+      ...existingStore,
+      trackingParams: {
+        ...existingTrackingParams,
+        fbp,
+        fbc,
+      },
     });
   } catch (e) {}
 </script>

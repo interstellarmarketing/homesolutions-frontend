@@ -6,15 +6,15 @@ import { getSuccessResult } from "@utils/kv/storedResults";
 const { resultId } = resultIdStore.get();
 
 if (!resultId) {
-	return Astro.redirect("/");
+  return Astro.redirect("/");
 }
 
 const getStashedResult = await getSuccessResult(Astro, resultId);
 ---
 
 <Layout>
-	<div>
-		{resultId}
-		{JSON.stringify(getStashedResult)}
-	</div>
+  <div>
+    {resultId}
+    {JSON.stringify(getStashedResult)}
+  </div>
 </Layout>

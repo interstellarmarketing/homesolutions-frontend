@@ -1,38 +1,25 @@
 ---
-import { z } from "zod";
-import { estimateStore } from "@stores/estimateProgress";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import {
-  shortTradeEnum,
-  tradeOptionDescriptions,
-  homeTypesConst,
-} from "@assets/info/estimateOptions";
-import { activeEstimateTypeStore } from "@stores/activeEstimateType";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
-import StepLayout from "@components/step-layout/index.astro";
+import { homeTypesConst, shortTradeEnum } from "@assets/info/estimateOptions";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
-import { getTotalSteps } from "@utils/layout";
+import StepLayout from "@components/step-layout/index.astro";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
-
+import { z } from "zod";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 // Schema definitions
 const homeTypeSchema = z.enum(homeTypesConst);
 const estimateTypeSchema = shortTradeEnum;
 
 interface PageState {
   estimateType: string;
-  tradeDescription: string | undefined;
   homeTypes: typeof homeTypesConst;
-  currentSelection: string | undefined;
+  stepNumber: number;
+  totalSteps: number;
 }
 
 function initializePage(
-  params: Record<string, string | undefined>
+  params: Record<string, string | undefined>,
+  searchParams: URLSearchParams
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -42,176 +29,157 @@ function initializePage(
 
   const estimateType = parsedEstimateType.data;
 
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "home-type",
-    estimateType: estimateType,
-  });
-
-  const tradeOptions = tradeOptionDescriptions.find(
-    (option) => option.shortTrade === activeEstimateTypeStore.get()
-  );
+  // Get step information
+  const stepNumber = getCurrentStepNumber(estimateType, "home-type");
+  const totalSteps = getTotalSteps(estimateType);
 
   return {
     estimateType,
-    tradeDescription: tradeOptions?.typeDescription,
     homeTypes: homeTypesConst,
-    currentSelection: estimateStore.get().homeType,
+    stepNumber,
+    totalSteps,
   };
-}
-
-async function handleFormSubmission(request: Request, estimateType: string) {
-  const formData = await request.formData();
-  const homeTypeParsed = homeTypeSchema.safeParse(formData.get("homeType"));
-
-  if (!homeTypeParsed.success) {
-    return null;
-  }
-
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    homeType: homeTypeParsed.data,
-  });
-
-  // Get the next step from the store
-  const validatedEstimateType = estimateTypeSchema.safeParse(estimateType);
-  if (validatedEstimateType.success) {
-    const nextStep = getNextStep(validatedEstimateType.data, "home-type");
-
-    if (nextStep) {
-      const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(
-            redirectUrl,
-            new URL(request.url).searchParams
-          ),
-        },
-      });
-    }
-  }
-
-  // Fallback to original logic
-  if (estimateType === "roofing") {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: `/estimate/${estimateType}/credit-score` },
-    });
-  }
-
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `/estimate/${estimateType}/contact` },
-  });
 }
 
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
-pageState = initializePage(Astro.params);
+pageState = initializePage(Astro.params, Astro.url.searchParams);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
-// Get previous page URL for back button
-const validatedEstimateType = estimateTypeSchema.safeParse(
-  pageState.estimateType
-);
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "home-type")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${pageState.estimateType}/${prevStep}`
-  : `/estimate/${pageState.estimateType}/action`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "home-type")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
-const getStepHeader = () => {
-  switch (pageState.estimateType) {
-    case "roofing":
-      return "What type of home do you have?";
-    default:
-      return "What type of home do you have?";
-  }
-};
-const stepHeader = getStepHeader();
+// These will be determined client-side
+const stepNumber = 1;
+const totalSteps = 5;
+const stepHeader = "What type of home do you have?";
 ---
 
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
 >
-  <form method="post">
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.currentSelection ? "true" : "false"}
-    />
-
+  <form
+    method="post"
+    id="homeTypeForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <StepLayout
       stepHeader={stepHeader}
-      hasNextStep
-      hasPrevStep={stepNumber > 1}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={pageState.homeTypes}
         name="homeType"
-        currentSelection={pageState.currentSelection}
-        layout="grid2"
+        currentSelection={undefined}
+        layout="flex"
         capitalize={true}
       />
     </StepLayout>
   </form>
 
   <script>
+    import {
+      homeTypesConst,
+      shortTradeEnum,
+      tradeOptionDescriptions,
+      type ShortTradeEnum,
+    } from "@assets/info/estimateOptions";
+    import {
+      getCurrentStepNumber,
+      getNextStep,
+      getTotalSteps,
+    } from "@consts/estimateSteps";
+    import { activeEstimateTypeStore } from "@stores/activeEstimateType";
+    import { estimateStore } from "@stores/estimateProgress";
+    import { estimateStepsStore } from "@stores/estimateStepsStore";
     import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+    import { appendQueryParams } from "@utils/queryParams";
+    import { navigate } from "astro:transitions/client";
 
     class FormController {
       private radioButtons: NodeListOf<HTMLInputElement>;
       private submitButton: HTMLButtonElement | null;
+      private form: HTMLFormElement | null;
+      private estimateType!: ShortTradeEnum;
 
       constructor() {
         this.radioButtons = document.querySelectorAll('input[name="homeType"]');
         this.submitButton = document.getElementById(
           "nextStepButton"
         ) as HTMLButtonElement;
+        this.form = document.getElementById("homeTypeForm") as HTMLFormElement;
+        const rawEstimateType =
+          document
+            .querySelector("[data-estimate-type]")
+            ?.getAttribute("data-estimate-type") || "";
+
+        this.estimateType = rawEstimateType as ShortTradeEnum;
+
         this.initialize();
       }
 
       private initialize() {
-        if (!this.submitButton || !this.radioButtons.length) return;
+        if (!this.submitButton || !this.radioButtons.length || !this.form)
+          return;
 
-        const hasInitialSelection = document.getElementById(
-          "hasInitialSelection"
-        ) as HTMLInputElement;
-        if (hasInitialSelection?.value === "true") {
-          this.submitButton.setAttribute("aria-disabled", "false");
+        const validatedEstimateType = shortTradeEnum.safeParse(
+          this.estimateType
+        );
+        if (!validatedEstimateType.success) {
+          console.error("Invalid estimate type");
+          return;
+        }
+
+        // Initialize stores
+        estimateStepsStore.set({
+          currentStep: "home-type",
+          estimateType: this.estimateType,
+        });
+
+        // Set trade description
+        const tradeOptions = tradeOptionDescriptions.find(
+          (option) => option.shortTrade === activeEstimateTypeStore.get()
+        );
+
+        // Update step info
+        const stepNumber = getCurrentStepNumber(this.estimateType, "home-type");
+        const totalSteps = getTotalSteps(this.estimateType);
+        document
+          .querySelector("[data-step-number]")
+          ?.setAttribute("data-step-number", String(stepNumber));
+        document
+          .querySelector("[data-total-steps]")
+          ?.setAttribute("data-total-steps", String(totalSteps));
+
+        // Check store for initial selection and set the radio button accordingly
+        const storeData = estimateStore.get();
+        if (storeData.homeType) {
+          // Find and check the matching radio button
+          const radioToCheck = Array.from(this.radioButtons).find(
+            (radio) => radio.value === storeData.homeType
+          );
+
+          if (radioToCheck) {
+            radioToCheck.checked = true;
+            this.submitButton.setAttribute("aria-disabled", "false");
+          } else {
+            this.submitButton.setAttribute("aria-disabled", "true");
+          }
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
         }
 
         this.radioButtons.forEach((radio) => {
           radio.addEventListener("change", () => this.handleRadioChange());
         });
+
+        this.form.addEventListener("submit", (e) => this.handleSubmit(e));
       }
 
       private handleRadioChange() {
@@ -224,6 +192,37 @@ const stepHeader = getStepHeader();
           "aria-disabled",
           !isSelected ? "true" : "false"
         );
+      }
+
+      private handleSubmit(e: Event) {
+        e.preventDefault();
+
+        const formData = new FormData(this.form!);
+        const homeType = formData
+          .get("homeType")
+          ?.toString() as (typeof homeTypesConst)[number];
+
+        if (homeType && homeTypesConst.includes(homeType)) {
+          // Update store
+          const existingStore = estimateStore.get();
+          estimateStore.set({
+            ...existingStore,
+            homeType: homeType,
+          });
+
+          // Get next step
+          const nextStep = getNextStep(this.estimateType, "home-type");
+          if (nextStep) {
+            const currentUrl = new URL(window.location.href);
+            navigate(
+              appendQueryParams(
+                `/estimate/${this.estimateType}/${nextStep}`,
+                new URLSearchParams(currentUrl.search)
+              )
+            );
+            return;
+          }
+        }
       }
     }
 

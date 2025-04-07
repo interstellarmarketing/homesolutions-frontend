@@ -1,4 +1,4 @@
-import { atom } from "nanostores";
+import { persistentAtom } from '@nanostores/persistent'
 import { z } from "zod"
 import { shortTradeDiscriminatedUnion } from "@assets/info/estimateOptions"
 //import { } from "be-rpc-estimates/src/zoddle/houseEstimates/houseEstimateUnions"
@@ -17,4 +17,7 @@ export const activeEstimateParserLoose = activeEstimateParser.partial()
 
 export type ActiveEstimateParserLoose = z.infer<typeof activeEstimateParserLoose>
 
-export const activeEstimateStore = atom<ActiveEstimateParserLoose>({})
+export const activeEstimateStore = persistentAtom<ActiveEstimateParserLoose>('active-estimate-store', {}, {
+	encode: JSON.stringify,
+	decode: JSON.parse
+})

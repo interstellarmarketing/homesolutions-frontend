@@ -1,193 +1,72 @@
 ---
-import { estimateStore, estimateParser } from "@stores/estimateProgress";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { getTotalSteps } from "@utils/layout";
 import StepLayout from "@components/step-layout/index.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import {
-  estimateStepsStore,
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "@stores/estimateStepsStore";
 import { appendQueryParams } from "@utils/queryParams";
-/**
- * Extract and validate estimate type from URL parameters
- * Redirect to home if estimate type is missing
- */
-const { estimateType } = Astro.params;
-if (!estimateType) {
-  return Astro.redirect("/");
-}
+import { z } from "zod";
+import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
-const validatedEstimateType = shortTradeEnum.safeParse(estimateType);
-if (validatedEstimateType.success) {
-  // Update the estimate steps store with current page
-  estimateStepsStore.set({
-    currentStep: "phone-number",
-    estimateType: validatedEstimateType.data,
-  });
-}
-
-/**
- * Retrieve existing data from the estimate store
- * Extract phone number for validation
- */
-let existingStore = estimateStore.get();
-const { phone } = existingStore;
-
-/**
- * Create a phone-specific parser from the main estimate parser
- * This ensures we only validate the phone field
- */
-const phoneParser = estimateParser.pick({
-  phone: true,
+// Create phone-specific parser
+const phoneSchema = z.object({
+  phone: z
+    .string()
+    .regex(/^(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/),
 });
 
-/**
- * Validate existing phone data
- * Used to determine initial button state
- */
-const existingPhoneParsed = phoneParser.safeParse({ phone });
-
-/**
- * Handle form submission
- * Validates phone number and updates store if valid
- * Redirects to the next page on success using the store
- */
-if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const phone = formData.get("phoneInput");
-
-  const phoneParsed = phoneParser.safeParse({ phone });
-
-  if (phoneParsed.success) {
-    // Update store with new phone data while preserving existing data
-    estimateStore.set({
-      ...existingStore,
-      ...phoneParsed.data,
-    });
-
-    console.log("estimateType", estimateType);
-
-    if (estimateType === "solar") {
-      try {
-        const existingParams = new URLSearchParams(Astro.url.search);
-        const response = await fetch(
-          "https://bp-portal.freedomforever.com/open/affiliate/new",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              token: "xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ",
-              authorization_token: "JiUIX1ZB1RlJcKRBqGjN",
-              affiliate_id: "Mjc1",
-              campaign_id: "MjM0NA%3D%3D",
-              self_book_campaign_id: "MjQwNQ%3D%3D",
-              first_name: existingStore.firstName || "",
-              last_name: existingStore.lastName || "",
-              email: existingStore.email || "",
-              phone: phone || "",
-              zip_code: existingStore.zipCode || "",
-              Trusted_Form:
-                existingStore.trackingParams?.trustedFormCertUrl || "",
-              hrm_utm_campaign:
-                existingStore.trackingParams?.utm_campaign || "",
-              hrm_campaign: existingParams.get("campaign") || "",
-              hrm_campaign_id2: existingParams.get("campaign_id") || "",
-              hrm_adset_id: existingParams.get("ad_set") || "",
-              hrm_utm_medium: existingStore.trackingParams?.utm_medium || "",
-              hrm_adset_name: existingParams.get("utm_adset") || "",
-              hrm_ad_name: existingStore.trackingParams?.utm_content || "",
-              hrm_ad_id: existingParams.get("ad") || "",
-              unique_id: existingStore.trackingParams?.posthogPersonId || "",
-              hrm_fbc: existingStore.trackingParams?.fbc || "",
-              hrm_fbp: existingStore.trackingParams?.fbp || "",
-              hrm_gclid: existingStore.trackingParams?.gclid || "",
-              hrm_fbclid: existingStore.trackingParams?.fbclid || "",
-              hrm_creative: existingParams.get("google_ad_id") || "",
-              hrm_placement: existingParams.get("placement") || "",
-              hrm_utm_source: existingStore.trackingParams?.utm_source || "",
-              "HRM User Agent": existingStore.trackingParams?.userAgent || "",
-            }),
-          }
-        );
-
-        const data = (await response.json()) as { lead_id?: number };
-        console.log("Freedom Forever API Response:", data);
-
-        // Store the freedom lead ID
-        existingStore = estimateStore.get();
-
-        estimateStore.set({
-          ...existingStore,
-          freedomLeadId: data.lead_id,
-        });
-      } catch (error) {
-        console.error("Error calling Freedom Forever API:", error);
-      }
-    }
-
-    // Get the next step from the store
-    if (validatedEstimateType.success) {
-      const nextStep = getNextStep(validatedEstimateType.data, "phone-number");
-
-      if (nextStep) {
-        const redirectUrl = `/estimate/${estimateType}/${nextStep}`;
-        return new Response(null, {
-          status: 302,
-          headers: {
-            Location: appendQueryParams(redirectUrl, Astro.url.searchParams),
-          },
-        });
-      }
-    }
-
-    // Fallback to original logic
-    const redirectUrl = `/estimate/${estimateType}/address`;
-    return Astro.redirect(
-      appendQueryParams(redirectUrl, Astro.url.searchParams)
-    );
-  }
+interface PageState {
+  estimateType: string;
+  stepNumber: number;
+  totalSteps: number;
 }
 
-// Get previous page URL for back button
-const prevStep = validatedEstimateType.success
-  ? getPreviousStep(validatedEstimateType.data, "phone-number")
-  : null;
-const prevUrl = prevStep
-  ? `/estimate/${estimateType}/${prevStep}`
-  : `/estimate/${estimateType}/email`;
-
-// Get step number and total from store
-const stepNumber = validatedEstimateType.success
-  ? getCurrentStepNumber(validatedEstimateType.data, "phone-number")
-  : 1;
-const totalSteps = validatedEstimateType.success
-  ? getStoreSteps(validatedEstimateType.data)
-  : 5;
-
-const getStepHeader = () => {
-  switch (estimateType) {
-    default:
-      return "What's the best phone number to reach you?";
+function initializePage(
+  params: Record<string, string | undefined>
+): PageState | Response {
+  const validatedEstimateType = shortTradeEnum.safeParse(params.estimateType);
+  if (!validatedEstimateType.success) {
+    return new Response(null, { status: 302, headers: { Location: "/" } });
   }
-};
-const stepHeader = getStepHeader();
+
+  // Get step information
+  const estimateType = validatedEstimateType.data;
+  const stepNumber = getCurrentStepNumber(estimateType, "phone-number");
+  const totalSteps = getTotalSteps(estimateType);
+
+  return {
+    estimateType,
+    stepNumber,
+    totalSteps,
+  };
+}
+
+// Process the page based on the request method
+let pageState: PageState | Response;
+
+pageState = initializePage(Astro.params);
+
+if (pageState instanceof Response) {
+  return pageState;
+}
+
+const stepHeader = "What's the best phone number to reach you?";
 ---
 
-<EstimateWrapper title={estimateType} estimateType={estimateType}>
-  <form method="post">
+<EstimateWrapper
+  title={pageState.estimateType}
+  estimateType={pageState.estimateType}
+>
+  <form
+    method="post"
+    id="phoneForm"
+    data-estimate-type={pageState.estimateType}
+  >
     <StepLayout
       stepHeader={stepHeader}
-      stepNumber={stepNumber}
-      totalSteps={totalSteps}
-      estimateType={estimateType}
-      hasNextStep
-      hasPrevStep={stepNumber > 1}
+      stepNumber={pageState.stepNumber}
+      totalSteps={pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
+      hasPrevStep={pageState.stepNumber > 1}
+      estimateType={pageState.estimateType}
     >
       <div class="flex flex-col gap-4 text-center rounded-lg container">
         <div class="w-full mx-auto flex flex-col gap-2">
@@ -210,7 +89,6 @@ const stepHeader = getStepHeader();
               placeholder="Enter phone number"
               id="phoneInput"
               name="phoneInput"
-              value={phone ?? ""}
               inputmode="tel"
               pattern="(\+?1|1)?[-.\s]?\(?[2-9]\d{2}\)?[-.\s]?\d{3}[-.\s]?\d{4}"
               title="Phone number format: (XXX) XXX-XXXX"
@@ -219,7 +97,7 @@ const stepHeader = getStepHeader();
             />
           </div>
           {
-            estimateType === "solar" ? (
+            pageState.estimateType === "solar" ? (
               <p class="text-[8px] text-gray-500">
                 By submitting my contact information including my telephone
                 number above, I authorize Bright Solar Marketing, and/or its
@@ -255,40 +133,41 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script>
-  import { estimateParser } from "@stores/estimateProgress";
+  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { getNextStep } from "src/consts/estimateSteps";
+  import { shortTradeEnum } from "@assets/info/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
+  import { actions } from "astro:actions";
 
-  /**
-   * Controller class for phone form functionality
-   * Handles input formatting, validation, and button state
-   */
   class PhoneFormController {
     private phoneInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
+    private form: HTMLFormElement | null;
     private phoneParser = estimateParser.pick({ phone: true });
+    private estimateType: string;
 
     constructor() {
-      // Initialize DOM elements
       this.phoneInput = document.getElementById(
         "phoneInput"
       ) as HTMLInputElement;
       this.submitButton = document.getElementById(
         "nextStepButton"
       ) as HTMLButtonElement;
+      this.form = document.getElementById("phoneForm") as HTMLFormElement;
+      this.estimateType =
+        document
+          .querySelector("[data-estimate-type]")
+          ?.getAttribute("data-estimate-type") || "";
       this.initialize();
     }
 
-    /**
-     * Formats a phone number string to (XXX) XXX-XXXX format
-     * @param value - Raw phone number input
-     * @returns Formatted phone number string
-     */
     private formatPhoneNumber(value: string): string {
-      // Remove non-digit characters
       const phoneNumber = value.replace(/\D/g, "");
       const phoneNumberLength = phoneNumber.length;
 
-      // Format based on length
       if (phoneNumberLength < 4) return phoneNumber;
       if (phoneNumberLength < 7) {
         return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
@@ -299,16 +178,11 @@ const stepHeader = getStepHeader();
       )}-${phoneNumber.slice(6, 10)}`;
     }
 
-    /**
-     * Handles phone input events
-     * Formats input value and updates button state
-     */
     private handlePhoneInput = (e: Event) => {
       const input = e.target as HTMLInputElement;
       const formattedNumber = this.formatPhoneNumber(input.value);
       input.value = formattedNumber;
 
-      // Validate phone number and update button state
       const isValid = this.phoneParser.safeParse({
         phone: input.value,
       }).success;
@@ -321,25 +195,143 @@ const stepHeader = getStepHeader();
       }
     };
 
-    /**
-     * Initializes event listeners
-     * Sets up phone input handling and checks initial state
-     */
-    private initialize() {
-      if (this.phoneInput) {
-        // Check initial value
-        if (this.phoneInput.value) {
-          const isValid = this.phoneParser.safeParse({
-            phone: this.phoneInput.value,
-          }).success;
+    private async handleSubmit(e: Event) {
+      e.preventDefault();
 
-          if (this.submitButton && isValid) {
-            this.submitButton.setAttribute("aria-disabled", "false");
+      if (!this.form || !this.phoneInput) return;
+
+      const phoneValue = this.phoneInput.value;
+      const phoneParsed = this.phoneParser.safeParse({ phone: phoneValue });
+
+      if (phoneParsed.success) {
+        // Update store
+        const existingStore = estimateStore.get();
+        estimateStore.set({
+          ...existingStore,
+          phone: phoneValue,
+        });
+
+        if (this.estimateType === "solar") {
+          try {
+            const response = await actions.submitFreedomForever({
+              token: "xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ",
+              authorization_token: "JiUIX1ZB1RlJcKRBqGjN",
+              affiliate_id: "Mjc1",
+              campaign_id: "MjM0NA%3D%3D",
+              self_book_campaign_id: "MjQwNQ%3D%3D",
+              first_name: existingStore.firstName || "",
+              last_name: existingStore.lastName || "",
+              email: existingStore.email || "",
+              phone: phoneValue || "",
+              zip_code: existingStore.zipCode || "",
+              Trusted_Form:
+                existingStore.trackingParams?.trustedFormCertUrl || "",
+              hrm_utm_campaign:
+                existingStore.trackingParams?.utm_campaign || "",
+              hrm_campaign:
+                new URLSearchParams(window.location.search).get("campaign") ||
+                "",
+              hrm_campaign_id2:
+                new URLSearchParams(window.location.search).get(
+                  "campaign_id"
+                ) || "",
+              hrm_adset_id:
+                new URLSearchParams(window.location.search).get("ad_set") || "",
+              hrm_utm_medium: existingStore.trackingParams?.utm_medium || "",
+              hrm_adset_name:
+                new URLSearchParams(window.location.search).get("utm_adset") ||
+                "",
+              hrm_ad_name: existingStore.trackingParams?.utm_content || "",
+              hrm_ad_id:
+                new URLSearchParams(window.location.search).get("ad") || "",
+              unique_id: existingStore.trackingParams?.posthogPersonId || "",
+              hrm_fbc: existingStore.trackingParams?.fbc || "",
+              hrm_fbp: existingStore.trackingParams?.fbp || "",
+              hrm_gclid: existingStore.trackingParams?.gclid || "",
+              hrm_fbclid: existingStore.trackingParams?.fbclid || "",
+              hrm_creative:
+                new URLSearchParams(window.location.search).get(
+                  "google_ad_id"
+                ) || "",
+              hrm_placement:
+                new URLSearchParams(window.location.search).get("placement") ||
+                "",
+              hrm_utm_source: existingStore.trackingParams?.utm_source || "",
+              "HRM User Agent": existingStore.trackingParams?.userAgent || "",
+            });
+            console.log("Freedom Forever API Response:", response);
+
+            const lead_id = response.data;
+            if (lead_id) {
+              const updatedStore = estimateStore.get();
+              estimateStore.set({
+                ...updatedStore,
+                freedomLeadId: lead_id,
+              });
+            }
+          } catch (error) {
+            console.error("Error calling Freedom Forever API:", error);
           }
         }
 
-        this.phoneInput.addEventListener("input", this.handlePhoneInput);
+        // Get next step
+        const validatedEstimateType = shortTradeEnum.safeParse(
+          this.estimateType
+        );
+        if (validatedEstimateType.success) {
+          const nextStep = getNextStep(
+            validatedEstimateType.data,
+            "phone-number"
+          );
+          if (nextStep) {
+            const currentUrl = new URL(window.location.href);
+            navigate(
+              appendQueryParams(
+                `/estimate/${this.estimateType}/${nextStep}`,
+                new URLSearchParams(currentUrl.search)
+              )
+            );
+            return;
+          }
+        }
       }
+    }
+
+    private initialize() {
+      if (!this.phoneInput || !this.form || !this.estimateType) return;
+
+      const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
+      if (!validatedEstimateType.success) {
+        console.error("Invalid estimate type");
+        return;
+      }
+
+      // Initialize stores
+      estimateStepsStore.set({
+        currentStep: "phone-number",
+        estimateType: validatedEstimateType.data,
+      });
+
+      // Set phone value from store data if available
+      const storeData = estimateStore.get();
+      if (storeData.phone) {
+        this.phoneInput.value = storeData.phone;
+      }
+
+      // Check initial value
+      if (this.phoneInput.value) {
+        const isValid = this.phoneParser.safeParse({
+          phone: this.phoneInput.value,
+        }).success;
+
+        if (this.submitButton && isValid) {
+          this.submitButton.setAttribute("aria-disabled", "false");
+        }
+      }
+
+      // Set up event listeners
+      this.phoneInput.addEventListener("input", this.handlePhoneInput);
+      this.form.addEventListener("submit", (e) => this.handleSubmit(e));
     }
   }
 
