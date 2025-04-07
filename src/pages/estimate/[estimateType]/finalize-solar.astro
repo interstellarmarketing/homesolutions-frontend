@@ -6,12 +6,12 @@ import { z } from "zod";
 
 interface PageState {
   estimateType: string;
+  ipAddress: string | null;
 }
 
 function initializePage(
   params: Record<string, string | undefined>,
-  searchParams: URLSearchParams,
-  request: Request
+  searchParams: URLSearchParams
 ): PageState | Response {
   const validatedEstimateType = shortTradeEnum.safeParse(params.estimateType);
   if (!validatedEstimateType.success) {
@@ -23,14 +23,16 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
+    ipAddress:
+      Astro.clientAddress ||
+      Astro?.request?.headers?.get("cf-connecting-ip") ||
+      Astro?.request?.headers?.get("x-real-ip") ||
+      Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
+      null,
   };
 }
 
-const pageState = initializePage(
-  Astro.params,
-  Astro.url.searchParams,
-  Astro.request
-);
+const pageState = initializePage(Astro.params, Astro.url.searchParams);
 
 if (pageState instanceof Response) {
   return pageState;
@@ -40,7 +42,7 @@ if (pageState instanceof Response) {
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
-  data-ip-address={Astro.request.headers.get("cf-connecting-ip")}
+  data-ip-address={pageState.ipAddress}
 >
   <div
     class="w-full h-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"

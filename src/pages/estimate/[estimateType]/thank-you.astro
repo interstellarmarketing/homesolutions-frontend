@@ -6,6 +6,7 @@ import { z } from "zod";
 
 interface PageState {
   estimateType: string;
+  ipAddress: string | null;
 }
 
 function initializePage(
@@ -23,6 +24,12 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
+    ipAddress:
+      Astro.clientAddress ||
+      Astro?.request?.headers?.get("cf-connecting-ip") ||
+      Astro?.request?.headers?.get("x-real-ip") ||
+      Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
+      null,
   };
 }
 
@@ -40,7 +47,7 @@ if (pageState instanceof Response) {
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
-  data-ip-address={Astro.request.headers.get("cf-connecting-ip")}
+  data-ip-address={pageState.ipAddress}
 >
   <div
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
@@ -208,6 +215,8 @@ if (pageState instanceof Response) {
         document
           .querySelector("[data-ip-address]")
           ?.getAttribute("data-ip-address") || null;
+
+      console.log("ipAddress", ipAddress);
 
       const storeWithIp = { ...store, ipAddress };
 
