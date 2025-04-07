@@ -116,8 +116,8 @@ const formatEstimateTypeNoun = (type: string) =>
               pattern="[0-9]{5}"
               inputmode="numeric"
             />
-            <div id="zipErrorMessage" class="text-red-500 text-sm mt-1 hidden">
-            </div>
+          </div>
+          <div id="zipErrorMessage" class="text-red-500 text-sm mt-1 hidden">
           </div>
         </div>
       </div>
@@ -226,6 +226,8 @@ const formatEstimateTypeNoun = (type: string) =>
     }
 
     private async handleSubmit(e: Event) {
+      e.preventDefault();
+
       const zipCheck = await actions.checkZip({ zipCode: this.zipInput.value });
 
       if (!zipCheck.data) {
