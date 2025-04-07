@@ -25,7 +25,6 @@ function initializePage(
   return {
     estimateType: validatedEstimateType.data,
     ipAddress:
-      Astro.clientAddress ||
       Astro?.request?.headers?.get("cf-connecting-ip") ||
       Astro?.request?.headers?.get("x-real-ip") ||
       Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
@@ -47,11 +46,11 @@ if (pageState instanceof Response) {
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
-  data-ip-address={pageState.ipAddress}
 >
   <div
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
     data-estimate-type={pageState.estimateType}
+    data-ip-address={pageState.ipAddress}
   >
     <div class="flex flex-col items-center gap-8 max-w-2xl mx-auto">
       <div class="] flex-col justify-start items-center gap-8 inline-flex">
