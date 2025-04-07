@@ -4,7 +4,6 @@ import StepLayout from "@components/step-layout/index.astro";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { ProcessEstimateType } from "@utils/kv/estimateTypeReset";
-import { appendQueryParams } from "@utils/queryParams";
 import { formSubmissionParser } from "be-rpc-estimates/src/zoddles/form-submission/formSubmissionType";
 import { z } from "zod";
 // Validation schemas
@@ -14,8 +13,6 @@ const estimateTypeSchema = shortTradeEnum;
 interface PageState {
   estimateType: string;
   zipCode: string | null;
-  city: string | null;
-  state: string | null;
   stepNumber: number;
   totalSteps: number;
 }
@@ -23,7 +20,6 @@ interface PageState {
 // Initialize page state
 async function initializePage(
   params: Record<string, string | undefined>,
-  searchParams: URLSearchParams,
   runtime: any
 ): Promise<PageState | Response> {
   // Validate estimate type from URL params
@@ -44,12 +40,7 @@ async function initializePage(
   const cfPostalCode = z.string().safeParse(runtime.cf?.postalCode);
 
   // Initialize zip code from URL param or Cloudflare location
-  const zipCode =
-    searchParams.get("zipCode") ||
-    (cfPostalCode.success ? cfPostalCode.data : null);
-
-  const city = searchParams.get("city") || null;
-  const state = searchParams.get("state") || null;
+  const zipCode = cfPostalCode.success ? cfPostalCode.data : null;
 
   // Get step information
   const estimateType = parsedEstimateType.data;
@@ -59,99 +50,15 @@ async function initializePage(
   return {
     estimateType: validatedEstimateType,
     zipCode,
-    city,
-    state,
     stepNumber,
     totalSteps,
   };
 }
 
-// Handle form submission
-async function handleFormSubmission(
-  request: Request,
-  estimateType: string,
-  runtime: any
-): Promise<Response | null> {
-  const formData = await request.formData();
-  const submission = {
-    zipCode: formData?.get("zipInput") as string,
-    trustedFormCertUrl: formData?.get("xxTrustedFormCertUrl") as string,
-    trustedFormPingUrl: formData?.get("xxTrustedFormPingUrl") as string,
-  };
-
-  const parsedZip = zipSchema.safeParse({ zipCode: submission.zipCode });
-
-  if (parsedZip.success) {
-    const zipCode = parsedZip.data.zipCode;
-
-    try {
-      // Initialize ZIP service
-      const zipService = await runtime.env.ZIP_METHODS.newZipMethods();
-      const locationData = await zipService.uspsZipCheck(zipCode);
-
-      if (!locationData?.defaultState || !locationData?.defaultCity) {
-        throw new Error("Invalid ZIP code location data");
-      }
-
-      // Pass data as URL parameters
-      const url = new URL(request.url);
-      url.searchParams.set("zipCode", zipCode);
-      url.searchParams.set("city", locationData.defaultCity);
-      url.searchParams.set("state", locationData.defaultState);
-
-      if (submission.trustedFormCertUrl) {
-        url.searchParams.set(
-          "trustedFormCertUrl",
-          submission.trustedFormCertUrl
-        );
-      }
-
-      if (submission.trustedFormPingUrl) {
-        url.searchParams.set(
-          "trustedFormPingUrl",
-          submission.trustedFormPingUrl
-        );
-      }
-
-      // The next step will be determined client-side
-      const redirectUrl = `/estimate/${estimateType}/`;
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: appendQueryParams(redirectUrl, url.searchParams),
-        },
-      });
-    } catch (error) {
-      console.error("ZIP validation error:", error);
-      return new Response("Invalid ZIP code", {
-        status: 400,
-        statusText: "Invalid ZIP code or service unavailable",
-      });
-    }
-  }
-
-  return null;
-}
-
 // Process the page based on the request method
 let pageState: PageState | Response;
 
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || "",
-    Astro.locals.runtime
-  );
-  if (result) {
-    return result;
-  }
-}
-
-pageState = await initializePage(
-  Astro.params,
-  Astro.url.searchParams,
-  Astro.locals.runtime
-);
+pageState = await initializePage(Astro.params, Astro.locals.runtime);
 
 if (pageState instanceof Response) {
   return pageState;
@@ -166,15 +73,14 @@ const formatEstimateTypeNoun = (type: string) =>
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
 >
-  <form method="post" id="zipForm" data-estimate-type={pageState.estimateType}>
+  <form id="zipForm" data-estimate-type={pageState.estimateType}>
     <StepLayout
       stepHeader={`Let's find your local ${formatEstimateTypeNoun(pageState.estimateType)} pros`}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
-      delaySubmit={true}
       loadingButtonText="Validating your zip code..."
     >
       <div class="flex flex-col gap-4 text-center rounded-lg container">
@@ -210,6 +116,8 @@ const formatEstimateTypeNoun = (type: string) =>
               pattern="[0-9]{5}"
               inputmode="numeric"
             />
+            <div id="zipErrorMessage" class="text-red-500 text-sm mt-1 hidden">
+            </div>
           </div>
         </div>
       </div>
@@ -223,7 +131,10 @@ const formatEstimateTypeNoun = (type: string) =>
   import { estimateStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { actions } from "astro:actions";
   import { z } from "zod";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   const ZIP_LENGTH = 5;
 
@@ -285,6 +196,13 @@ const formatEstimateTypeNoun = (type: string) =>
       this.zipInput.addEventListener("input", (event) => {
         const input = (event.target as HTMLInputElement).value;
         this.validateZipCode(input);
+
+        // Clear error message when user starts typing
+        const errorElement = document.getElementById("zipErrorMessage");
+        if (errorElement) {
+          errorElement.classList.add("hidden");
+        }
+        this.zipInput.setCustomValidity("");
       });
 
       // Handle form submission
@@ -308,6 +226,27 @@ const formatEstimateTypeNoun = (type: string) =>
     }
 
     private async handleSubmit(e: Event) {
+      const zipCheck = await actions.checkZip({ zipCode: this.zipInput.value });
+
+      if (!zipCheck.data) {
+        this.zipInput.setCustomValidity("Invalid ZIP code");
+        // Display the error message
+        const errorElement = document.getElementById("zipErrorMessage");
+        if (errorElement) {
+          errorElement.textContent = "Invalid ZIP code";
+          errorElement.classList.remove("hidden");
+          e.preventDefault(); // Prevent form submission
+        }
+        return;
+      }
+
+      // Clear any previous error
+      this.zipInput.setCustomValidity("");
+      const errorElement = document.getElementById("zipErrorMessage");
+      if (errorElement) {
+        errorElement.classList.add("hidden");
+      }
+
       // We'll let the form submit to the server for ZIP validation
       // but we'll update the store with current values
       const existingStore = estimateStore.get();
@@ -340,13 +279,13 @@ const formatEstimateTypeNoun = (type: string) =>
       if (validatedEstimateType.success) {
         const nextStep = getNextStep(validatedEstimateType.data, "zip");
         if (nextStep) {
-          const url = new URL(window.location.href);
-          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-
-          // Add electric bill as URL parameter
-          url.searchParams.set("zip", this.zipInput.value);
-
-          window.location.href = url.toString();
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
           return;
         }
       }

@@ -4,33 +4,8 @@ import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 
-// Create page-specific parser
-const pageSchema = z.object({
-  estimateType: shortTradeEnum,
-  city: z.string().optional(),
-  state: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  creditScoreAboveOrEqual640: z.boolean().optional(),
-});
-
 interface PageState {
   estimateType: string;
-  city: string;
-  state: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  creditScoreAboveOrEqual640: boolean;
-  ipAddress: string | null;
-  trackingParams: {
-    fbc: string;
-    fbp: string;
-    posthogPersonId: string;
-  };
 }
 
 function initializePage(
@@ -48,24 +23,6 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
-    city: searchParams.get("city") || "",
-    state: searchParams.get("state") || "",
-    firstName: searchParams.get("firstName") || "",
-    lastName: searchParams.get("lastName") || "",
-    email: searchParams.get("email") || "",
-    phone: searchParams.get("phone") || "",
-    creditScoreAboveOrEqual640:
-      searchParams.get("creditScoreAboveOrEqual640") === "true",
-    ipAddress:
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-real-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0] ||
-      null,
-    trackingParams: {
-      fbc: searchParams.get("fbc") || "",
-      fbp: searchParams.get("fbp") || "",
-      posthogPersonId: searchParams.get("posthogPersonId") || "",
-    },
   };
 }
 
@@ -83,7 +40,6 @@ if (pageState instanceof Response) {
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
-  data-ip-address={pageState.ipAddress}
 >
   <div
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
@@ -137,9 +93,8 @@ if (pageState instanceof Response) {
                   </ul>
                 </div>
               ) : (
-                <p class="mb-4">
-                  We'll be in touch with matching pros in {pageState.city},{" "}
-                  {pageState.state} shortly.
+                <p class="mb-4" id="location-message">
+                  We'll be in touch with matching pros shortly.
                 </p>
               )
             }
@@ -176,6 +131,13 @@ if (pageState instanceof Response) {
           .querySelector("[data-estimate-type]")
           ?.getAttribute("data-estimate-type") || "";
       this.initialize();
+    }
+
+    private updateLocationMessage(store: StoreWithIpAddress) {
+      const messageElement = document.getElementById("location-message");
+      if (messageElement && store.city && store.state) {
+        messageElement.textContent = `We'll be in touch with matching pros in ${store.city}, ${store.state} shortly.`;
+      }
     }
 
     private async trackConversion(store: StoreWithIpAddress) {
@@ -245,8 +207,14 @@ if (pageState instanceof Response) {
         document
           .querySelector("[data-ip-address]")
           ?.getAttribute("data-ip-address") || null;
-      actions.processSubmission({ ...store, ipAddress });
-      this.trackConversion({ ...store, ipAddress });
+
+      const storeWithIp = { ...store, ipAddress };
+
+      // Update location message with store values
+      this.updateLocationMessage(storeWithIp);
+
+      actions.processSubmission(storeWithIp);
+      this.trackConversion(storeWithIp);
     }
   }
 

@@ -11,7 +11,6 @@ interface Props {
   hasPrevStep?: boolean;
   customButton?: boolean;
   estimateType: string;
-  delaySubmit?: boolean;
   showLoadingOnSubmit?: boolean;
   loadingButtonText?: string;
 }
@@ -24,7 +23,6 @@ const {
   hasPrevStep = false,
   customButton = false,
   estimateType,
-  delaySubmit = false,
   showLoadingOnSubmit = false,
   loadingButtonText = "Processing...",
 } = Astro.props;
@@ -105,7 +103,6 @@ const estimateHeader = getEstimateHeader(estimateType);
               type="submit"
               aria-disabled="true"
               class="h-12 px-5 py-3 bg-[#ffa726] rounded-lg flex justify-center items-center gap-2 w-full text-white aria-disabled:opacity-75 aria-disabled:cursor-not-allowed hover:bg-[#ff9800] transition-colors"
-              data-delay-submit={delaySubmit}
               data-show-loading={showLoadingOnSubmit}
               data-loading-text={loadingButtonText}
               data-estimate-steps-store={JSON.stringify(
@@ -144,16 +141,13 @@ const estimateHeader = getEstimateHeader(estimateType);
 </div>
 
 <script>
-  import { appendQueryParams } from "@utils/queryParams";
-  import { navigate } from "astro:transitions/client";
-
+  import { type EstimateStepsState } from "@stores/estimateStepsStore";
+  import posthog from "posthog-js";
   import {
     estimateSteps,
     getCurrentStepIndex,
     getTotalSteps,
   } from "src/consts/estimateSteps";
-  import { type EstimateStepsState } from "@stores/estimateStepsStore";
-  import posthog from "posthog-js";
 
   class StepLayoutWrapper extends HTMLElement {}
 
@@ -187,7 +181,6 @@ const estimateHeader = getEstimateHeader(estimateType);
       const form = this.button.closest("form");
       if (!form) return;
 
-      const shouldDelay = this.button.dataset.delaySubmit === "true";
       const showLoadingOnSubmit = this.button.dataset.showLoading === "true";
 
       // Add click handler to the button
@@ -198,9 +191,7 @@ const estimateHeader = getEstimateHeader(estimateType);
         }
       });
 
-      if (shouldDelay) {
-        form.addEventListener("submit", this.handleDelayedSubmit.bind(this));
-      } else if (showLoadingOnSubmit) {
+      if (showLoadingOnSubmit) {
         form.addEventListener("submit", this.handleLoadingSubmit.bind(this));
       }
       form.addEventListener(
@@ -245,41 +236,6 @@ const estimateHeader = getEstimateHeader(estimateType);
 
         // Send PostHog event
         posthog.capture("form_next_step_error", posthogNextStepErrorEvent);
-      }
-    }
-
-    private async handleDelayedSubmit(e: SubmitEvent) {
-      e.preventDefault();
-      const form = e.target as HTMLFormElement;
-      const formData = new FormData(form);
-      const url = form.action || window.location.href;
-
-      this.setLoadingState(true);
-
-      try {
-        // Wait a bit to show the loading state
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        // Use fetch to submit the form to support client-side navigation
-        const response = await fetch(url, {
-          method: "POST",
-          body: formData,
-          headers: {
-            Accept: "text/html,application/xhtml+xml",
-          },
-        });
-
-        const currentUrl = new URL(window.location.href);
-        navigate(
-          appendQueryParams(
-            response.url,
-            new URLSearchParams(currentUrl.search)
-          )
-        );
-      } catch (error) {
-        console.error("Form submission error:", error);
-        // Fall back to regular form submission if fetch fails
-        form.submit();
       }
     }
 

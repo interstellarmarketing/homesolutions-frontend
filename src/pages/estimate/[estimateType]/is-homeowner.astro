@@ -14,14 +14,12 @@ const homeownerOptions = ["I Own My Home", "I Rent My Home"];
 
 interface PageState {
   estimateType: string;
-  isHomeowner: boolean | undefined;
   stepNumber: number;
   totalSteps: number;
 }
 
 function initializePage(
-  params: Record<string, string | undefined>,
-  searchParams: URLSearchParams
+  params: Record<string, string | undefined>
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -36,60 +34,21 @@ function initializePage(
 
   return {
     estimateType,
-    isHomeowner: searchParams.get("ho") === "1",
     stepNumber,
     totalSteps,
   };
 }
 
-async function handleFormSubmission(request: Request, estimateType: string) {
-  const formData = await request.formData();
-  const homeowner = formData.get("homeowner");
-
-  // Convert the string value to boolean
-  const isHomeowner = homeowner === "I Own My Home";
-
-  // Pass homeowner data as URL parameter
-  const url = new URL(request.url);
-  url.searchParams.set("ho", isHomeowner ? "1" : "0");
-
-  // The next step will be determined client-side
-  const redirectUrl = `/estimate/${estimateType}/`;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: appendQueryParams(redirectUrl, url.searchParams),
-    },
-  });
-}
-
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
-pageState = initializePage(Astro.params, Astro.url.searchParams);
+pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
 const stepHeader = "Do you own your home?";
-
-// Transform boolean value to string for the radio component
-const currentSelection =
-  pageState.isHomeowner === undefined
-    ? undefined
-    : pageState.isHomeowner
-      ? "I Own My Home"
-      : "I Rent My Home";
 ---
 
 <EstimateWrapper
@@ -101,24 +60,18 @@ const currentSelection =
     id="homeownerForm"
     data-estimate-type={pageState.estimateType}
   >
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.isHomeowner !== undefined ? "true" : "false"}
-    />
-
     <StepLayout
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={homeownerOptions}
         name="homeowner"
-        currentSelection={currentSelection}
+        currentSelection={undefined}
         layout="grid2"
       />
     </StepLayout>
@@ -131,6 +84,8 @@ const currentSelection =
   import { getNextStep } from "src/consts/estimateSteps";
   import { shortTradeEnum } from "@assets/info/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   class FormController {
     private radioButtons: NodeListOf<HTMLInputElement>;
@@ -172,11 +127,26 @@ const currentSelection =
         estimateType: validatedEstimateType.data,
       });
 
-      const hasInitialSelection = document.getElementById(
-        "hasInitialSelection"
-      ) as HTMLInputElement;
-      if (hasInitialSelection?.value === "true") {
-        this.submitButton.setAttribute("aria-disabled", "false");
+      // Check store for initial selection and set the radio button accordingly
+      const storeData = estimateStore.get();
+      if (storeData.isHomeowner !== undefined) {
+        // Find and check the matching radio button based on the boolean value
+        const valueToSelect = storeData.isHomeowner
+          ? "I Own My Home"
+          : "I Rent My Home";
+
+        const radioToCheck = Array.from(this.radioButtons).find(
+          (radio) => radio.value === valueToSelect
+        );
+
+        if (radioToCheck) {
+          radioToCheck.checked = true;
+          this.submitButton.setAttribute("aria-disabled", "false");
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
+        }
+      } else {
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
 
       this.radioButtons.forEach((radio) => {
@@ -227,17 +197,16 @@ const currentSelection =
           "is-homeowner"
         );
         if (nextStep) {
-          const url = new URL(window.location.href);
-          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-          window.location.href = url.toString();
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
           return;
         }
       }
-
-      // Fallback to contact
-      const url = new URL(window.location.href);
-      url.pathname = `/estimate/${this.estimateType}/contact`;
-      window.location.href = url.toString();
     }
   }
 

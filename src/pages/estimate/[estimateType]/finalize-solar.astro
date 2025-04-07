@@ -4,39 +4,8 @@ import { shortTradeEnum } from "@assets/info/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 
-// Create page-specific parser
-const pageSchema = z.object({
-  estimateType: shortTradeEnum,
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  zipCode: z.string().optional(),
-  streetAddress: z.string().optional(),
-  freedomLeadId: z.string().optional(),
-  isHomeowner: z.boolean().optional(),
-  shadedRoof: z.boolean().optional(),
-});
-
 interface PageState {
   estimateType: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  zipCode: string;
-  streetAddress: string;
-  freedomLeadId: string;
-  isHomeowner: boolean;
-  shadedRoof: boolean;
-  ipAddress: string | null;
-  trackingParams: {
-    trustedFormCertUrl: string;
-    fbclid: string;
-    fbc: string;
-    fbp: string;
-    userAgent: string;
-  };
 }
 
 function initializePage(
@@ -54,27 +23,6 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
-    firstName: searchParams.get("firstName") || "",
-    lastName: searchParams.get("lastName") || "",
-    email: searchParams.get("email") || "",
-    phone: searchParams.get("phone") || "",
-    zipCode: searchParams.get("zipCode") || "",
-    streetAddress: searchParams.get("streetAddress") || "",
-    freedomLeadId: searchParams.get("freedomLeadId") || "",
-    isHomeowner: searchParams.get("isHomeowner") === "true",
-    shadedRoof: searchParams.get("shadedRoof") === "true",
-    ipAddress:
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-real-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0] ||
-      null,
-    trackingParams: {
-      trustedFormCertUrl: searchParams.get("trustedFormCertUrl") || "",
-      fbclid: searchParams.get("fbclid") || "",
-      fbc: searchParams.get("fbc") || "",
-      fbp: searchParams.get("fbp") || "",
-      userAgent: searchParams.get("userAgent") || "",
-    },
   };
 }
 
@@ -92,7 +40,6 @@ if (pageState instanceof Response) {
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
-  data-ip-address={pageState.ipAddress}
 >
   <div
     class="w-full h-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
@@ -110,8 +57,9 @@ if (pageState instanceof Response) {
         name="myiFrame"
         sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
         scrolling="no"
-        src=`https://bp-portal.freedomforever.com/open/affiliate/self-book?lead_id=${pageState.freedomLeadId}&token=xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ&authorization_token=JiUIX1ZB1RlJcKRBqGjN&affiliate_id=Mjc1&campaign_id=MjM0NA%3D%3D&self_book_campaign_id=MjQwNQ%3D%3D&first_name=${pageState.firstName}&zip_code=${pageState.zipCode}&last_name=${pageState.lastName}&phone=${pageState.phone}&email=${pageState.email}&address=${pageState.streetAddress}&credit_score=&electric_bill=&utility_company=Other&Facebook_Ad_ID=&Trusted_Form=${pageState.trackingParams.trustedFormCertUrl}&home_ownership=${pageState.isHomeowner ? 1 : 0}&Language=english&Roof_Shading=${pageState.shadedRoof ? 1 : 0}&Bill_Discounts=No&Self_Set_Apt_Notes=&Facebook_Click_ID=${pageState.trackingParams.fbclid}&Facebook_Browser_ID=&Ip_Address=${pageState.ipAddress}&User_Agent=${pageState.trackingParams.userAgent}`
-        style="border:0px #ffffff none;"></iframe>
+        src=""
+        style="border:0px #ffffff none;"
+        id="freedom-iframe"></iframe>
     </div>
   </div>
 </EstimateWrapper>
@@ -135,13 +83,53 @@ if (pageState instanceof Response) {
 
   class FinalizeSolarController {
     private estimateType: string;
+    private iframe: HTMLIFrameElement | null;
 
     constructor() {
       this.estimateType =
         document
           .querySelector("[data-estimate-type]")
           ?.getAttribute("data-estimate-type") || "";
+      this.iframe = document.getElementById(
+        "freedom-iframe"
+      ) as HTMLIFrameElement;
       this.initialize();
+    }
+
+    private updateIframeSrc(store: StoreWithIpAddress) {
+      if (!this.iframe) return;
+
+      const params = new URLSearchParams({
+        lead_id:
+          store.freedomLeadId !== undefined ? `${store.freedomLeadId}` : "",
+        token: "xiohQI7fv1KMp4TXXOztptNAbj11FfyKlu7gclQkapjmYvWJ",
+        authorization_token: "JiUIX1ZB1RlJcKRBqGjN",
+        affiliate_id: "Mjc1",
+        campaign_id: "MjM0NA==",
+        self_book_campaign_id: "MjQwNQ==",
+        first_name: store.firstName || "",
+        zip_code: store.zipCode || "",
+        last_name: store.lastName || "",
+        phone: store.phone || "",
+        email: store.email || "",
+        address: store.streetAddress || "",
+        credit_score: "",
+        electric_bill: "",
+        utility_company: "Other",
+        Facebook_Ad_ID: "",
+        Trusted_Form: store.trackingParams?.trustedFormCertUrl || "",
+        home_ownership: store.isHomeowner ? "1" : "0",
+        Language: "english",
+        Roof_Shading: store.shadedRoof ? "1" : "0",
+        Bill_Discounts: "No",
+        Self_Set_Apt_Notes: "",
+        Facebook_Click_ID: store.trackingParams?.fbclid || "",
+        Facebook_Browser_ID: "",
+        Ip_Address: store.ipAddress || "",
+        User_Agent: store.trackingParams?.userAgent || "",
+      });
+
+      this.iframe.src = `https://bp-portal.freedomforever.com/open/affiliate/self-book?${params.toString()}`;
     }
 
     private async trackConversion(store: StoreWithIpAddress) {
@@ -211,8 +199,14 @@ if (pageState instanceof Response) {
         document
           .querySelector("[data-ip-address]")
           ?.getAttribute("data-ip-address") || null;
-      actions.processSubmission({ ...store, ipAddress });
-      this.trackConversion({ ...store, ipAddress });
+
+      const storeWithIp = { ...store, ipAddress };
+
+      // Update iframe src with store values
+      this.updateIframeSrc(storeWithIp);
+
+      actions.processSubmission(storeWithIp);
+      this.trackConversion(storeWithIp);
     }
   }
 

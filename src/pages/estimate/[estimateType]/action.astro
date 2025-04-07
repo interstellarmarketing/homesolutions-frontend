@@ -20,6 +20,10 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
+import {
+  activeEstimateTypeStore,
+  computedEstimateOptions,
+} from "@stores/activeEstimateType";
 
 // Schema definitions
 const actionSchema = z.string();
@@ -27,15 +31,13 @@ const estimateTypeSchema = shortTradeEnum;
 
 interface PageState {
   estimateType: string;
-  estimateAction: string | undefined;
   stepNumber: number;
   totalSteps: number;
   options: string[];
 }
 
 function initializePage(
-  params: Record<string, string | undefined>,
-  searchParams: URLSearchParams
+  params: Record<string, string | undefined>
 ): PageState | Response {
   const estimateTypeResult = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -46,16 +48,13 @@ function initializePage(
 
   const estimateType = estimateTypeResult.data;
 
-  // Get trade-specific options from computedEstimateOptions
-  let options: string[] = [];
+  // Get store data
+  const activeEstimateOptions = computedEstimateOptions.get();
 
-  // This is a simplified approach, the actual options should be derived from the store in client-side
-  if (estimateType === "roofing") {
-    options = ["repair", "replace", "install"];
-  } else if (estimateType === "solar") {
-    options = ["install", "expand"];
-  } else {
-    options = ["install", "repair", "replace"];
+  // Validation checks
+  if (!activeEstimateOptions) {
+    console.error("Missing active estimate options");
+    return Astro.redirect("/");
   }
 
   // Get step information
@@ -64,49 +63,16 @@ function initializePage(
 
   return {
     estimateType,
-    estimateAction: searchParams.get("action") || undefined,
     stepNumber,
     totalSteps,
-    options,
+    options: activeEstimateOptions.data.estimateAction,
   };
-}
-
-async function handleFormSubmission(request: Request, estimateType: string) {
-  try {
-    const formData = await request.formData();
-    const action = actionSchema.parse(formData.get("action"));
-
-    // Pass action as URL parameter
-    const url = new URL(request.url);
-    url.searchParams.set("action", action);
-
-    // The next step will be determined client-side
-    const redirectUrl = `/estimate/${estimateType}/`;
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: appendQueryParams(redirectUrl, url.searchParams),
-      },
-    });
-  } catch (error) {
-    console.error("Form submission error:", error);
-    return null;
-  }
 }
 
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
-pageState = initializePage(Astro.params, Astro.url.searchParams);
+pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
   return pageState;
@@ -137,26 +103,19 @@ const stepHeader = getStepHeader();
     id="actionForm"
     data-estimate-type={pageState.estimateType}
   >
-    <!-- Add hidden input for initial state -->
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.estimateAction ? "true" : "false"}
-    />
-
     <StepLayout
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={pageState.options}
         name="action"
-        currentSelection={pageState.estimateAction}
-        layout="grid2"
+        currentSelection={undefined}
+        layout="flex"
         capitalize={true}
       />
     </StepLayout>
@@ -173,6 +132,8 @@ const stepHeader = getStepHeader();
     computedEstimateOptions,
   } from "@stores/activeEstimateType";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   /**
    * Client-side form validation and button state management
@@ -220,13 +181,22 @@ const stepHeader = getStepHeader();
       // Initialize active estimate type store
       activeEstimateTypeStore.set(validatedEstimateType.data);
 
-      // Check hidden field for initial state
-      const hasInitialSelection =
-        document
-          .getElementById("hasInitialSelection")
-          ?.getAttribute("value") === "true";
-      if (hasInitialSelection) {
-        this.submitButton.setAttribute("aria-disabled", "false");
+      // Check store for initial selection and set the radio button accordingly
+      const storeData = estimateStore.get();
+      if (storeData.estimateAction) {
+        // Find and check the matching radio button
+        const radioToCheck = Array.from(this.radioButtons).find(
+          (radio) => radio.value === storeData.estimateAction
+        );
+
+        if (radioToCheck) {
+          radioToCheck.checked = true;
+          this.submitButton.setAttribute("aria-disabled", "false");
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
+        }
+      } else {
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
 
       this.radioButtons.forEach((radio) => {
@@ -270,24 +240,16 @@ const stepHeader = getStepHeader();
       if (validatedEstimateType.success) {
         const nextStep = getNextStep(validatedEstimateType.data, "action");
         if (nextStep) {
-          const url = new URL(window.location.href);
-          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-          window.location.href = url.toString();
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
           return;
         }
       }
-
-      // Fallback logic
-      if (this.estimateType === "roofing") {
-        const url = new URL(window.location.href);
-        url.pathname = `/estimate/${this.estimateType}/home-type`;
-        window.location.href = url.toString();
-        return;
-      }
-
-      const url = new URL(window.location.href);
-      url.pathname = `/estimate/${this.estimateType}/project-details`;
-      window.location.href = url.toString();
     }
   }
 

@@ -12,7 +12,6 @@ const emailSchema = z.object({
 
 interface PageState {
   estimateType: string;
-  email: string | undefined;
   stepNumber: number;
   totalSteps: number;
 }
@@ -33,48 +32,13 @@ function initializePage(
 
   return {
     estimateType,
-    email: searchParams.get("email") || undefined,
     stepNumber,
     totalSteps,
   };
 }
 
-async function handleFormSubmission(request: Request, estimateType: string) {
-  const formData = await request.formData();
-  const emailData = {
-    email: formData.get("emailInput"),
-  };
-
-  const emailParsed = emailSchema.safeParse(emailData);
-  if (!emailParsed.success) {
-    return null;
-  }
-
-  // Pass email as URL parameter
-  const url = new URL(request.url);
-  url.searchParams.set("email", emailParsed.data.email);
-
-  // The next step will be determined client-side
-  const redirectUrl = `/estimate/${estimateType}/`;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: appendQueryParams(redirectUrl, url.searchParams),
-    },
-  });
-}
-
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
 pageState = initializePage(Astro.params, Astro.url.searchParams);
 
@@ -98,7 +62,7 @@ const stepHeader = "What's the best email to reach you?";
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
@@ -127,7 +91,6 @@ const stepHeader = "What's the best email to reach you?";
               placeholder="Enter email address"
               id="emailInput"
               name="emailInput"
-              value={pageState.email ?? ""}
               autocomplete="email"
               aria-label="Email address"
             />
@@ -148,6 +111,8 @@ const stepHeader = "What's the best email to reach you?";
     getTotalSteps,
   } from "@consts/estimateSteps";
   import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   /**
    * Controller class for email form functionality
@@ -213,6 +178,12 @@ const stepHeader = "What's the best email to reach you?";
         estimateType: validatedEstimateType.data,
       });
 
+      // Set email value from store data if available
+      const storeData = estimateStore.get();
+      if (storeData.email) {
+        this.emailInput.value = storeData.email;
+      }
+
       // Update step info
       const stepNumber = getCurrentStepNumber(
         validatedEstimateType.data,
@@ -265,17 +236,16 @@ const stepHeader = "What's the best email to reach you?";
         if (validatedEstimateType.success) {
           const nextStep = getNextStep(validatedEstimateType.data, "email");
           if (nextStep) {
-            const url = new URL(window.location.href);
-            url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-            window.location.href = url.toString();
+            const currentUrl = new URL(window.location.href);
+            navigate(
+              appendQueryParams(
+                `/estimate/${this.estimateType}/${nextStep}`,
+                new URLSearchParams(currentUrl.search)
+              )
+            );
             return;
           }
         }
-
-        // Fallback to phone number
-        const url = new URL(window.location.href);
-        url.pathname = `/estimate/${this.estimateType}/phone-number`;
-        window.location.href = url.toString();
       }
     };
   }

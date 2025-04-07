@@ -13,14 +13,12 @@ const shadedRoofOptions = ["Yes, willing to trim", "No"];
 
 interface PageState {
   estimateType: string;
-  shadedRoof: boolean | undefined;
   stepNumber: number;
   totalSteps: number;
 }
 
 function initializePage(
-  params: Record<string, string | undefined>,
-  searchParams: URLSearchParams
+  params: Record<string, string | undefined>
 ): PageState | Response {
   const parsedEstimateType = estimateTypeSchema.safeParse(params.estimateType);
 
@@ -35,60 +33,21 @@ function initializePage(
 
   return {
     estimateType,
-    shadedRoof: searchParams.get("sr") === "1",
     stepNumber,
     totalSteps,
   };
 }
 
-async function handleFormSubmission(request: Request, estimateType: string) {
-  const formData = await request.formData();
-  const shadedRoof = formData.get("shadedRoof");
-
-  // Convert the string value to boolean
-  const isRoofShaded = shadedRoof === "Yes, willing to trim";
-
-  // Pass shaded roof data as URL parameter
-  const url = new URL(request.url);
-  url.searchParams.set("sr", isRoofShaded ? "1" : "0");
-
-  // The next step will be determined client-side
-  const redirectUrl = `/estimate/${estimateType}/`;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: appendQueryParams(redirectUrl, url.searchParams),
-    },
-  });
-}
-
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
-pageState = initializePage(Astro.params, Astro.url.searchParams);
+pageState = initializePage(Astro.params);
 
 if (pageState instanceof Response) {
   return pageState;
 }
 
 const stepHeader = "Is your roof shaded by trees?";
-
-// Transform boolean value to string for the radio component
-const currentSelection =
-  pageState.shadedRoof === undefined
-    ? undefined
-    : pageState.shadedRoof
-      ? "Yes, willing to trim"
-      : "No";
 ---
 
 <EstimateWrapper
@@ -100,24 +59,18 @@ const currentSelection =
     id="shadedRoofForm"
     data-estimate-type={pageState.estimateType}
   >
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.shadedRoof !== undefined ? "true" : "false"}
-    />
-
     <StepLayout
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={shadedRoofOptions}
         name="shadedRoof"
-        currentSelection={currentSelection}
+        currentSelection={undefined}
         layout="grid2"
       />
     </StepLayout>
@@ -130,6 +83,8 @@ const currentSelection =
   import { getNextStep } from "src/consts/estimateSteps";
   import { shortTradeEnum } from "@assets/info/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   class FormController {
     private radioButtons: NodeListOf<HTMLInputElement>;
@@ -171,11 +126,26 @@ const currentSelection =
         estimateType: validatedEstimateType.data,
       });
 
-      const hasInitialSelection = document.getElementById(
-        "hasInitialSelection"
-      ) as HTMLInputElement;
-      if (hasInitialSelection?.value === "true") {
-        this.submitButton.setAttribute("aria-disabled", "false");
+      // Check store for initial selection and set the radio button accordingly
+      const storeData = estimateStore.get();
+      if (storeData.shadedRoof !== undefined) {
+        // Find and check the matching radio button based on the boolean value
+        const valueToSelect = storeData.shadedRoof
+          ? "Yes, willing to trim"
+          : "No";
+
+        const radioToCheck = Array.from(this.radioButtons).find(
+          (radio) => radio.value === valueToSelect
+        );
+
+        if (radioToCheck) {
+          radioToCheck.checked = true;
+          this.submitButton.setAttribute("aria-disabled", "false");
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
+        }
+      } else {
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
 
       this.radioButtons.forEach((radio) => {
@@ -223,17 +193,16 @@ const currentSelection =
       if (validatedEstimateType.success) {
         const nextStep = getNextStep(validatedEstimateType.data, "shaded-roof");
         if (nextStep) {
-          const url = new URL(window.location.href);
-          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-          window.location.href = url.toString();
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
           return;
         }
       }
-
-      // Fallback to contact
-      const url = new URL(window.location.href);
-      url.pathname = `/estimate/${this.estimateType}/contact`;
-      window.location.href = url.toString();
     }
   }
 

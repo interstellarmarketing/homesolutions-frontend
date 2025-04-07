@@ -130,7 +130,7 @@ export function parseShortTradeObject<K extends ShortTradeEnum>(
 export const shortTradeObjects = [
 	createShortTradeObject("bathroom", {
 		estimateAction: ["enclosure", "updates", "conversion", "remodel", "walk-in"],
-		type: [null],
+		type: ["metal"],
 		homeType: [...homeTypesConst]
 	}),
 	createShortTradeObject("roofing", {

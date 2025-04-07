@@ -13,7 +13,6 @@ const creditScoreOptions = ["Credit score above 640", "Credit score below 640"];
 
 interface PageState {
   estimateType: string;
-  creditScoreAboveOrEqual640: boolean | undefined;
   stepNumber: number;
   totalSteps: number;
 }
@@ -35,7 +34,6 @@ function initializePage(
 
   return {
     estimateType,
-    creditScoreAboveOrEqual640: searchParams.get("csh") === "1",
     stepNumber,
     totalSteps,
   };
@@ -50,7 +48,6 @@ async function handleFormSubmission(request: Request, estimateType: string) {
 
   // Pass creditScore data as URL parameter
   const url = new URL(request.url);
-  url.searchParams.set("csh", creditScoreAboveOrEqual640 ? "1" : "0");
 
   // The next step will be determined client-side
   const redirectUrl = `/estimate/${estimateType}/`;
@@ -64,15 +61,6 @@ async function handleFormSubmission(request: Request, estimateType: string) {
 
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
 pageState = initializePage(Astro.params, Astro.url.searchParams);
 
@@ -81,14 +69,6 @@ if (pageState instanceof Response) {
 }
 
 const stepHeader = "What is your credit score?";
-
-// Transform boolean value to string for the radio component
-const currentSelection =
-  pageState.creditScoreAboveOrEqual640 === undefined
-    ? undefined
-    : pageState.creditScoreAboveOrEqual640
-      ? "Credit score above 640"
-      : "Credit score below 640";
 ---
 
 <EstimateWrapper
@@ -100,26 +80,18 @@ const currentSelection =
     id="creditScoreForm"
     data-estimate-type={pageState.estimateType}
   >
-    <input
-      type="hidden"
-      id="hasInitialSelection"
-      value={pageState.creditScoreAboveOrEqual640 !== undefined
-        ? "true"
-        : "false"}
-    />
-
     <StepLayout
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
       <LargeRadioButtonGroup
         options={creditScoreOptions}
         name="creditScore"
-        currentSelection={currentSelection}
+        currentSelection={undefined}
         layout="grid2"
       />
     </StepLayout>
@@ -132,6 +104,8 @@ const currentSelection =
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   // Declare zaraz for TypeScript
   declare const zaraz:
@@ -182,11 +156,26 @@ const currentSelection =
         estimateType: validatedEstimateType.data,
       });
 
-      const hasInitialSelection = document.getElementById(
-        "hasInitialSelection"
-      ) as HTMLInputElement;
-      if (hasInitialSelection?.value === "true") {
-        this.submitButton.setAttribute("aria-disabled", "false");
+      // Check store for initial selection and set the radio button accordingly
+      const storeData = estimateStore.get();
+      if (storeData.creditScoreAboveOrEqual640 !== undefined) {
+        // Find and check the matching radio button based on the boolean value
+        const valueToSelect = storeData.creditScoreAboveOrEqual640
+          ? "Credit score above 640"
+          : "Credit score below 640";
+
+        const radioToCheck = Array.from(this.radioButtons).find(
+          (radio) => radio.value === valueToSelect
+        );
+
+        if (radioToCheck) {
+          radioToCheck.checked = true;
+          this.submitButton.setAttribute("aria-disabled", "false");
+        } else {
+          this.submitButton.setAttribute("aria-disabled", "true");
+        }
+      } else {
+        this.submitButton.setAttribute("aria-disabled", "true");
       }
 
       this.radioButtons.forEach((radio) => {
@@ -241,17 +230,20 @@ const currentSelection =
           "credit-score"
         );
         if (nextStep) {
-          const url = new URL(window.location.href);
-          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-          window.location.href = url.toString();
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set(
+            "csh",
+            creditScoreAboveOrEqual640 ? "1" : "0"
+          );
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
+          );
           return;
         }
       }
-
-      // Fallback to contact
-      const url = new URL(window.location.href);
-      url.pathname = `/estimate/${this.estimateType}/contact`;
-      window.location.href = url.toString();
     }
 
     private async trackPhoneSubmitEvent() {

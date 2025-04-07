@@ -6,22 +6,8 @@ import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 
-// Create page-specific parser
-const addressSchema = z.object({
-  streetAddress: z.string().min(5),
-  zipCode: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  isHomeowner: z.boolean().optional(),
-});
-
 interface PageState {
   estimateType: string;
-  streetAddress: string | undefined;
-  zipCode: string | undefined;
-  city: string | undefined;
-  state: string | undefined;
-  isHomeowner: boolean;
   stepNumber: number;
   totalSteps: number;
 }
@@ -45,60 +31,13 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
-    streetAddress: searchParams.get("streetAddress") || undefined,
-    zipCode: searchParams.get("zipCode") || undefined,
-    city: searchParams.get("city") || undefined,
-    state: searchParams.get("state") || undefined,
-    isHomeowner: searchParams.get("isHomeowner") === "true",
     stepNumber,
     totalSteps,
   };
 }
 
-async function handleFormSubmission(request: Request, estimateType: string) {
-  const formData = await request.formData();
-  const addressData = {
-    streetAddress: formData.get("streetAddressInput"),
-    zipCode: formData.get("zipCodeInput"),
-    city: formData.get("cityInput"),
-    state: formData.get("stateInput"),
-    isHomeowner: formData.get("isHomeownerInput") === "on",
-  };
-
-  const addressParsed = addressSchema.safeParse(addressData);
-  if (!addressParsed.success) {
-    return null;
-  }
-
-  // Pass address data as URL parameters
-  const url = new URL(request.url);
-  Object.entries(addressParsed.data).forEach(([key, value]) => {
-    if (value !== undefined) {
-      url.searchParams.set(key, value.toString());
-    }
-  });
-
-  // The next step will be determined client-side
-  const redirectUrl = `/estimate/${estimateType}/`;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: appendQueryParams(redirectUrl, url.searchParams),
-    },
-  });
-}
-
 // Process the page based on the request method
 let pageState: PageState | Response;
-if (Astro.request.method === "POST") {
-  const result = await handleFormSubmission(
-    Astro.request,
-    Astro.params.estimateType || ""
-  );
-  if (result) {
-    return result;
-  }
-}
 
 pageState = initializePage(Astro.params, Astro.url.searchParams);
 
@@ -125,7 +64,7 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
       stepHeader={stepHeader}
       stepNumber={pageState.stepNumber}
       totalSteps={pageState.totalSteps}
-      hasNextStep={pageState.stepNumber < pageState.totalSteps}
+      hasNextStep={pageState.stepNumber <= pageState.totalSteps}
       hasPrevStep={pageState.stepNumber > 1}
       estimateType={pageState.estimateType}
     >
@@ -152,7 +91,6 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
               placeholder="Enter"
               id="streetAddressInput"
               name="streetAddressInput"
-              value={pageState.streetAddress}
               minlength="5"
               autocomplete="street-address"
               aria-label="Street address"
@@ -164,7 +102,6 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
         <label class="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
-            checked={pageState.isHomeowner}
             class="w-5 h-5 rounded border-gray-300"
             id="isHomeownerInput"
             name="isHomeownerInput"
@@ -191,6 +128,8 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
   import { getNextStep } from "src/consts/estimateSteps";
   import { shortTradeEnum } from "@assets/info/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { navigate } from "astro:transitions/client";
+  import { appendQueryParams } from "@utils/queryParams";
 
   // TypeScript declaration to extend Window interface
   declare global {
@@ -258,6 +197,33 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
         estimateType: validatedEstimateType.data,
       });
 
+      // Set form values from store data
+      const storeData = estimateStore.get();
+
+      // Set street address if available
+      if (storeData.streetAddress) {
+        this.addressInput.value = storeData.streetAddress;
+      }
+
+      // Set homeowner status if available
+      const isHomeownerInput = this.form.querySelector(
+        'input[name="isHomeownerInput"]'
+      ) as HTMLInputElement;
+      if (isHomeownerInput && storeData.isHomeowner !== undefined) {
+        isHomeownerInput.checked = storeData.isHomeowner;
+      }
+
+      // Create or update hidden inputs for additional address components if they exist in store
+      if (storeData.zipCode) {
+        this.createOrUpdateHiddenInput("zipCodeInput", storeData.zipCode);
+      }
+      if (storeData.city) {
+        this.createOrUpdateHiddenInput("cityInput", storeData.city);
+      }
+      if (storeData.state) {
+        this.createOrUpdateHiddenInput("stateInput", storeData.state);
+      }
+
       if (this.addressInput.value.length >= 5) {
         const isValid = this.validateAddress(this.addressInput.value);
         this.updateButtonState(isValid);
@@ -265,6 +231,24 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
 
       this.addressInput.addEventListener("input", this.handleAddressInput);
       this.form.addEventListener("submit", (e) => this.handleSubmit(e));
+    }
+
+    /**
+     * Creates or updates a hidden input field
+     */
+    private createOrUpdateHiddenInput(name: string, value: string): void {
+      let input = this.form?.querySelector(
+        `input[name="${name}"]`
+      ) as HTMLInputElement;
+
+      if (!input) {
+        input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        this.form?.appendChild(input);
+      }
+
+      input.value = value;
     }
 
     /**
@@ -425,40 +409,16 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
       if (validatedEstimateType.success) {
         const nextStep = getNextStep(validatedEstimateType.data, "address");
         if (nextStep) {
-          const url = new URL(window.location.href);
-          url.pathname = `/estimate/${this.estimateType}/${nextStep}`;
-
-          // Add address data as URL parameters
-          url.searchParams.set("streetAddress", streetAddress);
-          if (zipInput?.value) url.searchParams.set("zipCode", zipInput.value);
-          if (cityInput?.value) url.searchParams.set("city", cityInput.value);
-          if (stateInput?.value)
-            url.searchParams.set("state", stateInput.value);
-          url.searchParams.set(
-            "isHomeowner",
-            isHomeownerInput?.checked ? "true" : "false"
+          const currentUrl = new URL(window.location.href);
+          navigate(
+            appendQueryParams(
+              `/estimate/${this.estimateType}/${nextStep}`,
+              new URLSearchParams(currentUrl.search)
+            )
           );
-
-          window.location.href = url.toString();
           return;
         }
       }
-
-      // Fallback to thank-you
-      const url = new URL(window.location.href);
-      url.pathname = `/estimate/${this.estimateType}/thank-you`;
-
-      // Add address data as URL parameters
-      url.searchParams.set("streetAddress", streetAddress);
-      if (zipInput?.value) url.searchParams.set("zipCode", zipInput.value);
-      if (cityInput?.value) url.searchParams.set("city", cityInput.value);
-      if (stateInput?.value) url.searchParams.set("state", stateInput.value);
-      url.searchParams.set(
-        "isHomeowner",
-        isHomeownerInput?.checked ? "true" : "false"
-      );
-
-      window.location.href = url.toString();
     }
   }
 
