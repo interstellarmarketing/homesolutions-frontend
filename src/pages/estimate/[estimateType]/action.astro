@@ -114,7 +114,6 @@ const stepHeader = getStepHeader();
       <LargeRadioButtonGroup
         options={pageState.options}
         name="action"
-        currentSelection={undefined}
         layout="flex"
         capitalize={true}
       />
@@ -225,6 +224,8 @@ const stepHeader = getStepHeader();
       const action = Array.from(this.radioButtons).find(
         (radio) => radio.checked
       )?.value;
+
+      console.log(action);
 
       if (!action) return;
 

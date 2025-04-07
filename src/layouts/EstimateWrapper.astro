@@ -68,9 +68,10 @@ if (validationResult instanceof Response) {
     getTotalSteps,
   } from "src/consts/estimateSteps";
 
+  const searchParams = new URLSearchParams(window.location.search);
+
   // Check if reset parameter is true
-  const shouldReset =
-    new URLSearchParams(window.location.search).get("reset") === "true";
+  const shouldReset = searchParams.get("reset") === "true";
   if (shouldReset) {
     // Reset all stores
     resetEstimateFields();
@@ -82,6 +83,31 @@ if (validationResult instanceof Response) {
     // Replace the current URL without reloading the page
     window.history.replaceState({}, document.title, url.toString());
   }
+
+  const trackingParams = {
+    utm_source: searchParams.get("utm_source") || undefined,
+    utm_medium: searchParams.get("utm_medium") || undefined,
+    utm_campaign: searchParams.get("utm_campaign") || undefined,
+    utm_content: searchParams.get("utm_content") || undefined,
+    utm_term: searchParams.get("utm_term") || undefined,
+    fbclid: searchParams.get("fbclid") || undefined,
+    gclid: searchParams.get("gclid") || undefined,
+    wbraid: searchParams.get("wbraid") || undefined,
+    gbraid: searchParams.get("gbraid") || undefined,
+    ssn: searchParams.get("ssn") || undefined,
+  };
+
+  // Update store with tracking params
+  const existingStore = estimateStore.get();
+  estimateStore.set({
+    ...existingStore,
+    trackingParams: {
+      ...existingStore.trackingParams,
+      ...Object.fromEntries(
+        Object.entries(trackingParams).filter(([_, v]) => v !== undefined)
+      ),
+    },
+  });
 
   class EstimateWrapper extends HTMLElement {
     private previousStep: string | null = null;
@@ -143,5 +169,9 @@ if (validationResult instanceof Response) {
         userAgent: window.navigator.userAgent,
       },
     });
+  });
+
+  estimateStore.subscribe((state) => {
+    console.log(state);
   });
 </script>

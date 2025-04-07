@@ -221,6 +221,8 @@ const stepHeader = "What's the main reason you're interested in going solar?";
         (radio) => radio.checked
       )?.value;
 
+      console.log("selected reason", selectedReason);
+
       if (!selectedReason) return;
 
       // Update store

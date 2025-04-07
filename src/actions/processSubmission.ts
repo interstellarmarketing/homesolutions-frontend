@@ -18,6 +18,10 @@ function formatStoreForSubmission(store: StoreWithIpAddress) {
 		email: store.email,
 		phone: store.phone,
 		ipAddress: store.ipAddress,
+		solarReason: store.solarReason,
+		electricBillOver100: store.electricBillOver100,
+		projectDetails: store.projectDetails,
+		shadedRoof: store.shadedRoof,
 
 		// Required qualification fields
 		isHomeowner: store.isHomeowner,
