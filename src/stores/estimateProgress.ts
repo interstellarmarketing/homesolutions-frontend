@@ -41,6 +41,7 @@ export const estimateParser = z.object({
       posthogPersonId: z.string().optional(),
     })
     .optional(),
+  submitted: z.boolean().optional(),
 });
 
 export type EstimateStoreType = z.infer<typeof estimateParser>;

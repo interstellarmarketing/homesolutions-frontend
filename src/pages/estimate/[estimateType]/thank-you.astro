@@ -40,6 +40,7 @@ if (pageState instanceof Response) {
 <EstimateWrapper
   title={pageState.estimateType}
   estimateType={pageState.estimateType}
+  data-ip-address={Astro.request.headers.get("cf-connecting-ip")}
 >
   <div
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
@@ -213,8 +214,15 @@ if (pageState instanceof Response) {
       // Update location message with store values
       this.updateLocationMessage(storeWithIp);
 
-      actions.processSubmission(storeWithIp);
-      this.trackConversion(storeWithIp);
+      if (!store.submitted) {
+        actions.processSubmission(storeWithIp);
+        this.trackConversion(storeWithIp);
+
+        estimateStore.set({
+          ...store,
+          submitted: true,
+        });
+      }
     }
   }
 
