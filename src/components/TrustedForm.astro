@@ -1,9 +1,9 @@
----
-import { estimateStore } from "@stores/estimateProgress";
-
-const certUrl = estimateStore.get().trackingParams?.trustedFormCertUrl;
-const pingUrl = estimateStore.get().trackingParams?.trustedFormPingUrl;
----
+<div>
+  <form novalidate>
+    <input type="hidden" name="xxTrustedFormCertUrl" />
+    <input type="hidden" name="xxTrustedFormPingUrl" />
+  </form>
+</div>
 
 <script>
   import { estimateStore } from "@stores/estimateProgress";
@@ -11,20 +11,22 @@ const pingUrl = estimateStore.get().trackingParams?.trustedFormPingUrl;
   // starts a loop with interval of 500ms
   var interval = setInterval(getCertUrl, 500);
   async function getCertUrl() {
-    var certUrl =
+    const certUrl =
       document.getElementsByName("xxTrustedFormCertUrl")[0] &&
       (
         document.getElementsByName(
           "xxTrustedFormCertUrl"
         )[0] as HTMLInputElement
       ).value;
-    var pingUrl =
+    const pingUrl =
       document.getElementsByName("xxTrustedFormPingUrl")[0] &&
       (
         document.getElementsByName(
           "xxTrustedFormPingUrl"
         )[0] as HTMLInputElement
       ).value;
+    console.log("certUrl", certUrl);
+    console.log("pingUrl", pingUrl);
     // check if the certificate has been generated
     if (certUrl && pingUrl) {
       // Update the store with the new values directly
@@ -54,8 +56,7 @@ const pingUrl = estimateStore.get().trackingParams?.trustedFormPingUrl;
       "://api.trustedform.com/trustedform.js?field=xxTrustedFormCertUrl&ping_field=xxTrustedFormPingUrl&l=" +
       new Date().getTime() +
       Math.random();
-    var s = document.getElementsByTagName("script")[0];
-    s.parentNode?.insertBefore(tf, s);
+    document.body.appendChild(tf);
   })();
 </script>
 <noscript>
