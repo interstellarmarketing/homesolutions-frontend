@@ -62,12 +62,5 @@ export type TrackingParams = EstimateStoreType["trackingParams"];
 
 
 export function resetEstimateFields() {
-  const {
-    estimateType,
-    estimateShortTrade,
-    estimateAction,
-    ...existingFields
-  } = estimateStore.get()
-
-  return estimateStore.set({ ...existingFields })
+  return estimateStore.set({})
 }

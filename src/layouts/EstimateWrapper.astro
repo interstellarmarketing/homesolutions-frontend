@@ -39,7 +39,6 @@ function validateEstimateType(
 
 // Destructure props with default values if needed
 const { title, estimateType: rawEstimateType } = Astro.props;
-
 // Validate the estimate type
 const validationResult = validateEstimateType(rawEstimateType);
 
@@ -59,15 +58,30 @@ if (validationResult instanceof Response) {
 </estimate-wrapper>
 
 <script>
+  import { estimateStore, resetEstimateFields } from "@stores/estimateProgress";
+  import { type EstimateStepsState } from "@stores/estimateStepsStore";
+  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import posthog from "posthog-js";
   import {
     estimateSteps,
     getCurrentStepIndex,
     getTotalSteps,
   } from "src/consts/estimateSteps";
-  import { type EstimateStepsState } from "@stores/estimateStepsStore";
-  import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { estimateStore } from "@stores/estimateProgress";
-  import posthog from "posthog-js";
+
+  // Check if reset parameter is true
+  const shouldReset =
+    new URLSearchParams(window.location.search).get("reset") === "true";
+  if (shouldReset) {
+    // Reset all stores
+    resetEstimateFields();
+
+    // Remove the reset parameter from the URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete("reset");
+
+    // Replace the current URL without reloading the page
+    window.history.replaceState({}, document.title, url.toString());
+  }
 
   class EstimateWrapper extends HTMLElement {
     private previousStep: string | null = null;
@@ -129,9 +143,5 @@ if (validationResult instanceof Response) {
         userAgent: window.navigator.userAgent,
       },
     });
-  });
-
-  estimateStore.subscribe((state) => {
-    console.log(state);
   });
 </script>
