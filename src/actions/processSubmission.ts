@@ -22,6 +22,7 @@ function formatStoreForSubmission(store: StoreWithIpAddress) {
 		electricBillOver100: store.electricBillOver100,
 		projectDetails: store.projectDetails,
 		shadedRoof: store.shadedRoof,
+		roofType: store.projectDetails,
 
 		// Required qualification fields
 		isHomeowner: store.isHomeowner,
@@ -54,9 +55,9 @@ function formatStoreForSubmission(store: StoreWithIpAddress) {
 		trustedFormPingUrl: store.trackingParams?.trustedFormPingUrl || null,
 	};
 
-	if (store.estimateShortTrade === "roofing") {
-		submission.roofType = store.projectDetails;
-	}
+	// if (store.estimateShortTrade === "roofing") {
+	// submission.roofType = store.projectDetails;
+	// }
 
 	switch (store.estimateType) {
 		case "solar":
