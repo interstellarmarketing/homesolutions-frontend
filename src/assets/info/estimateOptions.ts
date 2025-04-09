@@ -58,7 +58,7 @@ const TradeSchemas = {
 	siding: z.object({
 		shortTrade: z.literal<ShortTradeEnum>("siding"),
 		data: extendEstimateOptionSchema({
-			type: z.enum(["brickface", "metal", "stucco", "vinyl", "wood"]),
+			type: z.enum(["vinyl", "cedar", "fiberglass", "stucco", "other"]),
 			homeType: z.enum(homeTypesConst).optional(),
 		}),
 	}),
@@ -140,7 +140,7 @@ export const shortTradeObjects = [
 	}),
 	createShortTradeObject("siding", {
 		estimateAction: ["replace", "repair"],
-		type: ["brickface", "metal", "stucco", "vinyl", "wood"],
+		type: ["vinyl", "cedar", "fiberglass", "stucco", "other"],
 		homeType: [...homeTypesConst]
 	}),
 	createShortTradeObject("windows", {

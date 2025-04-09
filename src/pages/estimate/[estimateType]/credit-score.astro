@@ -107,13 +107,6 @@ const stepHeader = "What is your credit score?";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
 
-  // Declare zaraz for TypeScript
-  declare const zaraz:
-    | {
-        track: (eventName: string, data: any) => void;
-      }
-    | undefined;
-
   class FormController {
     private radioButtons: NodeListOf<HTMLInputElement>;
     private submitButton: HTMLButtonElement | null;
@@ -183,9 +176,6 @@ const stepHeader = "What is your credit score?";
       });
 
       this.form.addEventListener("submit", (e) => this.handleSubmit(e));
-
-      // Track event if user has an email in store
-      this.trackPhoneSubmitEvent();
     }
 
     private handleRadioChange() {
@@ -242,57 +232,6 @@ const stepHeader = "What is your credit score?";
             )
           );
           return;
-        }
-      }
-    }
-
-    private async trackPhoneSubmitEvent() {
-      const existingStore = estimateStore.get();
-      if (existingStore.email) {
-        try {
-          const response = await fetch(
-            "https://google-advanced-conversions.zsmithbiz1.workers.dev/",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                system: {
-                  timestamp: new Date().toISOString(),
-                },
-                client: {
-                  email: existingStore.email,
-                },
-              }),
-            }
-          );
-
-          const hashedEmail = await response.text();
-          const req = {
-            event_name: "solar_phone_submit",
-            event_id: crypto.randomUUID(),
-            event_time: new Date().toISOString(),
-            action_source: "website",
-            event_source_url: window.location.href,
-            user_data: {
-              sha256_email_address: hashedEmail,
-              fbc: existingStore.trackingParams?.fbc,
-              fbp: existingStore.trackingParams?.fbp,
-              client_user_agent: window.navigator.userAgent,
-              fn: existingStore.firstName,
-              ln: existingStore.lastName,
-              em: hashedEmail,
-              ph: existingStore.phone,
-              external_id: existingStore.trackingParams?.posthogPersonId,
-            },
-          };
-
-          const eventName = `solar_phone_submit`;
-          zaraz?.track(eventName, req);
-          console.log(`Zaraz event sent (${eventName}):`, req);
-        } catch (error) {
-          console.error("Error:", error);
         }
       }
     }

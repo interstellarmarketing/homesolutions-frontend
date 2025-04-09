@@ -42,6 +42,7 @@ export const estimateParser = z.object({
     })
     .optional(),
   submitted: z.boolean().optional(),
+  solarPhoneSubmitted: z.boolean().optional(),
 });
 
 export type EstimateStoreType = z.infer<typeof estimateParser>;

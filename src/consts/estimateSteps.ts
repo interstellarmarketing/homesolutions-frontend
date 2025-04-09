@@ -38,7 +38,18 @@ export const estimateSteps = {
         "finalize-solar",
     ],
     bathroom: defaultSteps,
-    siding: defaultSteps,
+    siding: [
+        "zip",
+        "project-details",
+        "action",
+        "home-type",
+        "credit-score",
+        "contact",
+        "email",
+        "phone-number",
+        "address",
+        "thank-you",
+    ],
     windows: defaultSteps,
 };
 

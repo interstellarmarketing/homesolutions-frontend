@@ -1,7 +1,6 @@
 ---
 import Layout from "./Layout.astro";
 import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { estimateStepsStore } from "@stores/estimateStepsStore";
 import type { z } from "zod";
 
 /**
@@ -48,10 +47,7 @@ if (validationResult instanceof Response) {
 }
 ---
 
-<estimate-wrapper
-  data-estimate-steps-store={JSON.stringify(estimateStepsStore.get())}
-  estimateType={validationResult}
->
+<estimate-wrapper estimateType={validationResult}>
   <Layout title={title} data-estimate-type={validationResult}>
     <slot />
   </Layout>
@@ -59,7 +55,10 @@ if (validationResult instanceof Response) {
 
 <script>
   import { estimateStore, resetEstimateFields } from "@stores/estimateProgress";
-  import { type EstimateStepsState } from "@stores/estimateStepsStore";
+  import {
+    estimateStepsStore,
+    type EstimateStepsState,
+  } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import posthog from "posthog-js";
   import {
@@ -84,31 +83,6 @@ if (validationResult instanceof Response) {
     window.history.replaceState({}, document.title, url.toString());
   }
 
-  const trackingParams = {
-    utm_source: searchParams.get("utm_source") || undefined,
-    utm_medium: searchParams.get("utm_medium") || undefined,
-    utm_campaign: searchParams.get("utm_campaign") || undefined,
-    utm_content: searchParams.get("utm_content") || undefined,
-    utm_term: searchParams.get("utm_term") || undefined,
-    fbclid: searchParams.get("fbclid") || undefined,
-    gclid: searchParams.get("gclid") || undefined,
-    wbraid: searchParams.get("wbraid") || undefined,
-    gbraid: searchParams.get("gbraid") || undefined,
-    ssn: searchParams.get("ssn") || undefined,
-  };
-
-  // Update store with tracking params
-  const existingStore = estimateStore.get();
-  estimateStore.set({
-    ...existingStore,
-    trackingParams: {
-      ...existingStore.trackingParams,
-      ...Object.fromEntries(
-        Object.entries(trackingParams).filter(([_, v]) => v !== undefined)
-      ),
-    },
-  });
-
   class EstimateWrapper extends HTMLElement {
     private previousStep: string | null = null;
 
@@ -119,7 +93,7 @@ if (validationResult instanceof Response) {
       );
 
       // estimateStepsStore.subscribe((state) => {
-      const { currentStep, estimateType } = state;
+      const { currentStep, estimateType } = estimateStepsStore.get();
 
       // Only send events when currentStep changes, is not null, and estimateType is available
       if (
@@ -145,6 +119,7 @@ if (validationResult instanceof Response) {
 
         // Send PostHog event
         posthog.capture("form_step_viewed", posthogStepViewedEvent);
+        console.log("posthogStepViewedEvent", posthogStepViewedEvent);
       }
     }
   }
@@ -154,7 +129,6 @@ if (validationResult instanceof Response) {
   crossPlatformLoader(() => {
     // Update user agent directly in the store
     const existingStore = estimateStore.get();
-    const existingTrackingParams = existingStore.trackingParams || {};
 
     const estimateType =
       document
@@ -164,10 +138,10 @@ if (validationResult instanceof Response) {
     estimateStore.set({
       ...existingStore,
       estimateType,
-      trackingParams: {
-        ...existingTrackingParams,
-        userAgent: window.navigator.userAgent,
-      },
+    });
+
+    estimateStore.subscribe((state) => {
+      console.log("estimateStore", state);
     });
   });
 </script>
