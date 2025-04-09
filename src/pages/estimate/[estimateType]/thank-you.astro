@@ -83,16 +83,24 @@ if (pageState instanceof Response) {
             class="w-full text-center text-[#2d3748] text-sm font-medium font-['Inter'] leading-[21px] max-w-md"
           >
             {
-              pageState.estimateType === "roofing" ? (
+              pageState.estimateType === "roofing" ||
+              pageState.estimateType === "siding" ? (
                 <div class="mb-8">
                   <p class="mb-4">
                     Please be on the lookout for a phone call and text message
-                    in the next few minutes. Our roof repair and installation
-                    team will be calling you to:
+                    in the next few minutes. Our{" "}
+                    {pageState.estimateType === "roofing" ? "roof" : "siding"}{" "}
+                    repair and installation team will be calling you to:
                   </p>
                   <ul class="text-left list-disc pl-6 space-y-2 my-4">
                     <li>Qualify your home</li>
-                    <li>Get more background on your desired roofing project</li>
+                    <li>
+                      Get more background on your desired{" "}
+                      {pageState.estimateType === "roofing"
+                        ? "roofing"
+                        : "siding"}{" "}
+                      project
+                    </li>
                     <li>
                       Schedule you for a free in-home consultation with one of
                       our experts

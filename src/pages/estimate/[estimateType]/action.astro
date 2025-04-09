@@ -86,6 +86,12 @@ const getStepHeader = () => {
       );
       return tradeOptions?.actionDescription ?? "";
     }
+    case "siding": {
+      const tradeOptions = tradeOptionDescriptions.find(
+        (trade) => trade.shortTrade === pageState.estimateType
+      );
+      return tradeOptions?.actionDescription ?? "";
+    }
     default:
       return "What type of project are you looking to complete?";
   }

@@ -55,10 +55,6 @@ function formatStoreForSubmission(store: StoreWithIpAddress) {
 		trustedFormPingUrl: store.trackingParams?.trustedFormPingUrl || null,
 	};
 
-	// if (store.estimateShortTrade === "roofing") {
-	// submission.roofType = store.projectDetails;
-	// }
-
 	switch (store.estimateType) {
 		case "solar":
 			submission.solarType = store.projectDetails;

@@ -191,8 +191,8 @@ export const tradeOptionDescriptions: readonly TradeOptionDescriptions[] = [
 	},
 	{
 		shortTrade: "siding",
-		actionDescription: "Service Needed",
-		typeDescription: "Project Details",
+		actionDescription: "Do you need to replace or repair existing siding?",
+		typeDescription: "What type of siding are you looking for?",
 		shortTradeNoun: ""
 	},
 	{
