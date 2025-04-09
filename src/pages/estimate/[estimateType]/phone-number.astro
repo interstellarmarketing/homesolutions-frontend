@@ -142,6 +142,13 @@ const stepHeader = "What's the best phone number to reach you?";
   import { appendQueryParams } from "@utils/queryParams";
   import { actions } from "astro:actions";
 
+  // Declare zaraz for TypeScript
+  declare const zaraz:
+    | {
+        track: (eventName: string, data: any) => void;
+      }
+    | undefined;
+
   class PhoneFormController {
     private phoneInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
@@ -194,6 +201,61 @@ const stepHeader = "What's the best phone number to reach you?";
         );
       }
     };
+
+    private async trackPhoneSubmitEvent() {
+      const existingStore = estimateStore.get();
+      if (existingStore.email && !existingStore.solarPhoneSubmitted) {
+        try {
+          const response = await fetch(
+            "https://google-advanced-conversions.zsmithbiz1.workers.dev/",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                system: {
+                  timestamp: new Date().toISOString(),
+                },
+                client: {
+                  email: existingStore.email,
+                },
+              }),
+            }
+          );
+
+          const hashedEmail = await response.text();
+          const req = {
+            event_name: "solar_phone_submit",
+            event_id: crypto.randomUUID(),
+            event_time: new Date().toISOString(),
+            action_source: "website",
+            event_source_url: window.location.href,
+            user_data: {
+              sha256_email_address: hashedEmail,
+              fbc: existingStore.trackingParams?.fbc,
+              fbp: existingStore.trackingParams?.fbp,
+              client_user_agent: window.navigator.userAgent,
+              fn: existingStore.firstName,
+              ln: existingStore.lastName,
+              em: hashedEmail,
+              ph: existingStore.phone,
+              external_id: existingStore.trackingParams?.posthogPersonId,
+            },
+          };
+
+          const eventName = `solar_phone_submit`;
+          zaraz?.track(eventName, req);
+          console.log(`Zaraz event sent (${eventName}):`, req);
+          estimateStore.set({
+            ...existingStore,
+            solarPhoneSubmitted: true,
+          });
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
+    }
 
     private async handleSubmit(e: Event) {
       e.preventDefault();
@@ -273,6 +335,8 @@ const stepHeader = "What's the best phone number to reach you?";
             console.error("Error calling Freedom Forever API:", error);
           }
         }
+
+        await this.trackPhoneSubmitEvent();
 
         // Get next step
         const validatedEstimateType = shortTradeEnum.safeParse(

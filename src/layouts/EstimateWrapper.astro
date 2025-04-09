@@ -55,7 +55,10 @@ if (validationResult instanceof Response) {
 
 <script>
   import { estimateStore, resetEstimateFields } from "@stores/estimateProgress";
-  import { type EstimateStepsState } from "@stores/estimateStepsStore";
+  import {
+    estimateStepsStore,
+    type EstimateStepsState,
+  } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import posthog from "posthog-js";
   import {
@@ -90,7 +93,7 @@ if (validationResult instanceof Response) {
       );
 
       // estimateStepsStore.subscribe((state) => {
-      const { currentStep, estimateType } = state;
+      const { currentStep, estimateType } = estimateStepsStore.get();
 
       // Only send events when currentStep changes, is not null, and estimateType is available
       if (
@@ -116,6 +119,7 @@ if (validationResult instanceof Response) {
 
         // Send PostHog event
         posthog.capture("form_step_viewed", posthogStepViewedEvent);
+        console.log("posthogStepViewedEvent", posthogStepViewedEvent);
       }
     }
   }
@@ -134,6 +138,10 @@ if (validationResult instanceof Response) {
     estimateStore.set({
       ...existingStore,
       estimateType,
+    });
+
+    estimateStore.subscribe((state) => {
+      console.log("estimateStore", state);
     });
   });
 </script>
