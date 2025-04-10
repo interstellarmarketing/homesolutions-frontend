@@ -23,6 +23,7 @@ function formatStoreForSubmission(store: StoreWithIpAddress) {
 		projectDetails: store.projectDetails,
 		shadedRoof: store.shadedRoof,
 		roofType: store.projectDetails,
+		landingPage: store.landingPage,
 
 		// Required qualification fields
 		isHomeowner: store.isHomeowner,
