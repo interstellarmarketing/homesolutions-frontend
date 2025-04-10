@@ -142,6 +142,7 @@ const formattedTitle = formatTitle(title);
 
     estimateStore.set({
       ...existingStore,
+      landingPage: window.location.href.split("/").slice(0, -1).join("/"),
       trackingParams: {
         ...existingTrackingParams,
         ...Object.fromEntries(

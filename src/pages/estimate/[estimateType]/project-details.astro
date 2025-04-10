@@ -57,16 +57,6 @@ function initializePage(
     (option) => option.shortTrade === activeEstimateTypeStore.get()
   );
 
-  // Define project types based on estimate type
-  let projectTypes: string[] = [];
-  if (estimateType === "roofing") {
-    projectTypes = ["repair", "replace", "install"];
-  } else if (estimateType === "bathroom") {
-    projectTypes = ["remodel", "repair", "install"];
-  } else {
-    projectTypes = ["repair", "replace", "install"];
-  }
-
   // Get step information
   const stepNumber = getCurrentStepNumber(estimateType, "project-details");
   const totalSteps = getTotalSteps(estimateType);
@@ -93,6 +83,8 @@ if (pageState instanceof Response) {
 const getStepHeader = () => {
   switch (pageState.estimateType) {
     case "roofing":
+      return pageState.tradeDescription ?? "";
+    case "siding":
       return pageState.tradeDescription ?? "";
     default:
       return "What type of project are you looking to complete?";
