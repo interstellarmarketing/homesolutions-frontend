@@ -1,0 +1,239 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+---
+
+<DashboardLayout title="Dashboard Overview">
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <!-- Total Leads Card -->
+    <div class="dashboard-card">
+      <div class="dashboard-card-title">Total Leads</div>
+      <div class="dashboard-card-value">1,247</div>
+      <div class="dashboard-card-change dashboard-card-change-positive">
+        <svg
+          class="h-5 w-5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+            clip-rule="evenodd"></path>
+        </svg>
+        <span>12.5% from previous period</span>
+      </div>
+    </div>
+
+    <!-- Conversion Rate Card -->
+    <div class="dashboard-card">
+      <div class="dashboard-card-title">Conversion Rate</div>
+      <div class="dashboard-card-value">8.4%</div>
+      <div class="dashboard-card-change dashboard-card-change-positive">
+        <svg
+          class="h-5 w-5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+            clip-rule="evenodd"></path>
+        </svg>
+        <span>1.2% from previous period</span>
+      </div>
+    </div>
+
+    <!-- Cost Per Lead Card -->
+    <div class="dashboard-card">
+      <div class="dashboard-card-title">Cost Per Lead</div>
+      <div class="dashboard-card-value">$36.42</div>
+      <div class="dashboard-card-change dashboard-card-change-negative">
+        <svg
+          class="h-5 w-5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z"
+            clip-rule="evenodd"></path>
+        </svg>
+        <span>3.1% from previous period</span>
+      </div>
+    </div>
+
+    <!-- ROI Card -->
+    <div class="dashboard-card">
+      <div class="dashboard-card-title">ROI</div>
+      <div class="dashboard-card-value">247%</div>
+      <div class="dashboard-card-change dashboard-card-change-positive">
+        <svg
+          class="h-5 w-5"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+            clip-rule="evenodd"></path>
+        </svg>
+        <span>15.4% from previous period</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+    <!-- Recent Leads -->
+    <div class="lg:col-span-2">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-medium text-gray-900">Recent Leads</h2>
+        <a
+          href="/dashboard/leads"
+          class="text-sm font-medium text-blue-600 hover:text-blue-500"
+        >
+          View all
+        </a>
+      </div>
+      <div
+        class="mt-4 overflow-hidden rounded-lg shadow ring-1 ring-black ring-opacity-5"
+      >
+        <table class="dashboard-table">
+          <thead class="dashboard-table-header">
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Email</th>
+              <th scope="col">Phone</th>
+              <th scope="col">Date</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody class="dashboard-table-body">
+            <tr class="dashboard-table-row">
+              <td class="dashboard-table-cell font-medium text-gray-900"
+                >John Smith</td
+              >
+              <td class="dashboard-table-cell">john.smith@example.com</td>
+              <td class="dashboard-table-cell">(555) 123-4567</td>
+              <td class="dashboard-table-cell">Aug 12, 2023</td>
+              <td class="dashboard-table-cell">
+                <span class="dashboard-badge dashboard-badge-success">New</span>
+              </td>
+            </tr>
+            <tr class="dashboard-table-row">
+              <td class="dashboard-table-cell font-medium text-gray-900"
+                >Sarah Johnson</td
+              >
+              <td class="dashboard-table-cell">sarah.johnson@example.com</td>
+              <td class="dashboard-table-cell">(555) 987-6543</td>
+              <td class="dashboard-table-cell">Aug 11, 2023</td>
+              <td class="dashboard-table-cell">
+                <span class="dashboard-badge dashboard-badge-info"
+                  >Contacted</span
+                >
+              </td>
+            </tr>
+            <tr class="dashboard-table-row">
+              <td class="dashboard-table-cell font-medium text-gray-900"
+                >Michael Brown</td
+              >
+              <td class="dashboard-table-cell">michael.brown@example.com</td>
+              <td class="dashboard-table-cell">(555) 456-7890</td>
+              <td class="dashboard-table-cell">Aug 10, 2023</td>
+              <td class="dashboard-table-cell">
+                <span class="dashboard-badge dashboard-badge-warning"
+                  >Pending</span
+                >
+              </td>
+            </tr>
+            <tr class="dashboard-table-row">
+              <td class="dashboard-table-cell font-medium text-gray-900"
+                >Emily Davis</td
+              >
+              <td class="dashboard-table-cell">emily.davis@example.com</td>
+              <td class="dashboard-table-cell">(555) 789-0123</td>
+              <td class="dashboard-table-cell">Aug 9, 2023</td>
+              <td class="dashboard-table-cell">
+                <span class="dashboard-badge dashboard-badge-success">New</span>
+              </td>
+            </tr>
+            <tr class="dashboard-table-row">
+              <td class="dashboard-table-cell font-medium text-gray-900"
+                >Robert Wilson</td
+              >
+              <td class="dashboard-table-cell">robert.wilson@example.com</td>
+              <td class="dashboard-table-cell">(555) 234-5678</td>
+              <td class="dashboard-table-cell">Aug 8, 2023</td>
+              <td class="dashboard-table-cell">
+                <span class="dashboard-badge dashboard-badge-error">Failed</span
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lead Sources -->
+    <div class="lg:col-span-1">
+      <h2 class="text-lg font-medium text-gray-900">Lead Sources</h2>
+      <div class="mt-4 rounded-lg bg-white p-6 shadow">
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-600">Google Ads</span>
+              <span class="text-sm font-medium text-gray-900">42%</span>
+            </div>
+            <div class="mt-2 h-2 w-full rounded-full bg-gray-200">
+              <div class="h-2 rounded-full bg-blue-600" style="width: 42%">
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-600">Facebook</span>
+              <span class="text-sm font-medium text-gray-900">28%</span>
+            </div>
+            <div class="mt-2 h-2 w-full rounded-full bg-gray-200">
+              <div class="h-2 rounded-full bg-blue-600" style="width: 28%">
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-600">Organic</span>
+              <span class="text-sm font-medium text-gray-900">15%</span>
+            </div>
+            <div class="mt-2 h-2 w-full rounded-full bg-gray-200">
+              <div class="h-2 rounded-full bg-blue-600" style="width: 15%">
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-600">Referral</span>
+              <span class="text-sm font-medium text-gray-900">10%</span>
+            </div>
+            <div class="mt-2 h-2 w-full rounded-full bg-gray-200">
+              <div class="h-2 rounded-full bg-blue-600" style="width: 10%">
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between">
+              <span class="text-sm font-medium text-gray-600">Other</span>
+              <span class="text-sm font-medium text-gray-900">5%</span>
+            </div>
+            <div class="mt-2 h-2 w-full rounded-full bg-gray-200">
+              <div class="h-2 rounded-full bg-blue-600" style="width: 5%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
