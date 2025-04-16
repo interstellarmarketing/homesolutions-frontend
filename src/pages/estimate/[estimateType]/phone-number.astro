@@ -4,6 +4,7 @@ import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@models/estimateOptions";
 import { z } from "zod";
+import { capitalizeFirstLetter } from "@utils/string";
 
 // Create phone-specific parser
 const phoneSchema = z.object({
@@ -99,45 +100,37 @@ const stepHeader = "What's the best phone number to reach you?";
             pageState.estimateType === "solar" ? (
               <p class="text-[8px] text-gray-500">
                 By submitting my contact information including my telephone
-                number above, I authorize Bright Solar Marketing, and/or its
-                affiliates to contact me via telephone calls and/or text
-                messages (SMS), using automated dialing technology for
-                marketing/advertising purposes. No purchase required. Message
-                and data rates may apply.
-              </p>
-            ) : pageState.estimateType === "roofing" ? (
-              <p class="text-[8px] text-gray-500">
-                By clicking Submit I am providing my{" "}
+                number above, I authorize Bright Solar Marketing, and/or its{" "}
                 <a
-                  href="/phone-number/esign"
-                  class="text-blue-600 hover:text-blue-800 underline"
-                  target="_blank"
-                >
-                  E-SIGN
-                </a>{" "}
-                signature and consent for Erie Construction Mid-West, LLC dba
-                Erie Home to contact me at the number I entered regarding this
-                request and for marketing purposes, including through phone
-                calls or text by means of automated technology, SMS/MMS, and
-                prerecorded messages. I acknowledge my consent is not required
-                for purchase. Message and data rates may apply. I also agree to
-                be bound by the Privacy Policy."
-              </p>
-            ) : (
-              <p class="text-[8px] text-gray-500">
-                By submitting my contact information including my telephone
-                number above, I authorize{" "}
-                <a
-                  class="text-blue-600 hover:text-blue-800 underline"
                   href="/dba"
+                  class="text-blue-600 hover:text-blue-800 underline"
                   target="_blank"
                 >
-                  chosen affiliates
+                  affiliates
                 </a>{" "}
                 to contact me via telephone calls and/or text messages (SMS),
                 using automated dialing technology for marketing/advertising
                 purposes. No purchase required. Message and data rates may
                 apply.
+              </p>
+            ) : (
+              <p class="text-[8px] text-gray-500">
+                By clicking Submit I am providing my ESIGN signature and consent
+                for Local {capitalizeFirstLetter(pageState.estimateType)}
+                Installers and its{" "}
+                <a
+                  href="/dba"
+                  class="text-blue-600 hover:text-blue-800 underline"
+                  target="_blank"
+                >
+                  affiliates
+                </a>{" "}
+                to contact me at the number I entered regarding this request and
+                for marketing purposes, including through phone calls or text by
+                means of automated technology, SMS/MMS, and prerecorded
+                messages. I acknowledge my consent is not required for purchase.
+                Message and data rates may apply. I also agree to be bound by
+                the Privacy Policy.
               </p>
             )
           }
