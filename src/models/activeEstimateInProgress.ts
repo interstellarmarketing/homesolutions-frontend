@@ -1,7 +1,4 @@
 import { z } from "zod"
-import { shortTradeDiscriminatedUnion } from "./estimateOptions"
-
-export type ShortTradeDiscriminatedUnion = z.infer<typeof shortTradeDiscriminatedUnion>
 
 export const activeEstimateParser = z.object({
 	estimateShortTrade: z.string(),

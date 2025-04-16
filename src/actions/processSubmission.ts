@@ -1,4 +1,4 @@
-import type { estimateParser } from '@stores/estimateProgress';
+import type { estimateParser } from '@models/estimateProgress';
 import { defineAction } from 'astro:actions';
 
 interface StoreWithIpAddress extends ReturnType<typeof estimateParser.parse> {

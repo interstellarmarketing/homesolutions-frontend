@@ -10,7 +10,10 @@
     "astro": "astro",
     "deploy:preview": "astro build && wrangler pages deploy",
     "deploy:production": "astro build && wrangler pages deploy --branch main",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "supabase:login": "supabase login",
+    "supabase:init": "supabase init",
+    "supabase:types": "supabase gen types typescript --local > src/models/supabase/types.ts && supazod -i src/models/supabase/types.ts -o src/models/supabase/schemas.ts -t src/models/supabase/schemas.d.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -41,6 +44,8 @@
     "@types/google.maps": "^3.58.1",
     "prettier": "^3.4.2",
     "prettier-plugin-astro": "^0.14.1",
+    "supabase": "^2.20.12",
+    "supazod": "^1.2.3",
     "wrangler": "^3.105.0"
   }
 }
