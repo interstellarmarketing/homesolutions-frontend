@@ -218,7 +218,7 @@ const stepHeader = "What's the best phone number to reach you?";
       }
     };
 
-    private async trackPhoneSubmitEvent() {
+    private async trackSolarPhoneSubmitEvent() {
       const existingStore = estimateStore.get();
       if (existingStore.email && !existingStore.solarPhoneSubmitted) {
         try {
@@ -350,9 +350,8 @@ const stepHeader = "What's the best phone number to reach you?";
           } catch (error) {
             console.error("Error calling Freedom Forever API:", error);
           }
+          await this.trackSolarPhoneSubmitEvent();
         }
-
-        await this.trackPhoneSubmitEvent();
 
         // Get next step
         const validatedEstimateType = shortTradeEnum.safeParse(

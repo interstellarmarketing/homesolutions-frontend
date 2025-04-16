@@ -176,12 +176,15 @@ if (pageState instanceof Response) {
         );
 
         const hashedEmail = await response.text();
+
+        const eventName = `completed_${store.estimateShortTrade}_estimate`;
         const req = {
-          event_name: "Lead",
+          event_name: eventName,
           event_id: crypto.randomUUID(),
           event_time: new Date().toISOString(),
           action_source: "website",
           event_source_url: window.location.href,
+
           user_data: {
             sha256_email_address: hashedEmail,
             fbc: store.trackingParams?.fbc,
@@ -194,9 +197,8 @@ if (pageState instanceof Response) {
             external_id: store.trackingParams?.posthogPersonId,
           },
         };
-
-        const eventName = `completed_${store.estimateShortTrade}_estimate`;
         zaraz?.track(eventName, req);
+
         console.log(`Zaraz event sent (${eventName}):`, req);
       } catch (error) {
         console.error("Error tracking conversion:", error);
