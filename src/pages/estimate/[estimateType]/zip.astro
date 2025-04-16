@@ -1,5 +1,5 @@
 ---
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -126,7 +126,7 @@ const formatEstimateTypeNoun = (type: string) =>
 </EstimateWrapper>
 
 <script>
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { getNextStep } from "@consts/index";
   import { estimateStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";

@@ -1,7 +1,7 @@
 ---
 import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { appendQueryParams } from "@utils/queryParams";
@@ -82,7 +82,7 @@ const stepHeader = "Do you own your home?";
   import { estimateStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";

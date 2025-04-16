@@ -1,5 +1,5 @@
 ---
-import { homeTypesConst, shortTradeEnum } from "@assets/info/estimateOptions";
+import { homeTypesConst, shortTradeEnum } from "@models/estimateOptions";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -89,7 +89,7 @@ const stepHeader = "What type of home do you have?";
       shortTradeEnum,
       tradeOptionDescriptions,
       type ShortTradeEnum,
-    } from "@assets/info/estimateOptions";
+    } from "@models/estimateOptions";
     import {
       getCurrentStepNumber,
       getNextStep,

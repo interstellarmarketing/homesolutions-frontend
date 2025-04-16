@@ -1,10 +1,9 @@
 ---
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import StepLayout from "@components/step-layout/index.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
-import { appendQueryParams } from "@utils/queryParams";
-import { z } from "zod";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
+import { shortTradeEnum } from "@models/estimateOptions";
+import { z } from "zod";
 
 // Create phone-specific parser
 const phoneSchema = z.object({
@@ -149,11 +148,12 @@ const stepHeader = "What's the best phone number to reach you?";
 </EstimateWrapper>
 
 <script>
-  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { estimateStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { estimateParser } from "@models/estimateProgress";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
   import { actions } from "astro:actions";

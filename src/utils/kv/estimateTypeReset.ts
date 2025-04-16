@@ -1,4 +1,4 @@
-import type { ShortTradeEnum } from "@assets/info/estimateOptions";
+import type { ShortTradeEnum } from "@models/estimateOptions";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
 import { estimateStore } from "@stores/estimateProgress";
 

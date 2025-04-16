@@ -115,16 +115,6 @@ function createShortTradeObject<K extends ShortTradeEnum>(
 }
 
 /**
- * Validates a trade object against its schema
- * @param obj - The trade object to validate
- */
-export function parseShortTradeObject<K extends ShortTradeEnum>(
-	obj: { shortTrade: K; data: ShortTradeDataMap[K] }
-): ShortTradeDiscriminatedUnion {
-	return shortTradeDiscriminatedUnion.parse(obj);
-}
-
-/**
  * Trade option configurations
  */
 export const shortTradeObjects = [

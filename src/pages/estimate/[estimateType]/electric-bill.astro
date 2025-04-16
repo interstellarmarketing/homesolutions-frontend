@@ -1,5 +1,5 @@
 ---
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -79,7 +79,7 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
 </EstimateWrapper>
 
 <script>
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import {
     getCurrentStepNumber,
     getNextStep,

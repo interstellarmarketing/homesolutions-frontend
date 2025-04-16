@@ -1,5 +1,5 @@
 ---
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -102,7 +102,8 @@ const stepHeader = "What's the best email to reach you?";
 </EstimateWrapper>
 
 <script>
-  import { estimateParser, estimateStore } from "@stores/estimateProgress";
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateParser } from "@models/estimateProgress";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import {
@@ -110,7 +111,7 @@ const stepHeader = "What's the best email to reach you?";
     getCurrentStepNumber,
     getTotalSteps,
   } from "@consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
 

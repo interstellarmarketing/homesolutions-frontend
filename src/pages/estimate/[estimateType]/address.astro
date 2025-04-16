@@ -1,7 +1,7 @@
 ---
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import StepLayout from "@components/step-layout/index.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
@@ -123,10 +123,11 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
   data-astro-rerun></script>
 
 <script>
-  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateParser } from "@models/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";

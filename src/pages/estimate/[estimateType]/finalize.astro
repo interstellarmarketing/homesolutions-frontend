@@ -1,24 +1,21 @@
 ---
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   shortTradeDiscriminatedUnion,
   shortTradeEnum,
-} from "@assets/info/estimateOptions";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import {
-  estimateParser,
-  estimateStore,
-  resetEstimateFields,
-} from "@stores/estimateProgress";
+} from "@models/estimateOptions";
+import { estimateParser } from "@models/estimateProgress";
+import { estimateStore, resetEstimateFields } from "@stores/estimateProgress";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
-import {
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "src/consts/estimateSteps";
 import { resultIdStore } from "@stores/stashedResultId";
 import { storeSuccessResult } from "@utils/kv/storedResults";
 import { appendQueryParams } from "@utils/queryParams";
+import {
+  getCurrentStepNumber,
+  getNextStep,
+  getPreviousStep,
+  getTotalSteps as getStoreSteps,
+} from "src/consts/estimateSteps";
 
 const { estimateType } = Astro.params;
 
@@ -218,7 +215,7 @@ const totalSteps = validatedEstimateType.success
 </EstimateWrapper>
 
 <script>
-  import { estimateParser } from "@stores/estimateProgress";
+  import { estimateParser } from "@models/estimateProgress";
 
   const emailInputEl = document.getElementById(
     "emailInput"

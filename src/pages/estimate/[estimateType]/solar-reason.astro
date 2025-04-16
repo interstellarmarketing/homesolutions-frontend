@@ -10,7 +10,7 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
-} from "@assets/info/estimateOptions";
+} from "@models/estimateOptions";
 import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
@@ -118,7 +118,7 @@ const stepHeader = "What's the main reason you're interested in going solar?";
 
 <script>
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { estimateStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
