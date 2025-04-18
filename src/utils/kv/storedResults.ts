@@ -1,11 +1,9 @@
 import { z } from "zod";
-import {
-  estimateParser,
-  type EstimateStoreType,
-} from "@stores/estimateProgress";
 import type { APIContext, AstroGlobal } from "astro";
 import type { ActionAPIContext } from "astro:actions";
 import { nanoid } from "nanoid";
+import type { PublicLeadsUpdateSchema } from "@models/supabase/zodTypes";
+import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
 
 /**
  * Constructs a standardized KV store prefix for estimate entries
@@ -32,7 +30,7 @@ export type ResultId = z.infer<typeof resultIdParser>;
  */
 export const storeSuccessResult = async (
   context: AstroGlobal | APIContext | ActionAPIContext,
-  resultData: EstimateStoreType,
+  resultData: PublicLeadsUpdateSchema,
   nanoId?: string
 ) => {
   const kvBinding = context.locals.runtime.env.contracting_estimates;
@@ -65,7 +63,7 @@ export const listSuccessResults = async (
   const getResult = await kvBinding.list({ prefix: "estimate:" });
 
   const parsedListResults = getResult.keys.map((result) => {
-    const parsedResult = estimateParser.safeParse(result?.metadata);
+    const parsedResult = publicLeadsUpdateSchemaSchema.safeParse(result?.metadata);
     if (parsedResult.success) {
       return parsedResult.data;
     } else {
@@ -90,7 +88,7 @@ export const getSuccessResult = async (
   const getResult = await kvBinding.getWithMetadata(
     storePrefixConstructor(resultId)
   );
-  const parsedResult = estimateParser.safeParse(getResult.metadata);
+  const parsedResult = publicLeadsUpdateSchemaSchema.safeParse(getResult.metadata);
 
   if (parsedResult.success) {
     return parsedResult.data;

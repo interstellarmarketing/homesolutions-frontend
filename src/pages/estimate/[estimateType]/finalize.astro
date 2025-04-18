@@ -4,8 +4,8 @@ import {
   shortTradeDiscriminatedUnion,
   shortTradeEnum,
 } from "@models/estimateOptions";
-import { estimateParser } from "@models/estimateProgress";
-import { estimateStore, resetEstimateFields } from "@stores/estimateProgress";
+import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
+import { estimateProgressStore } from "@stores/estimateProgress";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
 import { resultIdStore } from "@stores/stashedResultId";
 import { storeSuccessResult } from "@utils/kv/storedResults";
@@ -32,11 +32,11 @@ if (validatedEstimateType.success) {
   });
 }
 
-let existingStore = estimateStore.get();
+let existingStore = estimateProgressStore.get();
 
 let { phone, email } = existingStore;
 
-const phoneEmailParser = estimateParser.pick({
+const phoneEmailParser = publicLeadsUpdateSchemaSchema.pick({
   phone: true,
   email: true,
 });
@@ -64,18 +64,19 @@ if (Astro.request.method === "POST") {
 
     console.log({ finalfinalstore: existingStore });
 
-    estimateStore.set({
+    estimateProgressStore.set({
       ...existingStore,
       ...phoneEmailParsed.data,
     });
 
-    const parseFinalizedStore = estimateParser.safeParse(existingStore);
+    const parseFinalizedStore =
+      publicLeadsUpdateSchemaSchema.safeParse(existingStore);
 
     const testDiscriminatorParse = shortTradeDiscriminatedUnion.safeParse({
-      shortTrade: existingStore.estimateShortTrade,
+      shortTrade: existingStore.estimate_type,
       data: {
-        type: existingStore.estimateType,
-        estimateAction: existingStore.estimateAction,
+        type: existingStore.estimate_type,
+        estimateAction: existingStore.action,
       },
     });
 
@@ -99,8 +100,6 @@ if (Astro.request.method === "POST") {
       // );
 
       // console.log({ submitToDb });
-
-      resetEstimateFields();
 
       // Get the next step from the store
       if (validatedEstimateType.success) {
@@ -215,7 +214,7 @@ const totalSteps = validatedEstimateType.success
 </EstimateWrapper>
 
 <script>
-  import { estimateParser } from "@models/estimateProgress";
+  import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
 
   const emailInputEl = document.getElementById(
     "emailInput"
@@ -240,11 +239,11 @@ const totalSteps = validatedEstimateType.success
     return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
   }
 
-  const emailParser = estimateParser.pick({
+  const emailParser = publicLeadsUpdateSchemaSchema.pick({
     email: true,
   });
 
-  const phoneParser = estimateParser.pick({
+  const phoneParser = publicLeadsUpdateSchemaSchema.pick({
     phone: true,
   });
 

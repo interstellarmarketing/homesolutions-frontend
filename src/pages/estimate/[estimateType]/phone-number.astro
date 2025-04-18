@@ -141,16 +141,18 @@ const stepHeader = "What's the best phone number to reach you?";
 </EstimateWrapper>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@models/estimateOptions";
+  import {
+    shortTradeEnum,
+    type EstimateOptionsSolarSchema,
+  } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { estimateParser } from "@models/estimateProgress";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
   import { actions } from "astro:actions";
-
+  import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
   // Declare zaraz for TypeScript
   declare const zaraz:
     | {
@@ -162,7 +164,7 @@ const stepHeader = "What's the best phone number to reach you?";
     private phoneInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
     private form: HTMLFormElement | null;
-    private phoneParser = estimateParser.pick({ phone: true });
+    private phoneParser = publicLeadsUpdateSchemaSchema.pick({ phone: true });
     private estimateType: string;
 
     constructor() {
@@ -212,8 +214,11 @@ const stepHeader = "What's the best phone number to reach you?";
     };
 
     private async trackSolarPhoneSubmitEvent() {
-      const existingStore = estimateStore.get();
-      if (existingStore.email && !existingStore.solarPhoneSubmitted) {
+      const existingStore = estimateProgressStore.get();
+      const estimateOptions = existingStore.estimate_options as
+        | EstimateOptionsSolarSchema
+        | undefined;
+      if (existingStore.email && !estimateOptions?.solar_phone_submitted_at) {
         try {
           const response = await fetch(
             "https://google-advanced-conversions.zsmithbiz1.workers.dev/",
@@ -242,23 +247,26 @@ const stepHeader = "What's the best phone number to reach you?";
             event_source_url: window.location.href,
             user_data: {
               sha256_email_address: hashedEmail,
-              fbc: existingStore.trackingParams?.fbc,
-              fbp: existingStore.trackingParams?.fbp,
+              fbc: existingStore.fbc,
+              fbp: existingStore.fbp,
               client_user_agent: window.navigator.userAgent,
-              fn: existingStore.firstName,
-              ln: existingStore.lastName,
+              fn: existingStore.first_name,
+              ln: existingStore.last_name,
               em: hashedEmail,
               ph: existingStore.phone,
-              external_id: existingStore.trackingParams?.posthogPersonId,
+              external_id: existingStore.posthog_person_id,
             },
           };
 
           const eventName = `solar_phone_submit`;
           zaraz?.track(eventName, req);
           console.log(`Zaraz event sent (${eventName}):`, req);
-          estimateStore.set({
+          estimateProgressStore.set({
             ...existingStore,
-            solarPhoneSubmitted: true,
+            estimate_options: {
+              ...estimateOptions,
+              solar_phone_submitted_at: new Date().toISOString(),
+            },
           });
         } catch (error) {
           console.error("Error:", error);
@@ -276,8 +284,8 @@ const stepHeader = "What's the best phone number to reach you?";
 
       if (phoneParsed.success) {
         // Update store
-        const existingStore = estimateStore.get();
-        estimateStore.set({
+        const existingStore = estimateProgressStore.get();
+        estimateProgressStore.set({
           ...existingStore,
           phone: phoneValue,
         });
@@ -290,15 +298,13 @@ const stepHeader = "What's the best phone number to reach you?";
               affiliate_id: "Mjc1",
               campaign_id: "MjM0NA%3D%3D",
               self_book_campaign_id: "MjQwNQ%3D%3D",
-              first_name: existingStore.firstName || "",
-              last_name: existingStore.lastName || "",
+              first_name: existingStore.first_name || "",
+              last_name: existingStore.last_name || "",
               email: existingStore.email || "",
               phone: phoneValue || "",
-              zip_code: existingStore.zipCode || "",
-              Trusted_Form:
-                existingStore.trackingParams?.trustedFormCertUrl || "",
-              hrm_utm_campaign:
-                existingStore.trackingParams?.utm_campaign || "",
+              zip_code: existingStore.zip_code || "",
+              Trusted_Form: existingStore.trusted_form_cert_url || "",
+              hrm_utm_campaign: existingStore.utm_campaign || "",
               hrm_campaign:
                 new URLSearchParams(window.location.search).get("campaign") ||
                 "",
@@ -308,18 +314,18 @@ const stepHeader = "What's the best phone number to reach you?";
                 ) || "",
               hrm_adset_id:
                 new URLSearchParams(window.location.search).get("ad_set") || "",
-              hrm_utm_medium: existingStore.trackingParams?.utm_medium || "",
+              hrm_utm_medium: existingStore.utm_medium || "",
               hrm_adset_name:
                 new URLSearchParams(window.location.search).get("utm_adset") ||
                 "",
-              hrm_ad_name: existingStore.trackingParams?.utm_content || "",
+              hrm_ad_name: existingStore.utm_content || "",
               hrm_ad_id:
                 new URLSearchParams(window.location.search).get("ad") || "",
-              unique_id: existingStore.trackingParams?.posthogPersonId || "",
-              hrm_fbc: existingStore.trackingParams?.fbc || "",
-              hrm_fbp: existingStore.trackingParams?.fbp || "",
-              hrm_gclid: existingStore.trackingParams?.gclid || "",
-              hrm_fbclid: existingStore.trackingParams?.fbclid || "",
+              unique_id: existingStore.posthog_person_id || "",
+              hrm_fbc: existingStore.fbc || "",
+              hrm_fbp: existingStore.fbp || "",
+              hrm_gclid: existingStore.gclid || "",
+              hrm_fbclid: existingStore.fbclid || "",
               hrm_creative:
                 new URLSearchParams(window.location.search).get(
                   "google_ad_id"
@@ -327,17 +333,23 @@ const stepHeader = "What's the best phone number to reach you?";
               hrm_placement:
                 new URLSearchParams(window.location.search).get("placement") ||
                 "",
-              hrm_utm_source: existingStore.trackingParams?.utm_source || "",
-              "HRM User Agent": existingStore.trackingParams?.userAgent || "",
+              hrm_utm_source: existingStore.utm_source || "",
+              "HRM User Agent": existingStore.user_agent || "",
             });
             console.log("Freedom Forever API Response:", response);
 
             const lead_id = response.data;
             if (lead_id) {
-              const updatedStore = estimateStore.get();
-              estimateStore.set({
+              const updatedStore = estimateProgressStore.get();
+              const estimateOptions = updatedStore.estimate_options as
+                | EstimateOptionsSolarSchema
+                | undefined;
+              estimateProgressStore.set({
                 ...updatedStore,
-                freedomLeadId: lead_id,
+                estimate_options: {
+                  ...estimateOptions,
+                  freedom_lead_id: lead_id,
+                },
               });
             }
           } catch (error) {
@@ -385,7 +397,7 @@ const stepHeader = "What's the best phone number to reach you?";
       });
 
       // Set phone value from store data if available
-      const storeData = estimateStore.get();
+      const storeData = estimateProgressStore.get();
       if (storeData.phone) {
         this.phoneInput.value = storeData.phone;
       }

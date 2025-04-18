@@ -78,13 +78,16 @@ const stepHeader = "Is your roof shaded by trees?";
 </EstimateWrapper>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
+  import {
+    shortTradeEnum,
+    type EstimateOptionsSolarSchema,
+  } from "@models/estimateOptions";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
-  import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
+  import { navigate } from "astro:transitions/client";
+  import { getNextStep } from "src/consts/estimateSteps";
 
   class FormController {
     private radioButtons: NodeListOf<HTMLInputElement>;
@@ -127,10 +130,12 @@ const stepHeader = "Is your roof shaded by trees?";
       });
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.shadedRoof !== undefined) {
+      const storeData = estimateProgressStore.get();
+      const estimateOptions =
+        storeData.estimate_options as EstimateOptionsSolarSchema;
+      if (estimateOptions.is_roof_shaded !== undefined) {
         // Find and check the matching radio button based on the boolean value
-        const valueToSelect = storeData.shadedRoof
+        const valueToSelect = estimateOptions.is_roof_shaded
           ? "Yes, willing to trim"
           : "No";
 
@@ -182,10 +187,13 @@ const stepHeader = "Is your roof shaded by trees?";
       const isRoofShaded = shadedRoof === "Yes, willing to trim";
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
-        shadedRoof: isRoofShaded,
+        estimate_options: {
+          ...(existingStore.estimate_options as EstimateOptionsSolarSchema),
+          is_roof_shaded: isRoofShaded,
+        },
       });
 
       // Get next step

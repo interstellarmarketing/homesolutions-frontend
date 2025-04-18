@@ -100,7 +100,7 @@ const stepHeader = "What is your credit score?";
 
 <script>
   import { shortTradeEnum } from "@models/estimateOptions";
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
@@ -150,10 +150,10 @@ const stepHeader = "What is your credit score?";
       });
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.creditScoreAboveOrEqual640 !== undefined) {
+      const storeData = estimateProgressStore.get();
+      if (storeData.credit_score_eligible !== undefined) {
         // Find and check the matching radio button based on the boolean value
-        const valueToSelect = storeData.creditScoreAboveOrEqual640
+        const valueToSelect = storeData.credit_score_eligible
           ? "Credit score above 640"
           : "Credit score below 640";
 
@@ -206,10 +206,10 @@ const stepHeader = "What is your credit score?";
         creditScore === "Credit score above 640";
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
-        creditScoreAboveOrEqual640,
+        credit_score_eligible: creditScoreAboveOrEqual640,
       });
 
       // Get next step

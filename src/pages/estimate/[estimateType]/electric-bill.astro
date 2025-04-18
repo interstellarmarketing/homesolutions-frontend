@@ -85,7 +85,7 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
     getNextStep,
     getTotalSteps,
   } from "@consts/estimateSteps";
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { appendQueryParams } from "@utils/queryParams";
@@ -141,10 +141,10 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
       this.calculateStepNumbers();
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.electricBillOver100 !== undefined) {
+      const storeData = estimateProgressStore.get();
+      if (storeData.utility_bill_eligible !== undefined) {
         // Find and check the matching radio button based on the boolean value
-        const valueToSelect = storeData.electricBillOver100
+        const valueToSelect = storeData.utility_bill_eligible
           ? "Electric Bill Above $100"
           : "Electric Bill Below $100";
 
@@ -225,10 +225,10 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
       const electricBillOver100 = electricBill === "Electric Bill Above $100";
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
-        electricBillOver100,
+        utility_bill_eligible: electricBillOver100,
       });
 
       // Get next step

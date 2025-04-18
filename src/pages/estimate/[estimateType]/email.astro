@@ -102,8 +102,8 @@ const stepHeader = "What's the best email to reach you?";
 </EstimateWrapper>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
-  import { estimateParser } from "@models/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
+  import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import {
@@ -123,7 +123,7 @@ const stepHeader = "What's the best email to reach you?";
     private emailInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
     private form: HTMLFormElement | null;
-    private emailParser = estimateParser.pick({ email: true });
+    private emailParser = publicLeadsUpdateSchemaSchema.pick({ email: true });
     private estimateType: string;
 
     constructor() {
@@ -180,7 +180,7 @@ const stepHeader = "What's the best email to reach you?";
       });
 
       // Set email value from store data if available
-      const storeData = estimateStore.get();
+      const storeData = estimateProgressStore.get();
       if (storeData.email) {
         this.emailInput.value = storeData.email;
       }
@@ -224,8 +224,8 @@ const stepHeader = "What's the best email to reach you?";
 
       if (emailParsed.success) {
         // Update store
-        const existingStore = estimateStore.get();
-        estimateStore.set({
+        const existingStore = estimateProgressStore.get();
+        estimateProgressStore.set({
           ...existingStore,
           email: emailValue,
         });

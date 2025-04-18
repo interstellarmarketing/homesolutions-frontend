@@ -7,48 +7,39 @@ const getPrevResults = await listSuccessResults(Astro);
 const zipMethodsClass = Astro.locals.runtime.env.ZIP_METHODS;
 const zipMethods = await zipMethodsClass.newZipMethods();
 const zipData = await zipMethods.listAllZips();
-
-
 ---
 
 <Layout title="Welcome to Astro.">
-	<div
-		class="flex flex-col md:flex-row items-center text-center h-full grow gap-8"
-	>
-		{
-			/*
+  <div
+    class="flex flex-col md:flex-row items-center text-center h-full grow gap-8"
+  >
+    {
+      /*
 		// INFO: stashed results
 		*/
-		}
-		<div
-			class="flex flex-col gap-4 border p-4 overflow-scroll rounded-lg"
-		>
-			{
-				getPrevResults.map((result) => (
-					<div class="grid grid-cols-5 gap-4 text-start">
-						<p>{result.zipCode}</p>
-						<p>{result.email}</p>
-						<p>
-							{
-								result.estimateShortTrade
-							}
-						</p>
-						<p>{result.estimateType}</p>
-						<p>{result.estimateAction}</p>
-					</div>
-				))
-			}
-		</div>
-		<div class="flex flex-col gap-4 border p-4 rounded-lg">
-			{
-				zipData?.map((result) => (
-					<div class="grid grid-cols-3 gap-4 text-start">
-						<p>{result.zip5}</p>
-						<p>{result.defaultCity}</p>
-						<p>{result.defaultState}</p>
-					</div>
-				))
-			}
-		</div>
-	</div>
+    }
+    <div class="flex flex-col gap-4 border p-4 overflow-scroll rounded-lg">
+      {
+        getPrevResults.map((result) => (
+          <div class="grid grid-cols-5 gap-4 text-start">
+            <p>{result.zip_code}</p>
+            <p>{result.email}</p>
+            <p>{result.estimate_type}</p>
+            <p>{result.action}</p>
+          </div>
+        ))
+      }
+    </div>
+    <div class="flex flex-col gap-4 border p-4 rounded-lg">
+      {
+        zipData?.map((result) => (
+          <div class="grid grid-cols-3 gap-4 text-start">
+            <p>{result.zip5}</p>
+            <p>{result.defaultCity}</p>
+            <p>{result.defaultState}</p>
+          </div>
+        ))
+      }
+    </div>
+  </div>
 </Layout>
