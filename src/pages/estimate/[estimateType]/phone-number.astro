@@ -100,8 +100,9 @@ const stepHeader = "What's the best phone number to reach you?";
           {
             pageState.estimateType === "solar" ? (
               <p class="text-[8px] text-gray-500">
-                By submitting my contact information including my telephone
-                number above, I authorize Bright Solar Marketing, and/or its{" "}
+                By clicking Next Step and submitting my contact information
+                including my telephone number above, I authorize Bright Solar
+                Marketing, and/or its{" "}
                 <a
                   href="/dba"
                   class="text-blue-600 hover:text-blue-800 underline"
@@ -116,8 +117,9 @@ const stepHeader = "What's the best phone number to reach you?";
               </p>
             ) : (
               <p class="text-[8px] text-gray-500">
-                By clicking Submit I am providing my ESIGN signature and consent
-                for Local {capitalizeFirstLetter(pageState.estimateType)}
+                By clicking Next Step I am providing my ESIGN signature and
+                consent for Local{" "}
+                {capitalizeFirstLetter(pageState.estimateType)}
                 Installers and its{" "}
                 <a
                   href="/dba"
