@@ -121,15 +121,12 @@ if (pageState instanceof Response) {
 </EstimateWrapper>
 
 <script>
-  import {
-    estimateProgressStore,
-    resetEstimateProgressFields,
-  } from "@stores/estimateProgress";
-  import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { shortTradeEnum } from "@models/estimateOptions";
   import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
-  import { supabase } from "@utils/supabase";
   import type { PublicLeadsUpdateSchema } from "@models/supabase/zodTypes";
+  import { estimateProgressStore } from "@stores/estimateProgress";
+  import { estimateStepsStore } from "@stores/estimateStepsStore";
+  import { supabase } from "@utils/supabase";
 
   // Declare zaraz for TypeScript
   declare const zaraz:
@@ -236,11 +233,6 @@ if (pageState instanceof Response) {
       this.updateLocationMessage(validatedLead);
 
       if (!validatedLead.submitted_at) {
-        estimateProgressStore.set({
-          ...validatedLead,
-          status: "submitted",
-          submitted_at: new Date().toISOString(),
-        });
         try {
           const { data, error } = await supabase.functions.invoke(
             "submit-lead",
@@ -251,6 +243,12 @@ if (pageState instanceof Response) {
           if (error) {
             throw new Error(error.message);
           }
+          estimateProgressStore.set({
+            ...validatedLead,
+            status: "submitted",
+            updated_at: new Date().toISOString(),
+            submitted_at: new Date().toISOString(),
+          });
           console.log("Lead submitted successfully: ", data);
         } catch (error) {
           console.error("Error submitting lead:", error);

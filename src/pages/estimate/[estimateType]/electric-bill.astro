@@ -142,7 +142,10 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
 
       // Check store for initial selection and set the radio button accordingly
       const storeData = estimateProgressStore.get();
-      if (storeData.utility_bill_eligible !== undefined) {
+      if (
+        storeData.utility_bill_eligible !== undefined &&
+        storeData.utility_bill_eligible !== null
+      ) {
         // Find and check the matching radio button based on the boolean value
         const valueToSelect = storeData.utility_bill_eligible
           ? "Electric Bill Above $100"

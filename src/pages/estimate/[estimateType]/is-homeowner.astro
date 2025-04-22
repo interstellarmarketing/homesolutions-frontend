@@ -129,7 +129,10 @@ const stepHeader = "Do you own your home?";
 
       // Check store for initial selection and set the radio button accordingly
       const storeData = estimateProgressStore.get();
-      if (storeData.is_homeowner !== undefined) {
+      if (
+        storeData.is_homeowner !== undefined &&
+        storeData.is_homeowner !== null
+      ) {
         // Find and check the matching radio button based on the boolean value
         const valueToSelect = storeData.is_homeowner
           ? "I Own My Home"

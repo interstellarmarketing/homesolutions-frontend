@@ -225,6 +225,12 @@ if (pageState instanceof Response) {
           if (error) {
             throw new Error(error.message);
           }
+          estimateProgressStore.set({
+            ...validatedLead,
+            status: "submitted",
+            updated_at: new Date().toISOString(),
+            submitted_at: new Date().toISOString(),
+          });
           console.log("Lead submitted successfully: ", data);
         } catch (error) {
           console.error("Error submitting lead:", error);

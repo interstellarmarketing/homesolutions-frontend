@@ -36,6 +36,12 @@ function validateEstimateType(
   return parseResult.data;
 }
 
+const ipAddress =
+  Astro?.request?.headers?.get("cf-connecting-ip") ||
+  Astro?.request?.headers?.get("x-real-ip") ||
+  Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
+  null;
+
 // Destructure props with default values if needed
 const { title, estimateType: rawEstimateType } = Astro.props;
 // Validate the estimate type
@@ -47,7 +53,7 @@ if (validationResult instanceof Response) {
 }
 ---
 
-<estimate-wrapper estimateType={validationResult}>
+<estimate-wrapper estimateType={validationResult} data-ip-address={ipAddress}>
   <Layout title={title} data-estimate-type={validationResult}>
     <slot />
   </Layout>
@@ -81,7 +87,11 @@ if (validationResult instanceof Response) {
   const shouldReset = searchParams.get("reset") === "true";
   if (shouldReset) {
     // Reset all stores
-    await resetEstimateProgressFields();
+    const ipAddress =
+      document
+        .querySelector("estimate-wrapper")
+        ?.getAttribute("data-ip-address") || null;
+    await resetEstimateProgressFields(ipAddress);
 
     // Remove the reset parameter from the URL
     const url = new URL(window.location.href);
@@ -176,8 +186,11 @@ if (validationResult instanceof Response) {
 
   // Debounced logging function
   const debouncedSave = debounce(async (state: any) => {
+    if (!state.id) return;
+
     await supabase.from("leads").upsert({
       id: state.id,
+      updated_at: new Date().toISOString(),
       ...state,
     });
   }, 500);

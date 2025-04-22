@@ -151,7 +151,10 @@ const stepHeader = "What is your credit score?";
 
       // Check store for initial selection and set the radio button accordingly
       const storeData = estimateProgressStore.get();
-      if (storeData.credit_score_eligible !== undefined) {
+      if (
+        storeData.credit_score_eligible !== undefined &&
+        storeData.credit_score_eligible !== null
+      ) {
         // Find and check the matching radio button based on the boolean value
         const valueToSelect = storeData.credit_score_eligible
           ? "Credit score above 640"
