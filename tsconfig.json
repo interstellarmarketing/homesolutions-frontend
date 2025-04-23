@@ -15,9 +15,6 @@
       "@stores/*": [
         "src/stores/*"
       ],
-      "@typestash/*": [
-        "src/typestash/*"
-      ],
       "@actions/*": [
         "src/actions/*"
       ],
@@ -29,6 +26,9 @@
       ],
       "@consts/*": [
         "src/consts/*"
+      ],
+      "@models/*": [
+        "src/models/*"
       ]
     },
     "jsx": "react-jsx",

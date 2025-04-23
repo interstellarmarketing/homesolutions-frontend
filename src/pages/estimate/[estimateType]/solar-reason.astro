@@ -10,7 +10,7 @@ import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
-} from "@assets/info/estimateOptions";
+} from "@models/estimateOptions";
 import {
   getCurrentStepNumber,
   getTotalSteps as getStoreSteps,
@@ -118,8 +118,11 @@ const stepHeader = "What's the main reason you're interested in going solar?";
 
 <script>
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
-  import { estimateStore } from "@stores/estimateProgress";
+  import {
+    shortTradeEnum,
+    type EstimateOptionsSolarSchema,
+  } from "@models/estimateOptions";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
   import { navigate } from "astro:transitions/client";
@@ -174,11 +177,13 @@ const stepHeader = "What's the main reason you're interested in going solar?";
       });
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.solarReason) {
+      const storeData = estimateProgressStore.get();
+      const estimateOptions =
+        storeData.estimate_options as EstimateOptionsSolarSchema;
+      if (estimateOptions?.solar_reason) {
         // Find and check the matching radio button
         const radioToCheck = Array.from(this.radioButtons).find(
-          (radio) => radio.value === storeData.solarReason
+          (radio) => radio.value === estimateOptions.solar_reason
         );
 
         if (radioToCheck) {
@@ -226,10 +231,13 @@ const stepHeader = "What's the main reason you're interested in going solar?";
       if (!selectedReason) return;
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
-        solarReason: selectedReason,
+        estimate_options: {
+          ...(existingStore.estimate_options as EstimateOptionsSolarSchema),
+          solar_reason: selectedReason,
+        },
       });
 
       // Get next step

@@ -1,4 +1,4 @@
-import { uspsZipLookupParser } from '@typestash/zodTypes/usps';
+import { uspsZipLookupParser } from '@models/usps';
 import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'astro:schema';
 

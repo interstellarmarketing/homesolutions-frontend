@@ -1,5 +1,5 @@
 ---
-import { homeTypesConst, shortTradeEnum } from "@assets/info/estimateOptions";
+import { homeTypesConst, shortTradeEnum } from "@models/estimateOptions";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -89,14 +89,14 @@ const stepHeader = "What type of home do you have?";
       shortTradeEnum,
       tradeOptionDescriptions,
       type ShortTradeEnum,
-    } from "@assets/info/estimateOptions";
+    } from "@models/estimateOptions";
     import {
       getCurrentStepNumber,
       getNextStep,
       getTotalSteps,
     } from "@consts/estimateSteps";
     import { activeEstimateTypeStore } from "@stores/activeEstimateType";
-    import { estimateStore } from "@stores/estimateProgress";
+    import { estimateProgressStore } from "@stores/estimateProgress";
     import { estimateStepsStore } from "@stores/estimateStepsStore";
     import { crossPlatformLoader } from "@utils/crossPlatformLoader";
     import { appendQueryParams } from "@utils/queryParams";
@@ -158,11 +158,11 @@ const stepHeader = "What type of home do you have?";
           ?.setAttribute("data-total-steps", String(totalSteps));
 
         // Check store for initial selection and set the radio button accordingly
-        const storeData = estimateStore.get();
-        if (storeData.homeType) {
+        const storeData = estimateProgressStore.get();
+        if (storeData.property_type) {
           // Find and check the matching radio button
           const radioToCheck = Array.from(this.radioButtons).find(
-            (radio) => radio.value === storeData.homeType
+            (radio) => radio.value === storeData.property_type
           );
 
           if (radioToCheck) {
@@ -204,10 +204,10 @@ const stepHeader = "What type of home do you have?";
 
         if (homeType && homeTypesConst.includes(homeType)) {
           // Update store
-          const existingStore = estimateStore.get();
-          estimateStore.set({
+          const existingStore = estimateProgressStore.get();
+          estimateProgressStore.set({
             ...existingStore,
-            homeType: homeType,
+            property_type: homeType,
           });
 
           // Get next step

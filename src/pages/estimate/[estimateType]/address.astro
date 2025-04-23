@@ -1,7 +1,7 @@
 ---
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import StepLayout from "@components/step-layout/index.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
@@ -123,10 +123,11 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
   data-astro-rerun></script>
 
 <script>
-  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
+  import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
@@ -150,7 +151,9 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
     private addressInput: HTMLInputElement | null;
     private submitButton: HTMLButtonElement | null;
     private form: HTMLFormElement | null;
-    private addressParser = estimateParser.pick({ streetAddress: true });
+    private addressParser = publicLeadsUpdateSchemaSchema.pick({
+      street_address: true,
+    });
     private autocomplete: google.maps.places.Autocomplete | null = null;
     private estimateType: string;
 
@@ -198,24 +201,24 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
       });
 
       // Set form values from store data
-      const storeData = estimateStore.get();
+      const storeData = estimateProgressStore.get();
 
       // Set street address if available
-      if (storeData.streetAddress) {
-        this.addressInput.value = storeData.streetAddress;
+      if (storeData.street_address) {
+        this.addressInput.value = storeData.street_address;
       }
 
       // Set homeowner status if available
       const isHomeownerInput = this.form.querySelector(
         'input[name="isHomeownerInput"]'
       ) as HTMLInputElement;
-      if (isHomeownerInput && storeData.isHomeowner !== undefined) {
-        isHomeownerInput.checked = storeData.isHomeowner;
+      if (isHomeownerInput && storeData.is_homeowner !== undefined) {
+        isHomeownerInput.checked = !!storeData.is_homeowner;
       }
 
       // Create or update hidden inputs for additional address components if they exist in store
-      if (storeData.zipCode) {
-        this.createOrUpdateHiddenInput("zipCodeInput", storeData.zipCode);
+      if (storeData.zip_code) {
+        this.createOrUpdateHiddenInput("zipCodeInput", storeData.zip_code);
       }
       if (storeData.city) {
         this.createOrUpdateHiddenInput("cityInput", storeData.city);
@@ -390,16 +393,16 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY;
       ) as HTMLInputElement;
 
       const addressData = {
-        streetAddress,
-        zipCode: zipInput?.value,
+        street_address: streetAddress,
+        zip_code: zipInput?.value,
         city: cityInput?.value,
         state: stateInput?.value,
-        isHomeowner: isHomeownerInput?.checked,
+        is_homeowner: isHomeownerInput?.checked,
       };
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
         ...addressData,
       });

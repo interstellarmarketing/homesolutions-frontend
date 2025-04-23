@@ -6,7 +6,7 @@
 </div>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
 
   // starts a loop with interval of 500ms
   var interval = setInterval(getCertUrl, 500);
@@ -30,16 +30,12 @@
     // check if the certificate has been generated
     if (certUrl && pingUrl) {
       // Update the store with the new values directly
-      const existingStore = estimateStore.get();
-      const existingTrackingParams = existingStore.trackingParams || {};
+      const existingStore = estimateProgressStore.get();
 
-      estimateStore.set({
+      estimateProgressStore.set({
         ...existingStore,
-        trackingParams: {
-          ...existingTrackingParams,
-          trustedFormCertUrl: certUrl,
-          trustedFormPingUrl: pingUrl,
-        },
+        trusted_form_cert_url: certUrl,
+        trusted_form_ping_url: pingUrl,
       });
 
       // stops the loop

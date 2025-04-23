@@ -1,5 +1,5 @@
 ---
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -136,10 +136,10 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "@consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { z } from "zod";
   import { navigate } from "astro:transitions/client";
@@ -154,8 +154,8 @@ const stepHeader = getStepHeader();
 
     // Contact schema for client-side validation
     private contactSchema = z.object({
-      firstName: z.string().min(2),
-      lastName: z.string().min(2),
+      first_name: z.string().min(2),
+      last_name: z.string().min(2),
     });
 
     constructor() {
@@ -199,16 +199,16 @@ const stepHeader = getStepHeader();
       });
 
       // Set form values from store data
-      const storeData = estimateStore.get();
+      const storeData = estimateProgressStore.get();
 
       // Set first name if available
-      if (storeData.firstName) {
-        this.firstNameInput.value = storeData.firstName;
+      if (storeData.first_name) {
+        this.firstNameInput.value = storeData.first_name;
       }
 
       // Set last name if available
-      if (storeData.lastName) {
-        this.lastNameInput.value = storeData.lastName;
+      if (storeData.last_name) {
+        this.lastNameInput.value = storeData.last_name;
       }
 
       // Set up event listeners
@@ -225,8 +225,8 @@ const stepHeader = getStepHeader();
         return;
 
       const isValid = this.contactSchema.safeParse({
-        firstName: this.firstNameInput.value,
-        lastName: this.lastNameInput.value,
+        first_name: this.firstNameInput.value,
+        last_name: this.lastNameInput.value,
       }).success;
 
       this.submitButton.setAttribute(
@@ -241,8 +241,8 @@ const stepHeader = getStepHeader();
       if (!this.form || !this.firstNameInput || !this.lastNameInput) return;
 
       const contactData = {
-        firstName: this.firstNameInput.value,
-        lastName: this.lastNameInput.value,
+        first_name: this.firstNameInput.value,
+        last_name: this.lastNameInput.value,
       };
 
       const validationResult = this.contactSchema.safeParse(contactData);
@@ -251,8 +251,8 @@ const stepHeader = getStepHeader();
       }
 
       // Update store with contact data
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
         ...contactData,
       });

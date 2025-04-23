@@ -1,6 +1,6 @@
 import { ActionError, defineAction } from 'astro:actions';
 import { z } from "astro/zod";
-import { shortTradesConst, shortTradeObjects } from '@assets/info/estimateOptions';
+import { shortTradesConst, shortTradeObjects } from '@models/estimateOptions';
 
 export const estimateOptions = {
 	estimateOptionShortSet: defineAction({

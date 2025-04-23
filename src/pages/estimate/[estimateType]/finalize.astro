@@ -1,24 +1,21 @@
 ---
+import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import {
   shortTradeDiscriminatedUnion,
   shortTradeEnum,
-} from "@assets/info/estimateOptions";
-import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import {
-  estimateParser,
-  estimateStore,
-  resetEstimateFields,
-} from "@stores/estimateProgress";
+} from "@models/estimateOptions";
+import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
+import { estimateProgressStore } from "@stores/estimateProgress";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
-import {
-  getNextStep,
-  getPreviousStep,
-  getCurrentStepNumber,
-  getTotalSteps as getStoreSteps,
-} from "src/consts/estimateSteps";
 import { resultIdStore } from "@stores/stashedResultId";
 import { storeSuccessResult } from "@utils/kv/storedResults";
 import { appendQueryParams } from "@utils/queryParams";
+import {
+  getCurrentStepNumber,
+  getNextStep,
+  getPreviousStep,
+  getTotalSteps as getStoreSteps,
+} from "src/consts/estimateSteps";
 
 const { estimateType } = Astro.params;
 
@@ -35,11 +32,11 @@ if (validatedEstimateType.success) {
   });
 }
 
-let existingStore = estimateStore.get();
+let existingStore = estimateProgressStore.get();
 
 let { phone, email } = existingStore;
 
-const phoneEmailParser = estimateParser.pick({
+const phoneEmailParser = publicLeadsUpdateSchemaSchema.pick({
   phone: true,
   email: true,
 });
@@ -67,18 +64,19 @@ if (Astro.request.method === "POST") {
 
     console.log({ finalfinalstore: existingStore });
 
-    estimateStore.set({
+    estimateProgressStore.set({
       ...existingStore,
       ...phoneEmailParsed.data,
     });
 
-    const parseFinalizedStore = estimateParser.safeParse(existingStore);
+    const parseFinalizedStore =
+      publicLeadsUpdateSchemaSchema.safeParse(existingStore);
 
     const testDiscriminatorParse = shortTradeDiscriminatedUnion.safeParse({
-      shortTrade: existingStore.estimateShortTrade,
+      shortTrade: existingStore.estimate_type,
       data: {
-        type: existingStore.estimateType,
-        estimateAction: existingStore.estimateAction,
+        type: existingStore.estimate_type,
+        estimateAction: existingStore.action,
       },
     });
 
@@ -102,8 +100,6 @@ if (Astro.request.method === "POST") {
       // );
 
       // console.log({ submitToDb });
-
-      resetEstimateFields();
 
       // Get the next step from the store
       if (validatedEstimateType.success) {
@@ -218,7 +214,7 @@ const totalSteps = validatedEstimateType.success
 </EstimateWrapper>
 
 <script>
-  import { estimateParser } from "@stores/estimateProgress";
+  import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
 
   const emailInputEl = document.getElementById(
     "emailInput"
@@ -243,11 +239,11 @@ const totalSteps = validatedEstimateType.success
     return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
   }
 
-  const emailParser = estimateParser.pick({
+  const emailParser = publicLeadsUpdateSchemaSchema.pick({
     email: true,
   });
 
-  const phoneParser = estimateParser.pick({
+  const phoneParser = publicLeadsUpdateSchemaSchema.pick({
     phone: true,
   });
 

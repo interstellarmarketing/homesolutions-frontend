@@ -1,7 +1,5 @@
-import { persistentAtom } from '@nanostores/persistent'
-import type { ShortTradeEnum } from "@assets/info/estimateOptions";
-import posthog from "posthog-js";
-import { estimateSteps } from "src/consts";
+import type { ShortTradeEnum } from "@models/estimateOptions";
+import { persistentAtom } from '@nanostores/persistent';
 
 // Interface for the estimate steps store
 export interface EstimateStepsState {

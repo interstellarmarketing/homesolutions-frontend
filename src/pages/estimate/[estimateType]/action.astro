@@ -13,7 +13,7 @@
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
-} from "@assets/info/estimateOptions";
+} from "@models/estimateOptions";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import StepLayout from "@components/step-layout/index.astro";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -128,10 +128,10 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "@consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import {
     activeEstimateTypeStore,
     computedEstimateOptions,
@@ -187,11 +187,11 @@ const stepHeader = getStepHeader();
       activeEstimateTypeStore.set(validatedEstimateType.data);
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.estimateAction) {
+      const storeData = estimateProgressStore.get();
+      if (storeData.action) {
         // Find and check the matching radio button
         const radioToCheck = Array.from(this.radioButtons).find(
-          (radio) => radio.value === storeData.estimateAction
+          (radio) => radio.value === storeData.action
         );
 
         if (radioToCheck) {
@@ -236,10 +236,10 @@ const stepHeader = getStepHeader();
       if (!action) return;
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
-        estimateAction: action,
+        action,
       });
 
       // Get next step

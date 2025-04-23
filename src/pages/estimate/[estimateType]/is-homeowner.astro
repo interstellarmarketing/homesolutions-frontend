@@ -1,7 +1,7 @@
 ---
 import { z } from "zod";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import { appendQueryParams } from "@utils/queryParams";
@@ -79,10 +79,10 @@ const stepHeader = "Do you own your home?";
 </EstimateWrapper>
 
 <script>
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { getNextStep } from "src/consts/estimateSteps";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
@@ -128,10 +128,13 @@ const stepHeader = "Do you own your home?";
       });
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.isHomeowner !== undefined) {
+      const storeData = estimateProgressStore.get();
+      if (
+        storeData.is_homeowner !== undefined &&
+        storeData.is_homeowner !== null
+      ) {
         // Find and check the matching radio button based on the boolean value
-        const valueToSelect = storeData.isHomeowner
+        const valueToSelect = storeData.is_homeowner
           ? "I Own My Home"
           : "I Rent My Home";
 
@@ -183,10 +186,10 @@ const stepHeader = "Do you own your home?";
       const isHomeowner = homeowner === "I Own My Home";
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
+      const existingStore = estimateProgressStore.get();
+      estimateProgressStore.set({
         ...existingStore,
-        isHomeowner,
+        is_homeowner: isHomeowner,
       });
 
       // Get next step

@@ -1,44 +1,44 @@
 ---
-import { type ShortTradeEnum } from "@assets/info/estimateOptions";
+import { type ShortTradeEnum } from "@models/estimateOptions";
 
 import { Icon } from "astro-icon/components";
 
 interface Props {
-	shortTrade: ShortTradeEnum;
+  shortTrade: ShortTradeEnum;
 }
 const { shortTrade } = Astro.props;
 
 interface IconProps {
-	shortTrade: ShortTradeEnum;
-	iconNameMDI: string; // ref: https://icones.js.org/collection/mdi
-	// just copy *after* the `mdi:` - for **reasons**
+  shortTrade: ShortTradeEnum;
+  iconNameMDI: string; // ref: https://icones.js.org/collection/mdi
+  // just copy *after* the `mdi:` - for **reasons**
 }
 
 export const shortTradeIcons: IconProps[] = [
-	{
-		shortTrade: "bathroom",
-		iconNameMDI: "bathtub-outline",
-	},
-	{
-		shortTrade: "siding",
-		iconNameMDI: "wall",
-	},
-	{
-		shortTrade: "roofing",
-		iconNameMDI: "home-roof",
-	},
-	{
-		shortTrade: "windows",
-		iconNameMDI: "window-closed-variant",
-	},
+  {
+    shortTrade: "bathroom",
+    iconNameMDI: "bathtub-outline",
+  },
+  {
+    shortTrade: "siding",
+    iconNameMDI: "wall",
+  },
+  {
+    shortTrade: "roofing",
+    iconNameMDI: "home-roof",
+  },
+  {
+    shortTrade: "windows",
+    iconNameMDI: "window-closed-variant",
+  },
 ];
 
 const getShortTradeIcon = shortTradeIcons?.find(
-	(x) => x.shortTrade === shortTrade,
+  (x) => x.shortTrade === shortTrade
 );
 
 const convertIcon = (icon?: string, prefix?: string) =>
-	icon && prefix ? `${prefix}:${icon}` : "mdi:home-variant-outline";
+  icon && prefix ? `${prefix}:${icon}` : "mdi:home-variant-outline";
 ---
 
 <Icon name={convertIcon(getShortTradeIcon?.iconNameMDI, "mdi")} />

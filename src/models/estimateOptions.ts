@@ -115,16 +115,6 @@ function createShortTradeObject<K extends ShortTradeEnum>(
 }
 
 /**
- * Validates a trade object against its schema
- * @param obj - The trade object to validate
- */
-export function parseShortTradeObject<K extends ShortTradeEnum>(
-	obj: { shortTrade: K; data: ShortTradeDataMap[K] }
-): ShortTradeDiscriminatedUnion {
-	return shortTradeDiscriminatedUnion.parse(obj);
-}
-
-/**
  * Trade option configurations
  */
 export const shortTradeObjects = [
@@ -204,3 +194,24 @@ export const tradeOptionDescriptions: readonly TradeOptionDescriptions[] = [
 ] as const;
 
 
+export const estimateOptionsRoofingSchema = z.object({
+	roof_type: z.string().optional(),
+});
+
+export type EstimateOptionsRoofingSchema = z.infer<typeof estimateOptionsRoofingSchema>;
+
+export const estimateOptionsSolarSchema = z.object({
+	solar_reason: z.string().optional(),
+	roof_type: z.string().optional(),
+	is_roof_shaded: z.boolean().optional(),
+	freedom_lead_id: z.string().optional(),
+	solar_phone_submitted_at: z.string().optional(),
+});
+
+export type EstimateOptionsSolarSchema = z.infer<typeof estimateOptionsSolarSchema>;
+
+export const estimateOptionsSidingSchema = z.object({
+	siding_type: z.string().optional(),
+});
+
+export type EstimateOptionsSidingSchema = z.infer<typeof estimateOptionsSidingSchema>;

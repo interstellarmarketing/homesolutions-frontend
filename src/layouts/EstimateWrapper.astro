@@ -1,6 +1,6 @@
 ---
 import Layout from "./Layout.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import type { z } from "zod";
 
 /**
@@ -36,6 +36,12 @@ function validateEstimateType(
   return parseResult.data;
 }
 
+const ipAddress =
+  Astro?.request?.headers?.get("cf-connecting-ip") ||
+  Astro?.request?.headers?.get("x-real-ip") ||
+  Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
+  null;
+
 // Destructure props with default values if needed
 const { title, estimateType: rawEstimateType } = Astro.props;
 // Validate the estimate type
@@ -48,22 +54,31 @@ if (validationResult instanceof Response) {
 ---
 
 <estimate-wrapper estimateType={validationResult}>
+  <div data-ip-address={ipAddress} id="ipAddress"></div>
   <Layout title={title} data-estimate-type={validationResult}>
     <slot />
   </Layout>
 </estimate-wrapper>
 
 <script>
-  import { estimateStore, resetEstimateFields } from "@stores/estimateProgress";
+  import type { ShortTradeEnum } from "@models/estimateOptions";
+  import {
+    estimateProgressStore,
+    resetEstimateProgressFields,
+  } from "@stores/estimateProgress";
   import {
     estimateStepsStore,
     type EstimateStepsState,
   } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
+  import { appendQueryParams } from "@utils/queryParams";
+  import { supabase } from "@utils/supabase";
+  import { navigate } from "astro:transitions/client";
   import posthog from "posthog-js";
   import {
     estimateSteps,
     getCurrentStepIndex,
+    getFirstStep,
     getTotalSteps,
   } from "src/consts/estimateSteps";
 
@@ -73,7 +88,10 @@ if (validationResult instanceof Response) {
   const shouldReset = searchParams.get("reset") === "true";
   if (shouldReset) {
     // Reset all stores
-    resetEstimateFields();
+    const ipAddress =
+      document.querySelector("#ipAddress")?.getAttribute("data-ip-address") ||
+      null;
+    await resetEstimateProgressFields(ipAddress);
 
     // Remove the reset parameter from the URL
     const url = new URL(window.location.href);
@@ -128,20 +146,54 @@ if (validationResult instanceof Response) {
 
   crossPlatformLoader(() => {
     // Update user agent directly in the store
-    const existingStore = estimateStore.get();
+    const existingStore = estimateProgressStore.get();
 
     const estimateType =
       document
         .querySelector("[data-estimate-type]")
         ?.getAttribute("data-estimate-type") || "";
 
-    estimateStore.set({
-      ...existingStore,
-      estimateType,
-    });
+    if (!existingStore.id) {
+      // Determine first step based on estimate type
+      let firstStep = getFirstStep(estimateType as ShortTradeEnum);
 
-    estimateStore.subscribe((state) => {
-      console.log("estimateStore", state);
+      const searchParams = new URLSearchParams(window.location.search);
+
+      searchParams.append("reset", "true");
+
+      // Redirect to first step with query params preserved
+      const redirectUrl = `/estimate/${estimateType}/${firstStep}`;
+      return navigate(appendQueryParams(redirectUrl, searchParams));
+    }
+
+    estimateProgressStore.set({
+      ...existingStore,
+      estimate_type: estimateType,
     });
   });
+
+  // Debounce function to limit how often the callback is executed
+  const debounce = <T extends (...args: any[]) => void>(
+    func: T,
+    wait = 300
+  ) => {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    return (...args: Parameters<T>) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  // Debounced logging function
+  const debouncedSave = debounce(async (state: any) => {
+    if (!state.id) return;
+
+    await supabase.from("leads").upsert({
+      id: state.id,
+      updated_at: new Date().toISOString(),
+      ...state,
+    });
+  }, 500);
+
+  estimateProgressStore.subscribe(debouncedSave);
 </script>

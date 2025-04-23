@@ -8,7 +8,7 @@
 import {
   shortTradeEnum,
   tradeOptionDescriptions,
-} from "@assets/info/estimateOptions";
+} from "@models/estimateOptions";
 import LargeRadioButtonGroup from "@components/radio-button/LargeRadioButtonGroup.astro";
 import StepLayout from "@components/step-layout/index.astro";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
@@ -114,7 +114,7 @@ const stepHeader = getStepHeader();
     >
       <LargeRadioButtonGroup
         options={pageState.projectTypes}
-        name="action"
+        name="estimate_option"
         currentSelection={undefined}
         layout="flex"
         capitalize={true}
@@ -124,13 +124,18 @@ const stepHeader = getStepHeader();
 </EstimateWrapper>
 
 <script>
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
-  import { estimateStore } from "@stores/estimateProgress";
+  import {
+    shortTradeEnum,
+    type EstimateOptionsRoofingSchema,
+    type EstimateOptionsSidingSchema,
+    type EstimateOptionsSolarSchema,
+  } from "@models/estimateOptions";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
-  import { getNextStep } from "src/consts/estimateSteps";
-  import { navigate } from "astro:transitions/client";
   import { appendQueryParams } from "@utils/queryParams";
+  import { navigate } from "astro:transitions/client";
+  import { getNextStep } from "src/consts/estimateSteps";
 
   /**
    * Controls the form behavior and button states
@@ -142,7 +147,9 @@ const stepHeader = getStepHeader();
     private estimateType: string;
 
     constructor() {
-      this.radioButtons = document.querySelectorAll('input[name="action"]');
+      this.radioButtons = document.querySelectorAll(
+        'input[name="estimate_option"]'
+      );
       this.submitButton = document.getElementById(
         "nextStepButton"
       ) as HTMLButtonElement;
@@ -181,11 +188,29 @@ const stepHeader = getStepHeader();
       });
 
       // Check store for initial selection and set the radio button accordingly
-      const storeData = estimateStore.get();
-      if (storeData.projectDetails) {
+      const storeData = estimateProgressStore.get();
+      const estimateOptions = storeData.estimate_options as
+        | EstimateOptionsRoofingSchema
+        | EstimateOptionsSolarSchema
+        | EstimateOptionsSidingSchema;
+
+      let key: string | undefined;
+
+      switch (this.estimateType) {
+        case "roofing":
+          key = "roof_type";
+          break;
+        case "siding":
+          key = "siding_type";
+          break;
+      }
+
+      if (key && estimateOptions?.[key as keyof typeof estimateOptions]) {
         // Find and check the matching radio button
         const radioToCheck = Array.from(this.radioButtons).find(
-          (radio) => radio.value === storeData.projectDetails
+          (radio) =>
+            radio.value ===
+            estimateOptions?.[key as keyof typeof estimateOptions]
         );
 
         if (radioToCheck) {
@@ -222,18 +247,39 @@ const stepHeader = getStepHeader();
 
       if (!this.form) return;
 
-      const selectedAction = Array.from(this.radioButtons).find(
+      const selectedEstimateOption = Array.from(this.radioButtons).find(
         (radio) => radio.checked
       )?.value;
 
-      if (!selectedAction) return;
+      if (!selectedEstimateOption) return;
 
       // Update store
-      const existingStore = estimateStore.get();
-      estimateStore.set({
-        ...existingStore,
-        projectDetails: selectedAction,
-      });
+      const existingStore = estimateProgressStore.get();
+      const estimateOptions = existingStore.estimate_options as
+        | EstimateOptionsRoofingSchema
+        | EstimateOptionsSolarSchema
+        | EstimateOptionsSidingSchema;
+
+      let key: string | undefined;
+
+      switch (this.estimateType) {
+        case "roofing":
+          key = "roof_type";
+          break;
+        case "siding":
+          key = "siding_type";
+          break;
+      }
+
+      if (!!key) {
+        estimateProgressStore.set({
+          ...existingStore,
+          estimate_options: {
+            ...estimateOptions,
+            [key]: selectedEstimateOption,
+          },
+        });
+      }
 
       // Get next step
       const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);

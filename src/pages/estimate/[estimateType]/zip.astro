@@ -1,5 +1,5 @@
 ---
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import StepLayout from "@components/step-layout/index.astro";
 import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
@@ -126,9 +126,9 @@ const formatEstimateTypeNoun = (type: string) =>
 </EstimateWrapper>
 
 <script>
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
+  import { shortTradeEnum } from "@models/estimateOptions";
   import { getNextStep } from "@consts/index";
-  import { estimateStore } from "@stores/estimateProgress";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
   import { crossPlatformLoader } from "@utils/crossPlatformLoader";
   import { actions } from "astro:actions";
@@ -251,7 +251,7 @@ const formatEstimateTypeNoun = (type: string) =>
 
       // We'll let the form submit to the server for ZIP validation
       // but we'll update the store with current values
-      const existingStore = estimateStore.get();
+      const existingStore = estimateProgressStore.get();
       const formData = new FormData(this.form);
 
       // Get TrustedForm data
@@ -265,15 +265,12 @@ const formatEstimateTypeNoun = (type: string) =>
           ?.getAttribute("value") || "";
 
       // Update store with zipCode and estimateShortTrade
-      estimateStore.set({
+      estimateProgressStore.set({
         ...existingStore,
-        zipCode: this.zipInput.value,
-        estimateShortTrade: this.estimateType,
-        trackingParams: {
-          ...existingStore.trackingParams,
-          trustedFormCertUrl: trustedFormCertUrl || undefined,
-          trustedFormPingUrl: trustedFormPingUrl || undefined,
-        },
+        zip_code: this.zipInput.value,
+        estimate_type: this.estimateType,
+        trusted_form_cert_url: trustedFormCertUrl || undefined,
+        trusted_form_ping_url: trustedFormPingUrl || undefined,
       });
 
       // Get next step

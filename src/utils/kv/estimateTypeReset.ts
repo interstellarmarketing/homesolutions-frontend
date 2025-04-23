@@ -1,15 +1,15 @@
-import type { ShortTradeEnum } from "@assets/info/estimateOptions";
+import type { ShortTradeEnum } from "@models/estimateOptions";
 import { activeEstimateTypeStore } from "@stores/activeEstimateType";
-import { estimateStore } from "@stores/estimateProgress";
+import { estimateProgressStore } from "@stores/estimateProgress";
 
 export function ProcessEstimateType(estimateType: ShortTradeEnum) {
 
-	const currentEstimateStore = estimateStore.get()
+	const currentEstimateStore = estimateProgressStore.get()
 
-	if (estimateType !== currentEstimateStore.estimateType) {
-		estimateStore.set({
+	if (estimateType !== currentEstimateStore.estimate_type) {
+		estimateProgressStore.set({
 			...currentEstimateStore,
-			estimateType
+			estimate_type: estimateType
 		})
 		activeEstimateTypeStore.set(estimateType)
 	}

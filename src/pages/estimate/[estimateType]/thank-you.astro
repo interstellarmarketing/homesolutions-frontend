@@ -1,12 +1,11 @@
 ---
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
-import { shortTradeEnum } from "@assets/info/estimateOptions";
+import { shortTradeEnum } from "@models/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
 import { z } from "zod";
 
 interface PageState {
   estimateType: string;
-  ipAddress: string | null;
 }
 
 function initializePage(
@@ -24,11 +23,6 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
-    ipAddress:
-      Astro?.request?.headers?.get("cf-connecting-ip") ||
-      Astro?.request?.headers?.get("x-real-ip") ||
-      Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
-      null,
   };
 }
 
@@ -50,7 +44,6 @@ if (pageState instanceof Response) {
   <div
     class="w-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
     data-estimate-type={pageState.estimateType}
-    data-ip-address={pageState.ipAddress}
   >
     <div class="flex flex-col items-center gap-8 max-w-2xl mx-auto">
       <div class="] flex-col justify-start items-center gap-8 inline-flex">
@@ -121,10 +114,12 @@ if (pageState instanceof Response) {
 </EstimateWrapper>
 
 <script>
-  import { estimateStore, estimateParser } from "@stores/estimateProgress";
+  import { shortTradeEnum } from "@models/estimateOptions";
+  import { publicLeadsUpdateSchemaSchema } from "@models/supabase/schemas";
+  import type { PublicLeadsUpdateSchema } from "@models/supabase/zodTypes";
+  import { estimateProgressStore } from "@stores/estimateProgress";
   import { estimateStepsStore } from "@stores/estimateStepsStore";
-  import { shortTradeEnum } from "@assets/info/estimateOptions";
-  import { actions } from "astro:actions";
+  import { supabase } from "@utils/supabase";
 
   // Declare zaraz for TypeScript
   declare const zaraz:
@@ -132,10 +127,6 @@ if (pageState instanceof Response) {
         track: (eventName: string, data: any) => void;
       }
     | undefined;
-
-  interface StoreWithIpAddress extends ReturnType<typeof estimateParser.parse> {
-    ipAddress?: string | null;
-  }
 
   class ThankYouController {
     private estimateType: string;
@@ -148,14 +139,14 @@ if (pageState instanceof Response) {
       this.initialize();
     }
 
-    private updateLocationMessage(store: StoreWithIpAddress) {
+    private updateLocationMessage(lead: PublicLeadsUpdateSchema) {
       const messageElement = document.getElementById("location-message");
-      if (messageElement && store.city && store.state) {
-        messageElement.textContent = `We'll be in touch with matching pros in ${store.city}, ${store.state} shortly.`;
+      if (messageElement && lead.city && lead.state) {
+        messageElement.textContent = `We'll be in touch with matching pros in ${lead.city}, ${lead.state} shortly.`;
       }
     }
 
-    private async trackConversion(store: StoreWithIpAddress) {
+    private async trackConversion(lead: PublicLeadsUpdateSchema) {
       try {
         const response = await fetch(
           "https://google-advanced-conversions.zsmithbiz1.workers.dev/",
@@ -169,7 +160,7 @@ if (pageState instanceof Response) {
                 timestamp: new Date().toISOString(),
               },
               client: {
-                email: store.email,
+                email: lead.email,
               },
             }),
           }
@@ -177,7 +168,7 @@ if (pageState instanceof Response) {
 
         const hashedEmail = await response.text();
 
-        const eventName = `completed_${store.estimateShortTrade}_estimate`;
+        const eventName = `completed_${lead.estimate_type}_estimate`;
         const req = {
           event_name: eventName,
           event_id: crypto.randomUUID(),
@@ -187,14 +178,14 @@ if (pageState instanceof Response) {
 
           user_data: {
             sha256_email_address: hashedEmail,
-            fbc: store.trackingParams?.fbc,
-            fbp: store.trackingParams?.fbp,
+            fbc: lead.fbc,
+            fbp: lead.fbp,
             client_user_agent: window.navigator.userAgent,
-            fn: store.firstName,
-            ln: store.lastName,
+            fn: lead.first_name,
+            ln: lead.last_name,
             em: hashedEmail,
-            ph: store.phone,
-            external_id: store.trackingParams?.posthogPersonId,
+            ph: lead.phone,
+            external_id: lead.posthog_person_id,
           },
         };
         zaraz?.track(eventName, req);
@@ -205,7 +196,7 @@ if (pageState instanceof Response) {
       }
     }
 
-    private initialize() {
+    private async initialize() {
       const validatedEstimateType = shortTradeEnum.safeParse(this.estimateType);
       if (!validatedEstimateType.success) {
         console.error("Invalid estimate type");
@@ -219,27 +210,36 @@ if (pageState instanceof Response) {
       });
 
       // Process submission
-      const store = estimateParser.parse(estimateStore.get());
-      const ipAddress =
-        document
-          .querySelector("[data-ip-address]")
-          ?.getAttribute("data-ip-address") || null;
-
-      console.log("ipAddress", ipAddress);
-
-      const storeWithIp = { ...store, ipAddress };
+      const validatedLead = publicLeadsUpdateSchemaSchema.parse(
+        estimateProgressStore.get()
+      );
 
       // Update location message with store values
-      this.updateLocationMessage(storeWithIp);
+      this.updateLocationMessage(validatedLead);
 
-      if (!store.submitted) {
-        actions.processSubmission(storeWithIp);
-        this.trackConversion(storeWithIp);
+      if (!validatedLead.submitted_at) {
+        try {
+          const { data, error } = await supabase.functions.invoke(
+            "submit-lead",
+            {
+              body: validatedLead,
+            }
+          );
+          if (error) {
+            throw new Error(error.message);
+          }
+          estimateProgressStore.set({
+            ...data,
+            status: "submitted",
+            updated_at: new Date().toISOString(),
+            submitted_at: new Date().toISOString(),
+          });
+          console.log("Lead submitted successfully: ", data);
+        } catch (error) {
+          console.error("Error submitting lead:", error);
+        }
 
-        estimateStore.set({
-          ...store,
-          submitted: true,
-        });
+        this.trackConversion(validatedLead);
       }
     }
   }
