@@ -53,7 +53,8 @@ if (validationResult instanceof Response) {
 }
 ---
 
-<estimate-wrapper estimateType={validationResult} data-ip-address={ipAddress}>
+<estimate-wrapper estimateType={validationResult}>
+  <div data-ip-address={ipAddress} id="ipAddress"></div>
   <Layout title={title} data-estimate-type={validationResult}>
     <slot />
   </Layout>
@@ -88,9 +89,8 @@ if (validationResult instanceof Response) {
   if (shouldReset) {
     // Reset all stores
     const ipAddress =
-      document
-        .querySelector("estimate-wrapper")
-        ?.getAttribute("data-ip-address") || null;
+      document.querySelector("#ipAddress")?.getAttribute("data-ip-address") ||
+      null;
     await resetEstimateProgressFields(ipAddress);
 
     // Remove the reset parameter from the URL

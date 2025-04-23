@@ -6,7 +6,6 @@ import { z } from "zod";
 
 interface PageState {
   estimateType: string;
-  ipAddress: string | null;
 }
 
 function initializePage(
@@ -23,11 +22,6 @@ function initializePage(
 
   return {
     estimateType: validatedEstimateType.data,
-    ipAddress:
-      Astro?.request?.headers?.get("cf-connecting-ip") ||
-      Astro?.request?.headers?.get("x-real-ip") ||
-      Astro?.request?.headers?.get("x-forwarded-for")?.split(",")[0] ||
-      null,
   };
 }
 
@@ -45,7 +39,6 @@ if (pageState instanceof Response) {
   <div
     class="w-full h-full bg-white rounded-2xl md:shadow-[0px_2px_20px_0px_rgba(0,0,0,0.10)] md:p-8 mt-12"
     data-estimate-type={pageState.estimateType}
-    data-ip-address={pageState.ipAddress}
   >
     <div class="portal-container w-full h-full" id="freedomportal">
       <iframe
@@ -204,12 +197,6 @@ if (pageState instanceof Response) {
       const validatedLead = publicLeadsUpdateSchemaSchema.parse(
         estimateProgressStore.get()
       );
-      const ipAddress =
-        document
-          .querySelector("[data-ip-address]")
-          ?.getAttribute("data-ip-address") || null;
-
-      validatedLead.ip_address = ipAddress;
 
       // Update iframe src with store values
       this.updateIframeSrc(validatedLead);
@@ -226,7 +213,7 @@ if (pageState instanceof Response) {
             throw new Error(error.message);
           }
           estimateProgressStore.set({
-            ...validatedLead,
+            ...data,
             status: "submitted",
             updated_at: new Date().toISOString(),
             submitted_at: new Date().toISOString(),

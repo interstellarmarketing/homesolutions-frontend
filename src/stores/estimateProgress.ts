@@ -15,6 +15,8 @@ export const estimateProgressStore = persistentAtom<PublicLeadsUpdateSchema>(
 
 export async function resetEstimateProgressFields(ipAddress?: string | null) {
   try {
+    console.log('ipAddress', ipAddress);
+
     estimateProgressStore.set({});
     const posthogPersonId = posthog.get_distinct_id();
 
@@ -44,6 +46,10 @@ export async function resetEstimateProgressFields(ipAddress?: string | null) {
       console.error("Error getting facebook cookie", e);
     }
 
+
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const deviceCategory = isMobile ? "mobile" : "desktop";
+
     const { data, error } = await supabase
       .from("leads")
       .insert({
@@ -51,6 +57,7 @@ export async function resetEstimateProgressFields(ipAddress?: string | null) {
         posthog_person_id: posthogPersonId,
         landing_page: window.location.href.split("/").slice(0, -1).join("/"),
         ip_address: ipAddress,
+        device_category: deviceCategory,
         ...Object.fromEntries(
           Object.entries({
             ...trackingSearchParams,
