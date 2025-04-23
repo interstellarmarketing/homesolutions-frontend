@@ -20,4 +20,14 @@ export default defineConfig({
     },
   }),
   integrations: [tailwind(), react(), icon()],
+  vite: {
+    build: {
+      rollupOptions: {
+        external: ['ws'],
+      },
+    },
+    ssr: {
+      noExternal: ['ws'],
+    },
+  },
 });
