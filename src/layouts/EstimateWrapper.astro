@@ -153,7 +153,7 @@ if (validationResult instanceof Response) {
         .querySelector("[data-estimate-type]")
         ?.getAttribute("data-estimate-type") || "";
 
-    if (!existingStore.id) {
+    if (!existingStore.id && !shouldReset) {
       // Determine first step based on estimate type
       let firstStep = getFirstStep(estimateType as ShortTradeEnum);
 

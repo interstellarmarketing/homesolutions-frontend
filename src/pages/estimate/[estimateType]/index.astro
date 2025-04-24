@@ -25,7 +25,9 @@ let firstStep = getFirstStep(estimateType as ShortTradeEnum);
 
 const searchParams = Astro.url.searchParams;
 
-searchParams.append("reset", "true");
+if (!searchParams.has("reset")) {
+  searchParams.append("reset", "true");
+}
 
 // Redirect to first step with query params preserved
 const redirectUrl = `/estimate/${estimateType}/${firstStep}`;
