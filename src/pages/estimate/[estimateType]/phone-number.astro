@@ -198,14 +198,16 @@ const stepHeader = "What's the best phone number to reach you?";
       )}-${phoneNumber.slice(6, 10)}`;
     }
 
-    private handlePhoneInput = (e: Event) => {
-      const input = e.target as HTMLInputElement;
+    private validatePhoneNumber(input: HTMLInputElement) {
       const formattedNumber = this.formatPhoneNumber(input.value);
       input.value = formattedNumber;
 
-      const isValid = this.phoneParser.safeParse({
-        phone: input.value,
-      }).success;
+      const isValid =
+        this.phoneParser.safeParse({
+          phone: input.value,
+        }).success &&
+        !input.value.replace(/\D/g, "").startsWith("1") &&
+        input.value.replace(/\D/g, "").length === 10;
 
       if (this.submitButton) {
         this.submitButton.setAttribute(
@@ -213,6 +215,11 @@ const stepHeader = "What's the best phone number to reach you?";
           !isValid ? "true" : "false"
         );
       }
+    }
+
+    private handlePhoneInput = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      this.validatePhoneNumber(input);
     };
 
     private async trackSolarPhoneSubmitEvent() {
@@ -404,15 +411,8 @@ const stepHeader = "What's the best phone number to reach you?";
         this.phoneInput.value = storeData.phone;
       }
 
-      // Check initial value
-      if (this.phoneInput.value) {
-        const isValid = this.phoneParser.safeParse({
-          phone: this.phoneInput.value,
-        }).success;
-
-        if (this.submitButton && isValid) {
-          this.submitButton.setAttribute("aria-disabled", "false");
-        }
+      if (this.phoneInput) {
+        this.validatePhoneNumber(this.phoneInput);
       }
 
       // Set up event listeners
