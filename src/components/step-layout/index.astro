@@ -1,6 +1,6 @@
 ---
-import Spinner from "@components/spinner/index.astro";
 import Rating from "@components/ratings/index.astro";
+import Spinner from "@components/spinner/index.astro";
 import { estimateStepsStore } from "@stores/estimateStepsStore";
 
 interface Props {
@@ -27,24 +27,34 @@ const {
   loadingButtonText = "Processing...",
 } = Astro.props;
 
+const compliant =
+  Astro.url.searchParams.get("compliant") === "true" &&
+  (estimateType === "roofing" || estimateType === "siding");
+
 const progressPercentage = (stepNumber / totalSteps) * 100;
 
-export const getEstimateHeader = (estimateType: string) => {
+function getEstimateHeader() {
   switch (estimateType) {
     case "roofing":
-      return "Replace Your Roof For No Cost Down*";
-    // return "Replace Your Roof<br />For As Low As $97/month";
+      if (compliant) {
+        return "Replace Your Roof For No Cost Down*";
+      } else {
+        return "Replace Your Roof<br />For As Low As $97/month";
+      }
     case "siding":
-      return "Replace Your Siding For No Cost Down*";
-    // return "Replace Your Siding<br />For As Low As $97/month";
+      if (compliant) {
+        return "Replace Your Siding For No Cost Down*";
+      } else {
+        return "Replace Your Siding<br />For As Low As $97/month";
+      }
     case "solar":
       return "<h1 class='text-2xl font-bold'>GO SOLAR FOR NO COST*</h1><h2 class='font-bold'>Take FREE Survey To Qualify</h2>";
     default:
       return "Get Your Free<br />Estimate*";
   }
-};
+}
 
-const estimateHeader = getEstimateHeader(estimateType);
+const estimateHeader = getEstimateHeader();
 ---
 
 <div
@@ -142,10 +152,14 @@ const estimateHeader = getEstimateHeader(estimateType);
     <Rating src="/static/layout/bbb.svg" alt="BBB" />
     <Rating src="/static/layout/google.svg" alt="Google Rating" />
   </div>
-  <div class="text-center text-xs text-gray-500 italic mt-4">
-    * Subject to credit approval. Financing terms and conditions apply. Contact
-    us for complete details.
-  </div>
+  {
+    compliant && (
+      <div class="text-center text-xs text-gray-500 italic mt-4">
+        * Subject to credit approval. Financing terms and conditions apply.
+        Contact us for complete details.
+      </div>
+    )
+  }
 </div>
 
 <script>
@@ -170,6 +184,7 @@ const estimateHeader = getEstimateHeader(estimateType);
     private loadingText!: string;
 
     initialize(buttonId: string) {
+      console.log("Initializing ButtonLoadingHandler");
       this.button = document.getElementById(buttonId) as HTMLButtonElement;
       if (!this.button) return;
 
