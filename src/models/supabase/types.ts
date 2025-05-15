@@ -316,6 +316,7 @@ export type Database = {
           trusted_form_ping_url: string | null
           updated_at: string | null
           user_agent: string | null
+          utility_bill: string | null
           utility_bill_eligible: boolean | null
           utm_campaign: string | null
           utm_content: string | null
@@ -371,6 +372,7 @@ export type Database = {
           trusted_form_ping_url?: string | null
           updated_at?: string | null
           user_agent?: string | null
+          utility_bill?: string | null
           utility_bill_eligible?: boolean | null
           utm_campaign?: string | null
           utm_content?: string | null
@@ -426,6 +428,7 @@ export type Database = {
           trusted_form_ping_url?: string | null
           updated_at?: string | null
           user_agent?: string | null
+          utility_bill?: string | null
           utility_bill_eligible?: boolean | null
           utm_campaign?: string | null
           utm_content?: string | null

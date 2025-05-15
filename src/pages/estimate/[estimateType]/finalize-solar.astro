@@ -2,7 +2,6 @@
 import EstimateWrapper from "@layouts/EstimateWrapper.astro";
 import { shortTradeEnum } from "@models/estimateOptions";
 import { appendQueryParams } from "@utils/queryParams";
-import { z } from "zod";
 
 interface PageState {
   estimateType: string;
@@ -42,19 +41,18 @@ if (pageState instanceof Response) {
   >
     <div class="portal-container w-full h-full" id="freedomportal">
       <iframe
-        allow="autoplay"
+        id="freedom-iframe"
         allowfullscreen=""
-        class="w-full h-full"
+        class="responsive-iframe w-full h-full"
         frameborder="1"
         height="400px"
         marginheight="0px"
         marginwidth="0px"
         name="myiFrame"
-        sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation allow-top-navigation-by-user-activation"
         scrolling="no"
         src=""
-        style="border:0px #ffffff none;"
-        id="freedom-iframe"></iframe>
+        style="border:0px #FFFFFF none;"
+        width="601px"></iframe>
     </div>
   </div>
 </EstimateWrapper>
@@ -97,6 +95,20 @@ if (pageState instanceof Response) {
       const estimateOptions =
         lead.estimate_options as EstimateOptionsSolarSchema;
 
+      let address = lead.street_address;
+      if (address && lead.city) {
+        address += `, ${lead.city}`;
+      }
+      if (address && lead.state) {
+        address += `, ${lead.state}`;
+      }
+      if (address && lead.zip_code) {
+        address += ` ${lead.zip_code}`;
+      }
+      if (address) {
+        address = address.trim() + ", USA";
+      }
+
       const params = new URLSearchParams({
         lead_id:
           estimateOptions.freedom_lead_id !== undefined
@@ -112,19 +124,13 @@ if (pageState instanceof Response) {
         last_name: lead.last_name || "",
         phone: lead.phone || "",
         email: lead.email || "",
-        address: lead.street_address || "",
-        credit_score: "",
-        electric_bill: "",
-        utility_company: "Other",
-        Facebook_Ad_ID: "",
-        Trusted_Form: lead.trusted_form_cert_url || "",
-        home_ownership: lead.is_homeowner ? "1" : "0",
-        Language: "english",
-        Roof_Shading: estimateOptions.is_roof_shaded ? "1" : "0",
-        Bill_Discounts: "No",
-        Self_Set_Apt_Notes: "",
+        address: address || "",
+        credit_score: lead.credit_score_eligible ? "Above 640" : "Below 640",
+        electric_bill: lead.utility_bill || "",
+        Roof_Shading: estimateOptions.is_roof_shaded
+          ? "Yes, Im willing to trim trees"
+          : "No, it's sunny",
         Facebook_Click_ID: lead.fbclid || "",
-        Facebook_Browser_ID: "",
         Ip_Address: lead.ip_address || "",
         User_Agent: lead.user_agent || "",
       });

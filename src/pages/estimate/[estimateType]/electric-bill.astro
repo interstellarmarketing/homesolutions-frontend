@@ -9,10 +9,7 @@ import { getCurrentStepNumber, getTotalSteps } from "@consts/estimateSteps";
 // Define validation schemas using Zod
 const estimateTypeSchema = shortTradeEnum;
 
-const electricBillOptions = [
-  "Electric Bill Above $100",
-  "Electric Bill Below $100",
-];
+const electricBillOptions = ["$50-$99", "$100-$200", "$201-$300", "$301-$400+"];
 
 interface PageState {
   estimateType: string;
@@ -48,7 +45,7 @@ if (pageState instanceof Response) {
   return pageState;
 }
 
-const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
+const stepHeader = "What Is Your Average Electric Bill?";
 ---
 
 <EstimateWrapper
@@ -143,16 +140,11 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
       // Check store for initial selection and set the radio button accordingly
       const storeData = estimateProgressStore.get();
       if (
-        storeData.utility_bill_eligible !== undefined &&
-        storeData.utility_bill_eligible !== null
+        storeData.utility_bill !== undefined &&
+        storeData.utility_bill !== null
       ) {
-        // Find and check the matching radio button based on the boolean value
-        const valueToSelect = storeData.utility_bill_eligible
-          ? "Electric Bill Above $100"
-          : "Electric Bill Below $100";
-
         const radioToCheck = Array.from(this.radioButtons).find(
-          (radio) => radio.value === valueToSelect
+          (radio) => radio.value === storeData.utility_bill
         );
 
         if (radioToCheck) {
@@ -224,14 +216,11 @@ const stepHeader = "Is Your Electric Bill Usually Higher Than $100?";
 
       if (!electricBill) return;
 
-      // Convert the string value to boolean
-      const electricBillOver100 = electricBill === "Electric Bill Above $100";
-
       // Update store
       const existingStore = estimateProgressStore.get();
       estimateProgressStore.set({
         ...existingStore,
-        utility_bill_eligible: electricBillOver100,
+        utility_bill: electricBill,
       });
 
       // Get next step

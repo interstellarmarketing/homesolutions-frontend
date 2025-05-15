@@ -2,6 +2,6 @@
 
 interface Env {
 	contracting_estimates: KVNamespace;
-	ZIP_METHODS: Service<import("be-rpc-estimates/src/index").Zips>;
-	DB: Service<import("be-rpc-estimates/src/index").D1Worker>;
+	ZIP_METHODS: Fetcher;
+	DB: Fetcher;
 }
